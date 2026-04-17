@@ -1,0 +1,89 @@
+{
+  "theme": "dark",
+  "archetype": "2 (Performance Pro)",
+  "core_philosophy": "Tactical Minimalism. High-energy, command-center focus for outdoor running. High-visibility 'Tactical' look utilizing deep obsidian backgrounds with electric kinetic triggers.",
+  "colors": {
+    "background": "#09090B",
+    "surface": "#18181B",
+    "surface_secondary": "#27272A",
+    "primary": "#FF3B30",
+    "primary_hover": "#FF5C53",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA",
+    "border": "#27272A",
+    "success": "#10B981",
+    "progress_ring_track": "#27272A",
+    "progress_ring_fill": "#FF3B30"
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Barlow Condensed, sans-serif",
+      "body": "DM Sans, sans-serif"
+    },
+    "rules": {
+      "h1": "text-5xl font-black uppercase tracking-tighter text-white",
+      "h2": "text-4xl font-bold uppercase tracking-tight text-white",
+      "h3": "text-2xl font-bold uppercase tracking-tight text-white",
+      "h4": "text-lg font-bold uppercase tracking-tight text-white",
+      "body": "text-base font-medium tracking-wide text-zinc-400",
+      "metric_value": "text-6xl font-black tracking-tighter text-white",
+      "metric_label": "text-xs font-bold uppercase tracking-[0.2em] text-zinc-500",
+      "button_text": "text-base font-bold uppercase tracking-widest text-white"
+    }
+  },
+  "spacing_and_layout": {
+    "mobile_first": true,
+    "screen_padding": "p-4 md:p-6",
+    "card_padding": "p-5",
+    "gap_small": "gap-3",
+    "gap_medium": "gap-6",
+    "gap_large": "gap-10",
+    "layout_modes": {
+      "dashboard": "Bento grid structure. Summary metrics use col-span-1 (or equivalent flex row layout). Primary data/progress rings use large dominant spans.",
+      "active_workout": "Maximalist data focus. Center stage for pace and time. High contrast, large typography for quick glances while running."
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "Flat background (bg-zinc-900), sharp 1px border (border-zinc-800), rounded-xl, no soft shadows. For premium plans, add a 1px border of primary color at 50% opacity (border-primary/50) with an inner glow.",
+      "hover_state": "Slight lift, border lightens to border-zinc-700."
+    },
+    "buttons": {
+      "primary": "bg-primary rounded-full px-8 py-4 flex items-center justify-center. No shadow. Active state scales down (scale-95).",
+      "secondary": "bg-transparent border border-zinc-800 rounded-full px-8 py-4. text-white.",
+      "fab_workout": "Massive circular CTA (h-20 w-20) pinned to the bottom center. bg-primary text-white border-4 border-black."
+    },
+    "navigation": {
+      "bottom_tab": "Sticky bottom nav. bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-900. High contrast active icon color (primary), dormant icons (zinc-500)."
+    },
+    "data_visualization": {
+      "progress_rings": "Thick strokes (strokeWidth 12-16). Track color zinc-800, Fill color primary (#FF3B30). Flat ends, no rounded caps for a harsher, tactical look.",
+      "bar_charts": "Weekly progress bars: straight edges, minimal spacing. bg-zinc-800 for empty, bg-white for completed, bg-primary for today."
+    },
+    "forms": {
+      "inputs": "bg-zinc-900 border-b-2 border-transparent border-b-zinc-800 rounded-t-lg px-4 py-4 text-white focus:border-b-primary focus:bg-zinc-800 transition-colors"
+    }
+  },
+  "animations": {
+    "transitions": "Fast, kinetic. transition-all duration-200 ease-out.",
+    "active_workout_timer": "Monospaced tabular numbers. No bouncing or layout shifts."
+  },
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwcnVubmVyJTIwZGFya3xlbnwwfHx8fDE3NzY0NjIwNzJ8MA&ixlib=rb-4.1.0&q=85",
+      "category": "Onboarding Hero / Splash Screen",
+      "description": "Close up of Nike running shoes on black concrete. Perfect for a moody, energetic first impression."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1765914448187-ee93dd13e1e6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwyfHxydW5uaW5nJTIwc2hvZXMlMjByb2FkfGVufDB8fHx8MTc3NjQ2MjA3Mnww&ixlib=rb-4.1.0&q=85",
+      "category": "Training Plans / Running History",
+      "description": "Runner's legs in motion on pavement. Use as header background for the training plans list with a heavy dark overlay."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1775225218390-34a8c5135110?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwzfHxmaXRuZXNzJTIwcnVubmVyJTIwZGFya3xlbnwwfHx8fDE3NzY0NjIwNzJ8MA&ixlib=rb-4.1.0&q=85",
+      "category": "Premium Upgrade / AI Generator",
+      "description": "A person running on a paved path through a forest. Represents pushing boundaries and elite training."
+    }
+  ],
+  "instructions_to_main_agent": "Since this is a React Native Expo / mobile app context, translate the Tailwind utility references (which map perfectly via NativeWind) or apply them as standard React Native StyleSheets. Emphasize large touch targets, a 'tactical minimal' UI (no soft shadows, use 1px hard borders instead), and bold uppercase typography for metrics to ensure readability while the user is actively running. Build the layout with a sticky bottom tab bar for global navigation, and ensure the Active Workout screen uses massive tabular typography."
+}
