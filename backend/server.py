@@ -353,14 +353,25 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(get_cur
             session_id=f"plan_{user['user_id']}_{uuid.uuid4().hex[:6]}",
             system_message=system_msg,
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-        resp = await chat.send_message(UserMessage(text=prompt))
+        try:
+            resp = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=90.0)
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
         # Extract JSON
         match = re.search(r'\{.*\}', resp, re.DOTALL)
         raw = match.group(0) if match else resp
         parsed = json.loads(raw)
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        logger.error(f"AI JSON parse error: {e}")
+        raise HTTPException(status_code=502, detail="Risposta AI non valida. Riprova.")
     except Exception as e:
         logger.error(f"AI generate error: {e}")
-        raise HTTPException(status_code=500, detail=f"Errore generazione AI: {str(e)}")
+        msg = str(e)
+        if "502" in msg or "BadGateway" in msg:
+            raise HTTPException(status_code=503, detail="Servizio AI momentaneamente non disponibile. Riprova tra qualche minuto.")
+        raise HTTPException(status_code=500, detail=f"Errore generazione AI: {msg[:200]}")
 
     # Build plan document
     workouts = []
