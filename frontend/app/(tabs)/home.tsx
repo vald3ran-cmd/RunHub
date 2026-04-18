@@ -9,6 +9,7 @@ import { api } from '../../src/api';
 import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
 import { ProgressRing } from '../../src/ProgressRing';
+import { AdBanner } from '../../src/Ads';
 
 type Progress = {
   daily: { distance_km: number; duration_seconds: number; count: number };
@@ -100,12 +101,14 @@ export default function Home() {
             style={[styles.ctaCard, styles.premiumCard]} onPress={() => router.push('/ai-generate')}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[styles.ctaLabel, { color: colors.primary }]}>AI COACH · PREMIUM</Text>
+              <Text style={[styles.ctaLabel, { color: colors.primary }]}>AI COACH · PERFORMANCE</Text>
               <Text style={styles.ctaTitle}>Genera un piano su misura</Text>
             </View>
             <Ionicons name="sparkles" size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
+
+        <AdBanner />
       </ScrollView>
     </SafeAreaView>
   );

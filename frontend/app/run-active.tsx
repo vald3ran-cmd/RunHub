@@ -10,6 +10,7 @@ import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
 import { colors, spacing, radius, stepTypeColors, stepTypeLabels } from '../src/theme';
 import { RouteMap } from '../src/RouteMap';
+import { InterstitialAd, useShouldShowAds } from '../src/Ads';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -32,6 +33,9 @@ export default function RunActive() {
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
   const [gpsError, setGpsError] = useState<string>('');
   const [permState, setPermState] = useState<string>('unknown');
+  const [showAd, setShowAd] = useState(false);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const showAds = useShouldShowAds();
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
   const pausedRef = useRef(false);
@@ -260,9 +264,23 @@ export default function RunActive() {
         calories: Math.round(distance * 65),
         locations: coords,
       });
-      router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+      if (showAds) {
+        // Free tier → show interstitial before navigating
+        setPendingSessionId(data.session_id);
+        setShowAd(true);
+      } else {
+        router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+      }
     } catch (e: any) {
       Alert.alert('Errore', 'Salvataggio fallito');
+    }
+  };
+
+  const onAdClose = () => {
+    setShowAd(false);
+    if (pendingSessionId) {
+      router.replace({ pathname: '/workout/[id]', params: { id: pendingSessionId } });
+      setPendingSessionId(null);
     }
   };
 
@@ -381,6 +399,7 @@ export default function RunActive() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <InterstitialAd visible={showAd} onClose={onAdClose} skipAfter={5} />
     </SafeAreaView>
   );
 }
