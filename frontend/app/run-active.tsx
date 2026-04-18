@@ -71,40 +71,82 @@ export default function RunActive() {
 
   const requestAndStart = async () => {
     try {
-      // On web, check if geolocation API is even available (iframe might block it)
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
-        if (!navigator.geolocation) {
+      // On web: use native navigator.geolocation directly (expo-location's web impl
+      // doesn't reliably trigger the browser permission prompt, and iframes may silently block)
+      if (Platform.OS === 'web') {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
           setHasLocationPermission(false);
           setGpsError('GPS non disponibile nel browser');
-        } else if (window.self !== window.top) {
-          // We're in an iframe — geolocation often blocked
-          setGpsError('Apri la preview in una nuova scheda del browser per usare il GPS');
-        }
-      }
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setHasLocationPermission(false);
-        setGpsError(prev => prev || 'Permesso GPS negato — cronometro attivo senza tracciamento');
-      } else {
-        setHasLocationPermission(true);
-        setGpsError('');
-        subRef.current = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
-          (loc) => {
-            if (pausedRef.current) return;
-            const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
-            setCoords(prev => {
-              if (prev.length > 0) {
-                const last = prev[prev.length - 1];
-                const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
-                if (d > 0.002 && d < 0.2) { // sanity filter
-                  setDistance(x => x + d);
-                }
+        } else {
+          const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+          // Try to get first position — triggers browser permission prompt
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setHasLocationPermission(true);
+              setGpsError('');
+              const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: pos.timestamp };
+              setCoords(prev => [...prev, pt]);
+              // Start continuous watch
+              const watchId = navigator.geolocation.watchPosition(
+                (p) => {
+                  if (pausedRef.current) return;
+                  const npt = { lat: p.coords.latitude, lng: p.coords.longitude, timestamp: p.timestamp };
+                  setCoords(prev => {
+                    if (prev.length > 0) {
+                      const last = prev[prev.length - 1];
+                      const d = haversine(last.lat, last.lng, npt.lat, npt.lng);
+                      if (d > 0.002 && d < 0.2) setDistance(x => x + d);
+                    }
+                    return [...prev, npt];
+                  });
+                },
+                (err) => { console.warn('GPS error', err); },
+                { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
+              );
+              subRef.current = { remove: () => navigator.geolocation.clearWatch(watchId) } as any;
+            },
+            (err) => {
+              setHasLocationPermission(false);
+              if (err.code === err.PERMISSION_DENIED) {
+                setGpsError(inIframe
+                  ? 'Permesso bloccato. Apri la preview in una nuova scheda del browser.'
+                  : 'Permesso negato. Controlla le impostazioni del browser.');
+              } else if (err.code === err.POSITION_UNAVAILABLE) {
+                setGpsError('Posizione non disponibile. Sei in un luogo con segnale GPS?');
+              } else if (err.code === err.TIMEOUT) {
+                setGpsError('Timeout GPS. Prova a riprovare.');
+              } else {
+                setGpsError(err.message || 'Errore GPS');
               }
-              return [...prev, pt];
-            });
-          }
-        );
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          );
+        }
+      } else {
+        // Native (iOS/Android via Expo Go): use expo-location
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setHasLocationPermission(false);
+          setGpsError('Permesso GPS negato — cronometro attivo senza tracciamento');
+        } else {
+          setHasLocationPermission(true);
+          setGpsError('');
+          subRef.current = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
+            (loc) => {
+              if (pausedRef.current) return;
+              const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
+              setCoords(prev => {
+                if (prev.length > 0) {
+                  const last = prev[prev.length - 1];
+                  const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
+                  if (d > 0.002 && d < 0.2) setDistance(x => x + d);
+                }
+                return [...prev, pt];
+              });
+            }
+          );
+        }
       }
     } catch (e: any) {
       setHasLocationPermission(false);
@@ -118,32 +160,68 @@ export default function RunActive() {
   const retryGps = async () => {
     setGpsError(''); setHasLocationPermission(null);
     subRef.current?.remove();
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        setHasLocationPermission(true);
-        subRef.current = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
-          (loc) => {
-            if (pausedRef.current) return;
-            const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
-            setCoords(prev => {
-              if (prev.length > 0) {
-                const last = prev[prev.length - 1];
-                const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
-                if (d > 0.002 && d < 0.2) setDistance(x => x + d);
-              }
-              return [...prev, pt];
-            });
-          }
-        );
-      } else {
+    // Re-run the same logic
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+      const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setHasLocationPermission(true);
+          setGpsError('');
+          setCoords(prev => [...prev, { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: pos.timestamp }]);
+          const watchId = navigator.geolocation.watchPosition(
+            (p) => {
+              if (pausedRef.current) return;
+              const npt = { lat: p.coords.latitude, lng: p.coords.longitude, timestamp: p.timestamp };
+              setCoords(prev => {
+                if (prev.length > 0) {
+                  const last = prev[prev.length - 1];
+                  const d = haversine(last.lat, last.lng, npt.lat, npt.lng);
+                  if (d > 0.002 && d < 0.2) setDistance(x => x + d);
+                }
+                return [...prev, npt];
+              });
+            },
+            null as any,
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
+          );
+          subRef.current = { remove: () => navigator.geolocation.clearWatch(watchId) } as any;
+        },
+        (err) => {
+          setHasLocationPermission(false);
+          setGpsError(err.code === err.PERMISSION_DENIED && inIframe
+            ? 'Permesso bloccato. Apri la preview in una nuova scheda del browser.'
+            : err.message || 'Errore GPS');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    } else {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          setHasLocationPermission(true);
+          subRef.current = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
+            (loc) => {
+              if (pausedRef.current) return;
+              const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
+              setCoords(prev => {
+                if (prev.length > 0) {
+                  const last = prev[prev.length - 1];
+                  const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
+                  if (d > 0.002 && d < 0.2) setDistance(x => x + d);
+                }
+                return [...prev, pt];
+              });
+            }
+          );
+        } else {
+          setHasLocationPermission(false);
+          setGpsError('Permesso negato. Controlla le impostazioni del device.');
+        }
+      } catch (e: any) {
         setHasLocationPermission(false);
-        setGpsError('Permesso negato. Controlla le impostazioni del browser/device.');
+        setGpsError(e?.message || 'Errore GPS');
       }
-    } catch (e: any) {
-      setHasLocationPermission(false);
-      setGpsError(e?.message || 'Errore GPS');
     }
   };
 
