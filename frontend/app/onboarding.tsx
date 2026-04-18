@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
+import { useAuth } from '../src/auth';
 import { colors, spacing, radius } from '../src/theme';
 
 const LEVELS = [
@@ -26,6 +27,7 @@ const DAYS = [2, 3, 4, 5, 6];
 
 export default function Onboarding() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState('');
   const [goal, setGoal] = useState('');
@@ -41,6 +43,7 @@ export default function Onboarding() {
       const { data } = await api.post('/onboarding', {
         level, goal, days_per_week: days,
       });
+      await refresh();
       router.replace({ pathname: '/plan/[id]', params: { id: data.recommended_plan_id } });
     } catch (e: any) {
       Alert.alert('Errore', 'Salvataggio fallito');

@@ -14,10 +14,18 @@ function RootNav() {
   useEffect(() => {
     if (loading) return;
     const inAuth = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
     if (!user && !inAuth) {
       router.replace('/(auth)/login');
+    } else if (user && !user.onboarding_completed && !inOnboarding && !inAuth) {
+      // Force new users to go through onboarding
+      router.replace('/onboarding');
     } else if (user && inAuth) {
-      router.replace('/(tabs)/home');
+      if (!user.onboarding_completed) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)/home');
+      }
     }
   }, [user, loading, segments]);
 

@@ -9,6 +9,7 @@ type User = {
   tier?: string;
   tier_expires_at?: string | null;
   is_premium: boolean;
+  onboarding_completed?: boolean;
 };
 
 type AuthContextType = {
