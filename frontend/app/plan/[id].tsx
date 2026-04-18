@@ -68,20 +68,39 @@ export default function PlanDetail() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>ALLENAMENTI</Text>
+          {plan.locked ? (
+            <View style={styles.lockBox}>
+              <Ionicons name="lock-closed" size={24} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.lockTitle}>PIANO BLOCCATO</Text>
+                <Text style={styles.lockSub}>Abbonati a Starter o superiore per avviare gli allenamenti di questo piano.</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.lockBtn}
+                onPress={() => router.push('/premium')}
+              >
+                <Text style={styles.lockBtnText}>UPGRADE</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {plan.workouts.map((w: any, idx: number) => (
             <TouchableOpacity
               key={w.workout_id}
               testID={`workout-item-${idx}`}
-              style={styles.workoutCard}
-              onPress={() => router.push({
-                pathname: '/run-active',
-                params: {
-                  title: `${plan.title} — ${w.title}`,
-                  workout_id: w.workout_id,
-                  plan_id: plan.plan_id,
-                  steps: JSON.stringify(w.steps),
-                }
-              })}
+              style={[styles.workoutCard, plan.locked && { opacity: 0.5 }]}
+              disabled={plan.locked}
+              onPress={() => {
+                if (plan.locked) { router.push('/premium'); return; }
+                router.push({
+                  pathname: '/run-active',
+                  params: {
+                    title: `${plan.title} — ${w.title}`,
+                    workout_id: w.workout_id,
+                    plan_id: plan.plan_id,
+                    steps: JSON.stringify(w.steps),
+                  }
+                });
+              }}
             >
               <View style={styles.dayBadge}><Text style={styles.dayText}>{w.day}</Text></View>
               <View style={{ flex: 1 }}>
@@ -139,4 +158,13 @@ const styles = StyleSheet.create({
   stepChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: spacing.sm },
   chip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm },
   chipText: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  lockBox: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.lg,
+    borderWidth: 2, borderColor: colors.primary, marginBottom: spacing.md,
+  },
+  lockTitle: { color: colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 2 },
+  lockSub: { color: colors.textPrimary, fontSize: 12, marginTop: 4 },
+  lockBtn: { backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill },
+  lockBtnText: { color: '#fff', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
 });

@@ -493,15 +493,16 @@ async def get_plan(plan_id: str, user: dict = Depends(get_current_user)):
     for p in PREDEFINED_PLANS:
         if p["plan_id"] == plan_id:
             req = p.get("required_tier", "free")
-            if not has_tier(user, req):
-                raise HTTPException(status_code=403,
-                                    detail=f"Questo piano richiede l'abbonamento {req.capitalize()} o superiore")
-            return p
+            # Return plan info but flag if locked (frontend can show paywall on start)
+            out = dict(p)
+            out["locked"] = not has_tier(user, req)
+            return out
     plan = await db.plans.find_one({"plan_id": plan_id}, {"_id": 0})
     if not plan:
         raise HTTPException(status_code=404, detail="Piano non trovato")
     if plan.get("created_by") != user["user_id"]:
         raise HTTPException(status_code=403, detail="Non autorizzato")
+    plan["locked"] = False
     return plan
 
 @api_router.post("/plans/ai-generate")
