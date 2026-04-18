@@ -37,6 +37,8 @@ function RootNav() {
       <Stack.Screen name="run-active" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="premium" options={{ presentation: 'modal' }} />
       <Stack.Screen name="ai-generate" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="race-predictor" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="coach" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

@@ -95,6 +95,28 @@ export default function Profile() {
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
+        {user?.tier === 'performance' || user?.tier === 'elite' ? (
+          <TouchableOpacity
+            testID="race-predictor-button"
+            style={styles.row} onPress={() => router.push('/race-predictor')}
+          >
+            <Ionicons name="stopwatch" size={20} color={colors.primary} />
+            <Text style={styles.rowText}>Proiezione tempi gara & VO2max</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
+        {user?.tier === 'elite' ? (
+          <TouchableOpacity
+            testID="coach-dashboard-button"
+            style={styles.row} onPress={() => router.push('/coach')}
+          >
+            <Ionicons name="people" size={20} color={colors.primary} />
+            <Text style={styles.rowText}>Coach Dashboard</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity
           testID="logout-button"
           style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}

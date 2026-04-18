@@ -341,6 +341,135 @@ PREDEFINED_PLANS = [
             ]},
         ]
     },
+    # ===== PERFORMANCE TIER PLANS =====
+    {
+        "plan_id": "pl_5k_sub30",
+        "title": "5K sotto 30 minuti",
+        "description": "Piano 4 settimane per sfondare il muro dei 30 minuti sui 5K con tempo run e ripetute brevi.",
+        "level": "intermediate", "duration_weeks": 4, "workouts_per_week": 3,
+        "is_premium": False, "required_tier": "performance",
+        "image_url": "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=800",
+        "workouts": [
+            {"workout_id": "wk_530_1", "title": "Tempo 20' + 4x200m", "day": 1, "estimated_duration_min": 40, "estimated_distance_km": 6.0, "steps": [
+                {"type": "warmup", "duration_seconds": 600, "description": "Riscaldamento", "target_pace": "6:30/km"},
+                {"type": "run", "duration_seconds": 1200, "description": "Tempo run", "target_pace": "5:30/km"},
+                {"type": "recovery", "duration_seconds": 180, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 45, "description": "200m veloce", "target_pace": "4:30/km"},
+                {"type": "recovery", "duration_seconds": 90, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 45, "description": "200m veloce", "target_pace": "4:30/km"},
+                {"type": "recovery", "duration_seconds": 90, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 45, "description": "200m veloce", "target_pace": "4:30/km"},
+                {"type": "recovery", "duration_seconds": 90, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 45, "description": "200m veloce", "target_pace": "4:30/km"},
+                {"type": "stretching", "duration_seconds": 480, "description": "Stretching", "target_pace": None},
+            ]},
+            {"workout_id": "wk_530_2", "title": "5x1000m a ritmo gara", "day": 2, "estimated_duration_min": 45, "estimated_distance_km": 7.0, "steps": [
+                {"type": "warmup", "duration_seconds": 900, "description": "Riscaldamento", "target_pace": "6:00/km"},
+                {"type": "sprint", "duration_seconds": 300, "description": "1000m ritmo gara", "target_pace": "5:00/km"},
+                {"type": "recovery", "duration_seconds": 120, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 300, "description": "1000m ritmo gara", "target_pace": "5:00/km"},
+                {"type": "recovery", "duration_seconds": 120, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 300, "description": "1000m ritmo gara", "target_pace": "5:00/km"},
+                {"type": "recovery", "duration_seconds": 120, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 300, "description": "1000m ritmo gara", "target_pace": "5:00/km"},
+                {"type": "recovery", "duration_seconds": 120, "description": "Recupero", "target_pace": None},
+                {"type": "sprint", "duration_seconds": 300, "description": "1000m ritmo gara", "target_pace": "5:00/km"},
+                {"type": "stretching", "duration_seconds": 480, "description": "Stretching", "target_pace": None},
+            ]},
+        ],
+    },
+    {
+        "plan_id": "pl_10k_competitivo",
+        "title": "10K Competitivo",
+        "description": "8 settimane per correre 10K sotto 45 minuti. Soglia, VO2max, lunghi qualitativi.",
+        "level": "expert", "duration_weeks": 8, "workouts_per_week": 4,
+        "is_premium": False, "required_tier": "performance",
+        "image_url": "https://images.unsplash.com/photo-1456613820599-bfe244172af5?w=800",
+        "workouts": [
+            {"workout_id": "wk_10c_1", "title": "Soglia 2x15'", "day": 1, "estimated_duration_min": 60, "estimated_distance_km": 10.5, "steps": [
+                {"type": "warmup", "duration_seconds": 900, "description": "Riscaldamento", "target_pace": "5:30/km"},
+                {"type": "run", "duration_seconds": 900, "description": "Soglia", "target_pace": "4:30/km"},
+                {"type": "recovery", "duration_seconds": 180, "description": "Trotto", "target_pace": None},
+                {"type": "run", "duration_seconds": 900, "description": "Soglia", "target_pace": "4:30/km"},
+                {"type": "stretching", "duration_seconds": 480, "description": "Stretching", "target_pace": None},
+            ]},
+            {"workout_id": "wk_10c_2", "title": "VO2max 8x400m", "day": 2, "estimated_duration_min": 55, "estimated_distance_km": 9.0, "steps": [
+                {"type": "warmup", "duration_seconds": 900, "description": "Riscaldamento", "target_pace": "5:30/km"},
+                *[step for _ in range(8) for step in [
+                    {"type": "sprint", "duration_seconds": 80, "description": "400m veloce", "target_pace": "4:00/km"},
+                    {"type": "recovery", "duration_seconds": 90, "description": "Trotto", "target_pace": None},
+                ]],
+                {"type": "stretching", "duration_seconds": 480, "description": "Stretching", "target_pace": None},
+            ]},
+        ],
+    },
+    {
+        "plan_id": "pl_mezza_performance",
+        "title": "Mezza Maratona Performance",
+        "description": "10 settimane per battere il tuo record sulla mezza. Lunghi progressivi, soglia estesa, gara simulata.",
+        "level": "expert", "duration_weeks": 10, "workouts_per_week": 5,
+        "is_premium": False, "required_tier": "performance",
+        "image_url": "https://images.unsplash.com/photo-1502904550040-7534597429ae?w=800",
+        "workouts": [
+            {"workout_id": "wk_mp_1", "title": "Lungo progressivo 18K", "day": 1, "estimated_duration_min": 100, "estimated_distance_km": 18.0, "steps": [
+                {"type": "warmup", "duration_seconds": 600, "description": "Riscaldamento", "target_pace": "6:00/km"},
+                {"type": "run", "duration_seconds": 3000, "description": "Lento", "target_pace": "5:30/km"},
+                {"type": "run", "duration_seconds": 1800, "description": "Medio", "target_pace": "5:00/km"},
+                {"type": "run", "duration_seconds": 600, "description": "Forte", "target_pace": "4:30/km"},
+                {"type": "stretching", "duration_seconds": 600, "description": "Stretching + foam roller", "target_pace": None},
+            ]},
+        ],
+    },
+    {
+        "plan_id": "pl_maratona",
+        "title": "Maratona — 16 settimane",
+        "description": "Programma completo per finire la tua prima maratona. Costruzione progressiva fino a 32K di lungo.",
+        "level": "expert", "duration_weeks": 16, "workouts_per_week": 5,
+        "is_premium": False, "required_tier": "performance",
+        "image_url": "https://images.unsplash.com/photo-1517438476312-10d79c077509?w=800",
+        "workouts": [
+            {"workout_id": "wk_mar_1", "title": "Lungo 32K", "day": 1, "estimated_duration_min": 180, "estimated_distance_km": 32.0, "steps": [
+                {"type": "warmup", "duration_seconds": 600, "description": "Riscaldamento", "target_pace": "6:30/km"},
+                {"type": "run", "duration_seconds": 9600, "description": "Lungo lento", "target_pace": "6:00/km"},
+                {"type": "stretching", "duration_seconds": 900, "description": "Stretching completo", "target_pace": None},
+            ]},
+        ],
+    },
+    {
+        "plan_id": "pl_trail",
+        "title": "Trail Running — Montagna",
+        "description": "6 settimane per prepararsi a una gara trail. Focus su salite, discese tecniche, forza gambe.",
+        "level": "intermediate", "duration_weeks": 6, "workouts_per_week": 4,
+        "is_premium": False, "required_tier": "performance",
+        "image_url": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800",
+        "workouts": [
+            {"workout_id": "wk_tr_1", "title": "Salite ripetute", "day": 1, "estimated_duration_min": 60, "estimated_distance_km": 8.0, "steps": [
+                {"type": "warmup", "duration_seconds": 600, "description": "Riscaldamento piano", "target_pace": "6:30/km"},
+                {"type": "gymnastics", "duration_seconds": 300, "description": "Skip + calciate, 3 serie", "target_pace": None},
+                *[step for _ in range(6) for step in [
+                    {"type": "sprint", "duration_seconds": 90, "description": "Salita forte", "target_pace": None},
+                    {"type": "recovery", "duration_seconds": 120, "description": "Discesa recupero", "target_pace": None},
+                ]],
+                {"type": "stretching", "duration_seconds": 600, "description": "Stretching gambe", "target_pace": None},
+            ]},
+        ],
+    },
+    {
+        "plan_id": "pl_progressione_10",
+        "title": "Regola del +10% — Sicurezza",
+        "description": "4 settimane di carico progressivo sicuro (+10%/settimana). Previene infortuni e costruisce base aerobica.",
+        "level": "beginner", "duration_weeks": 4, "workouts_per_week": 4,
+        "is_premium": False, "required_tier": "performance",
+        "image_url": "https://images.unsplash.com/photo-1606889464198-fcb18894cf50?w=800",
+        "workouts": [
+            {"workout_id": "wk_p10_1", "title": "Base aerobica 6K", "day": 1, "estimated_duration_min": 40, "estimated_distance_km": 6.0, "steps": [
+                {"type": "warmup", "duration_seconds": 600, "description": "Camminata + mobilita'", "target_pace": None},
+                {"type": "run", "duration_seconds": 1800, "description": "Corsa aerobica", "target_pace": "6:00/km"},
+                {"type": "gymnastics", "duration_seconds": 300, "description": "Core: plank, bird-dog, glute bridge", "target_pace": None},
+                {"type": "stretching", "duration_seconds": 480, "description": "Stretching", "target_pace": None},
+            ]},
+        ],
+    },
 ]
 
 @api_router.get("/plans")
@@ -486,7 +615,6 @@ async def workout_detail(session_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Sessione non trovata")
     return doc
 
-# ----------------- Goals / Stats -----------------
 @api_router.get("/stats/progress")
 async def stats_progress(user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
@@ -529,6 +657,97 @@ async def update_goals(data: GoalsUpdate, user: dict = Depends(get_current_user)
         upsert=True
     )
     return {"ok": True, **data.dict()}
+
+# ----------------- Weekly chart (Performance+) -----------------
+@api_router.get("/stats/weekly")
+async def stats_weekly(user: dict = Depends(require_tier("performance"))):
+    now = datetime.now(timezone.utc)
+    # last 8 weeks
+    start = now - timedelta(days=56)
+    pipeline = [
+        {"$match": {"user_id": user["user_id"], "completed_at": {"$gte": start}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%U", "date": "$completed_at"}},
+            "distance": {"$sum": "$distance_km"},
+            "duration": {"$sum": "$duration_seconds"},
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    res = await db.workout_sessions.aggregate(pipeline).to_list(20)
+    return [{"week": r["_id"], "distance_km": round(r["distance"] or 0, 2),
+             "duration_seconds": int(r["duration"] or 0), "count": int(r["count"] or 0)} for r in res]
+
+# ----------------- Race predictor (Performance+, Riegel formula) -----------------
+class RacePredictRequest(BaseModel):
+    recent_distance_km: float
+    recent_time_seconds: int
+
+@api_router.post("/stats/predict-races")
+async def predict_races(data: RacePredictRequest, user: dict = Depends(require_tier("performance"))):
+    # Riegel: T2 = T1 * (D2/D1)^1.06
+    if data.recent_distance_km <= 0 or data.recent_time_seconds <= 0:
+        raise HTTPException(status_code=400, detail="Valori non validi")
+    d1, t1 = data.recent_distance_km, data.recent_time_seconds
+    races = {"5K": 5.0, "10K": 10.0, "Mezza": 21.0975, "Maratona": 42.195}
+    predictions = {}
+    for name, d2 in races.items():
+        t2 = t1 * (d2 / d1) ** 1.06
+        predictions[name] = {
+            "distance_km": d2,
+            "seconds": int(t2),
+            "hms": format_hms(int(t2)),
+            "pace_min_per_km": round((t2 / 60) / d2, 2),
+        }
+    # Also compute VO2max estimate (Jack Daniels)
+    pace_m_per_min = (d1 * 1000) / (t1 / 60) if t1 else 0
+    vo2 = 0
+    if pace_m_per_min > 0:
+        t_min = t1 / 60
+        vo2 = (-4.60 + 0.182258 * pace_m_per_min + 0.000104 * pace_m_per_min ** 2) / \
+              (0.8 + 0.1894393 * (2.71828 ** (-0.012778 * t_min)) + 0.2989558 * (2.71828 ** (-0.1932605 * t_min)))
+        vo2 = round(max(0, vo2), 1)
+    return {"predictions": predictions, "vo2max_estimate": vo2}
+
+def format_hms(s: int) -> str:
+    h = s // 3600; m = (s % 3600) // 60; sec = s % 60
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+
+# ----------------- Coach athletes (Elite) -----------------
+class AthleteInviteRequest(BaseModel):
+    email: EmailStr
+    name: str
+
+@api_router.get("/coach/athletes")
+async def list_athletes(user: dict = Depends(require_tier("elite"))):
+    items = await db.athletes.find({"coach_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return items
+
+@api_router.post("/coach/athletes")
+async def add_athlete(data: AthleteInviteRequest, user: dict = Depends(require_tier("elite"))):
+    count = await db.athletes.count_documents({"coach_id": user["user_id"]})
+    if count >= 10:
+        raise HTTPException(status_code=400, detail="Limite di 10 atleti raggiunto")
+    existing_user = await db.users.find_one({"email": data.email.lower()}, {"_id": 0, "password_hash": 0})
+    doc = {
+        "athlete_id": f"ath_{uuid.uuid4().hex[:10]}",
+        "coach_id": user["user_id"],
+        "email": data.email.lower(),
+        "name": data.name,
+        "status": "linked" if existing_user else "invited",
+        "linked_user_id": existing_user["user_id"] if existing_user else None,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.athletes.insert_one(dict(doc))
+    doc.pop("_id", None)
+    return doc
+
+@api_router.delete("/coach/athletes/{athlete_id}")
+async def remove_athlete(athlete_id: str, user: dict = Depends(require_tier("elite"))):
+    res = await db.athletes.delete_one({"athlete_id": athlete_id, "coach_id": user["user_id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    return {"ok": True}
 
 # ----------------- Stripe -----------------
 PACKAGES = {
