@@ -9,6 +9,7 @@ import * as Location from 'expo-location';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
 import { colors, spacing, radius, stepTypeColors, stepTypeLabels } from '../src/theme';
+import { RouteMap } from '../src/RouteMap';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -331,19 +332,25 @@ export default function RunActive() {
           <Metric label="KCAL" value={String(Math.round(distance * 65))} />
         </View>
 
-        {coords.length > 1 ? <RoutePreview coords={coords} /> : (
+        {coords.length >= 1 ? (
+          <View style={{ marginTop: spacing.lg }}>
+            <RouteMap coords={coords} height={240} />
+            <View style={styles.gpsStatusOverlay}>
+              <View style={[styles.gpsDot, { backgroundColor: colors.success }]} />
+              <Text style={styles.gpsStatusText}>GPS ATTIVO · {coords.length} PUNTI</Text>
+            </View>
+          </View>
+        ) : (
           <View style={styles.mapPlaceholder}>
             <View style={styles.gpsStatusRow}>
               <View style={[styles.gpsDot, {
                 backgroundColor: hasLocationPermission === true
-                  ? (coords.length > 0 ? colors.success : colors.warning)
+                  ? colors.warning
                   : hasLocationPermission === false ? colors.primary : colors.textMuted
               }]} />
               <Text style={styles.gpsStatusText}>
-                {hasLocationPermission === true && coords.length === 0
+                {hasLocationPermission === true
                   ? 'GPS ATTIVO — IN ATTESA SEGNALE'
-                  : hasLocationPermission === true
-                  ? `GPS ATTIVO · ${coords.length} PUNTI`
                   : hasLocationPermission === false
                   ? 'GPS NON ATTIVO'
                   : 'IN ATTESA DEL GPS...'}
@@ -468,6 +475,12 @@ const styles = StyleSheet.create({
   placeholderText: { color: colors.textSecondary, fontSize: 12, textAlign: 'center' },
   retryBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, marginTop: spacing.sm },
   retryText: { color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: 1 },
+  gpsStatusOverlay: {
+    position: 'absolute', top: spacing.sm, left: spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
   routeBox: {
     marginTop: spacing.lg, padding: spacing.sm, backgroundColor: colors.surface,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,

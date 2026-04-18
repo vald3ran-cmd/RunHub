@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../../src/api';
 import { colors, spacing, radius } from '../../src/theme';
+import { RouteMap } from '../../src/RouteMap';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -54,7 +55,12 @@ export default function WorkoutDetail() {
           <Stat label="KCAL" value={String(session.calories ?? '--')} />
         </View>
 
-        {session.locations && session.locations.length > 1 ? <Route coords={session.locations} /> : null}
+        {session.locations && session.locations.length > 1 ? (
+          <View style={{ marginTop: spacing.xl }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: spacing.sm }}>PERCORSO</Text>
+            <RouteMap coords={session.locations} height={260} showsUser={false} />
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
