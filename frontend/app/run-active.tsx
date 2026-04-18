@@ -277,11 +277,12 @@ export default function RunActive() {
   };
 
   const onAdClose = () => {
-    setShowAd(false);
     if (pendingSessionId) {
+      // Navigate FIRST, then close the modal to avoid black flash during transition
       router.replace({ pathname: '/workout/[id]', params: { id: pendingSessionId } });
       setPendingSessionId(null);
     }
+    setShowAd(false);
   };
 
   const confirmStop = () => {

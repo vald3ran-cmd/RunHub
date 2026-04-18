@@ -55,7 +55,7 @@ export function InterstitialAd({ visible, onClose, skipAfter = 5 }: Interstitial
   }, [visible, skipAfter]);
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={() => {}}>
+    <Modal visible={visible} animationType="none" transparent={false} onRequestClose={() => {}}>
       <View style={adStyles.container}>
         <View style={adStyles.header}>
           <View style={adStyles.adBadge}>
