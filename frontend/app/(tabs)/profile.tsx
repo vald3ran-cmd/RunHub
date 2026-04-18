@@ -138,6 +138,15 @@ export default function Profile() {
         ) : null}
 
         <TouchableOpacity
+          testID="community-button"
+          style={styles.row} onPress={() => router.push('/social')}
+        >
+          <Ionicons name="people" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Community (amici, feed, classifica)</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           testID="logout-button"
           style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
         >

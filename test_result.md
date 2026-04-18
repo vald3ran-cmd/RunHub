@@ -137,6 +137,34 @@ frontend:
         agent: "main"
         comment: "Pagina /admin gia' implementata, pulsante visibile in Profile solo per role='admin'. Non richiede re-test fino a richiesta utente."
 
+  - task: "Social community UI (Feed, Friends, Leaderboard, Comments)"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/social.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Creata pagina /social con tab segmentati: Feed (post amici+self, like, commenti modal), Amici (lista + richieste in/out + cerca utenti + aggiungi), Classifica (filtri weekly/monthly/all e km/runs/calories). Link da Home (CTA) e Profile (row). Registrata nel Stack root. Richiede test frontend su richiesta utente."
+
+backend:
+  - task: "Social feed endpoints (friends, feed, likes, comments, leaderboard)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Aggiunti 12 endpoints sotto /api/social/*: POST /friends/request (email), POST /friends/respond/{id}?action=accept|reject, DELETE /friends/{user_id}, GET /friends, GET /friends/requests, GET /friends/outgoing, GET /users/search?q=, GET /feed, POST/DELETE /workouts/{id}/like, GET/POST /workouts/{id}/comments, DELETE /comments/{id}, GET /leaderboard?period=&metric=. Smoke test via curl: feed, users/search, leaderboard = 200 OK."
+      - working: true
+        agent: "testing"
+        comment: "Eseguiti 42/42 test automatici via /app/backend_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. TUTTI PASS. (1) Setup: login admin + register/login alice_<ts>@test.com e bob_<ts>@test.com. (2) Friend happy path: POST /social/friends/request (email=bob) -> 200 con ok/friendship_id/target.user_id. GET /social/friends/requests per bob -> 1 incoming con from.user_id=alice. GET /social/friends/outgoing per alice -> 1 outgoing con to.user_id=bob. POST /social/friends/respond/{id}?action=accept con token alice (self) -> 400 'Non puoi rispondere a una tua richiesta'. POST stesso endpoint con token bob -> 200 status=accepted. GET /social/friends per entrambi -> lista contiene l'altro con total_km + total_runs. (3) Edge cases: self request -> 400 'Non puoi inviare una richiesta a te stesso'; already friends -> 400 \"Siete gia' amici\"; email inesistente -> 404 'Utente non trovato'. (4) Search: /social/users/search?q=bob -> bob presente con relation='friend'; ?q=a -> [] (singolo carattere); admin cerca alice -> relation='none'. (5) Feed: POST /api/workouts/complete come alice (workout_id=wk_b1, plan_id=pl_beginner_5k, title='Test Run', dur=600, km=2.0, pace=5.0, cal=150) -> 200 con session_id ws_*. GET /social/feed come bob include la sessione di alice (user.user_id=alice_uid). GET /social/feed come admin NON include la sessione di alice (admin non amico). (6) Likes: POST /social/workouts/{sid}/like come bob -> 200 likes_count=1; GET /feed come bob mostra liked_by_me=true e likes_count=1; secondo like -> 200 already_liked=true (idempotente); admin (non amico) -> 403 'Non autorizzato'; DELETE like -> 200 likes_count=0. (7) Comments: POST /comments {text:'Bravo!'} -> 200 con comment_id cm_*; text vuoto -> 400 'Commento vuoto'; GET /comments include commento di bob con user_name='Bob Sprinter'; admin POST -> 403; DELETE comment_id come autore bob -> 200; alice (session owner) puo' eliminare commento di bob -> 200. (8) Leaderboard: /leaderboard?period=weekly&metric=km come alice -> 200, entries[] contiene alice con is_me=true; monthly&runs -> 200; period=invalid -> 400 'Periodo non valido'; metric=invalid -> 400 'Metrica non valida'. Nota minor: bob non compare nella leaderboard perche' non ha sessioni completate (comportamento corretto dell'aggregation - richiede almeno 1 sessione per apparire). (9) Unfriend: DELETE /social/friends/{bob_uid} come alice -> 200; GET /social/friends dopo unfriend -> []. (10) Regression: GET /admin/users come admin -> 200 con 14 utenti; GET /plans come alice -> 200. Cleanup: DELETE /admin/users/{alice_uid} e {bob_uid} come admin -> 200 entrambi. Social feed endpoints pienamente operativi, pronti per integrazione frontend."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -144,8 +172,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Admin panel endpoints (GET/DELETE /api/admin/users)"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -155,3 +182,5 @@ agent_communication:
     message: "Fixato bug seed admin. Gli endpoint /api/admin/users (GET e DELETE) ora funzionano. Richiesta verifica backend con credenziali admin@runhub.com / admin123. Testare: (1) login admin, (2) GET /api/admin/users, (3) DELETE protezione admin, (4) DELETE utente normale con cascata dati."
   - agent: "testing"
     message: "Completato il testing dei 9 casi P0 richiesti + 2 regression (12 asserzioni totali in /app/backend_test.py). Tutti i test passano contro l'URL pubblico. Login admin ritorna role='admin' + tier='elite'. GET /admin/users ritorna 200 con array di 10 utenti, nessun password_hash esposto. RBAC funziona: 401 senza token, 403 con utente normale. Protezione delete admin funziona (400 'Impossibile eliminare un admin'). Cascade delete su utente normale verificato (ok:true + payload completo + utente rimosso dalla lista). 404 per id inesistente. Regression OK: register e GET /plans funzionano con token admin. Nota minor (non blocking): 3 utenti legacy nel DB non hanno il campo 'tier' persistito - l'UserOut model lo default-a a 'free' ma il doc Mongo grezzo non lo contiene. Funzionalita' admin pienamente operativa."
+  - agent: "testing"
+    message: "Completato testing Social Feed: 42/42 assertions PASS in /app/backend_test.py. Coverage: friend request happy path (request/accept/list/incoming/outgoing), edge cases (self 400, already-friends 400, non-existent 404), user search (relation='friend'/'none'/single-char=empty), feed visibility (friend includes alice, non-friend admin excludes), likes (like/idempotent already_liked/unlike/403 non-friend), comments (add/empty=400/list with user_name/403 non-friend/delete by author/delete by session owner alice), leaderboard (weekly-km with is_me, monthly-runs, invalid period/metric -> 400), unfriend (DELETE -> lista vuota). Regression: /admin/users e /plans OK. Cleanup: alice e bob eliminati via DELETE /admin/users/{uid}. Nota: nel leaderboard weekly, bob non appare perche' non ha sessioni completate (aggregation $match+$group richiede almeno una sessione) - comportamento atteso e corretto. Tutti gli endpoint /api/social/* sono pronti per integrazione frontend."

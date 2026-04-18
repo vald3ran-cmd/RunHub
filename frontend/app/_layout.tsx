@@ -51,6 +51,7 @@ function RootNav() {
       <Stack.Screen name="onboarding" options={{ presentation: 'card', gestureEnabled: false }} />
       <Stack.Screen name="badges" options={{ presentation: 'card' }} />
       <Stack.Screen name="admin" options={{ presentation: 'card' }} />
+      <Stack.Screen name="social" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

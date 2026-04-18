@@ -985,6 +985,357 @@ async def save_onboarding(data: OnboardingRequest, user: dict = Depends(get_curr
     )
     return {"ok": True, "recommended_plan_id": recommended}
 
+# ----------------- Social (Friends, Feed, Likes, Comments, Leaderboard) -----------------
+
+class FriendRequestIn(BaseModel):
+    email: EmailStr
+
+class CommentIn(BaseModel):
+    text: str
+
+def _friend_pair(a: str, b: str) -> List[str]:
+    return sorted([a, b])
+
+async def _users_map(user_ids: List[str]) -> Dict[str, dict]:
+    if not user_ids:
+        return {}
+    docs = await db.users.find(
+        {"user_id": {"$in": list(set(user_ids))}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "tier": 1}
+    ).to_list(1000)
+    return {d["user_id"]: d for d in docs}
+
+async def _are_friends(uid_a: str, uid_b: str) -> bool:
+    if uid_a == uid_b:
+        return True
+    pair = _friend_pair(uid_a, uid_b)
+    f = await db.friendships.find_one({"users": pair, "status": "accepted"})
+    return f is not None
+
+async def _friend_ids(user_id: str) -> List[str]:
+    cur = db.friendships.find({"users": user_id, "status": "accepted"})
+    ids: List[str] = []
+    async for f in cur:
+        for u in f["users"]:
+            if u != user_id:
+                ids.append(u)
+    return ids
+
+@api_router.post("/social/friends/request")
+async def social_friend_request(data: FriendRequestIn, user: dict = Depends(get_current_user)):
+    target = await db.users.find_one({"email": data.email.lower()}, {"_id": 0, "user_id": 1, "name": 1, "email": 1})
+    if not target:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if target["user_id"] == user["user_id"]:
+        raise HTTPException(status_code=400, detail="Non puoi inviare una richiesta a te stesso")
+    pair = _friend_pair(user["user_id"], target["user_id"])
+    existing = await db.friendships.find_one({"users": pair})
+    if existing:
+        if existing["status"] == "accepted":
+            raise HTTPException(status_code=400, detail="Siete gia' amici")
+        if existing["status"] == "pending":
+            raise HTTPException(status_code=400, detail="Richiesta gia' inviata")
+    friendship_id = f"fr_{uuid.uuid4().hex[:12]}"
+    await db.friendships.insert_one({
+        "friendship_id": friendship_id,
+        "users": pair,
+        "requested_by": user["user_id"],
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc),
+    })
+    return {"ok": True, "friendship_id": friendship_id, "target": target}
+
+@api_router.post("/social/friends/respond/{friendship_id}")
+async def social_friend_respond(friendship_id: str, action: str, user: dict = Depends(get_current_user)):
+    if action not in ("accept", "reject"):
+        raise HTTPException(status_code=400, detail="Azione non valida")
+    f = await db.friendships.find_one({"friendship_id": friendship_id})
+    if not f:
+        raise HTTPException(status_code=404, detail="Richiesta non trovata")
+    if user["user_id"] not in f["users"]:
+        raise HTTPException(status_code=403, detail="Non sei parte di questa richiesta")
+    if f["requested_by"] == user["user_id"]:
+        raise HTTPException(status_code=400, detail="Non puoi rispondere a una tua richiesta")
+    if f["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Richiesta gia' gestita")
+    if action == "accept":
+        await db.friendships.update_one(
+            {"friendship_id": friendship_id},
+            {"$set": {"status": "accepted", "accepted_at": datetime.now(timezone.utc)}}
+        )
+        return {"ok": True, "status": "accepted"}
+    else:
+        await db.friendships.delete_one({"friendship_id": friendship_id})
+        return {"ok": True, "status": "rejected"}
+
+@api_router.delete("/social/friends/{user_id}")
+async def social_unfriend(user_id: str, user: dict = Depends(get_current_user)):
+    pair = _friend_pair(user["user_id"], user_id)
+    res = await db.friendships.delete_one({"users": pair, "status": "accepted"})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Amicizia non trovata")
+    return {"ok": True}
+
+@api_router.get("/social/friends")
+async def social_friends_list(user: dict = Depends(get_current_user)):
+    friend_ids = await _friend_ids(user["user_id"])
+    umap = await _users_map(friend_ids)
+    # Attach basic stats
+    results = []
+    for fid in friend_ids:
+        u = umap.get(fid)
+        if not u:
+            continue
+        total = await db.workout_sessions.aggregate([
+            {"$match": {"user_id": fid}},
+            {"$group": {"_id": None, "km": {"$sum": "$distance_km"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        stats = total[0] if total else {"km": 0.0, "count": 0}
+        results.append({
+            "user_id": fid,
+            "name": u.get("name"),
+            "email": u.get("email"),
+            "tier": u.get("tier", "free"),
+            "total_km": round(stats.get("km") or 0.0, 2),
+            "total_runs": stats.get("count") or 0,
+        })
+    return results
+
+@api_router.get("/social/friends/requests")
+async def social_friend_requests_incoming(user: dict = Depends(get_current_user)):
+    cur = db.friendships.find({
+        "users": user["user_id"],
+        "status": "pending",
+        "requested_by": {"$ne": user["user_id"]}
+    })
+    out = []
+    async for f in cur:
+        other_id = next((u for u in f["users"] if u != user["user_id"]), None)
+        if not other_id:
+            continue
+        other = await db.users.find_one({"user_id": other_id}, {"_id": 0, "user_id": 1, "name": 1, "email": 1})
+        if other:
+            out.append({
+                "friendship_id": f["friendship_id"],
+                "from": other,
+                "created_at": f.get("created_at"),
+            })
+    return out
+
+@api_router.get("/social/friends/outgoing")
+async def social_friend_requests_outgoing(user: dict = Depends(get_current_user)):
+    cur = db.friendships.find({
+        "users": user["user_id"],
+        "status": "pending",
+        "requested_by": user["user_id"]
+    })
+    out = []
+    async for f in cur:
+        other_id = next((u for u in f["users"] if u != user["user_id"]), None)
+        other = await db.users.find_one({"user_id": other_id}, {"_id": 0, "user_id": 1, "name": 1, "email": 1})
+        if other:
+            out.append({
+                "friendship_id": f["friendship_id"],
+                "to": other,
+                "created_at": f.get("created_at"),
+            })
+    return out
+
+@api_router.get("/social/users/search")
+async def social_users_search(q: str, user: dict = Depends(get_current_user)):
+    if not q or len(q) < 2:
+        return []
+    pattern = re.escape(q.strip())
+    docs = await db.users.find(
+        {
+            "$or": [
+                {"email": {"$regex": pattern, "$options": "i"}},
+                {"name": {"$regex": pattern, "$options": "i"}},
+            ],
+            "user_id": {"$ne": user["user_id"]},
+        },
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "tier": 1}
+    ).limit(20).to_list(20)
+    # Mark friendship status
+    friend_ids = set(await _friend_ids(user["user_id"]))
+    pending_ids: set = set()
+    async for f in db.friendships.find({"users": user["user_id"], "status": "pending"}):
+        for u in f["users"]:
+            if u != user["user_id"]:
+                pending_ids.add(u)
+    for d in docs:
+        if d["user_id"] in friend_ids:
+            d["relation"] = "friend"
+        elif d["user_id"] in pending_ids:
+            d["relation"] = "pending"
+        else:
+            d["relation"] = "none"
+    return docs
+
+@api_router.get("/social/feed")
+async def social_feed(user: dict = Depends(get_current_user)):
+    friend_ids = await _friend_ids(user["user_id"])
+    user_ids = friend_ids + [user["user_id"]]
+    sessions = await db.workout_sessions.find(
+        {"user_id": {"$in": user_ids}}, {"_id": 0, "locations": 0}
+    ).sort("completed_at", -1).to_list(80)
+    if not sessions:
+        return []
+    umap = await _users_map([s["user_id"] for s in sessions])
+    session_ids = [s["session_id"] for s in sessions]
+    # Likes aggregation
+    likes_agg = await db.workout_likes.aggregate([
+        {"$match": {"session_id": {"$in": session_ids}}},
+        {"$group": {"_id": "$session_id", "count": {"$sum": 1}, "users": {"$push": "$user_id"}}}
+    ]).to_list(len(session_ids))
+    likes_map = {l["_id"]: l for l in likes_agg}
+    # Comments count
+    comments_agg = await db.workout_comments.aggregate([
+        {"$match": {"session_id": {"$in": session_ids}}},
+        {"$group": {"_id": "$session_id", "count": {"$sum": 1}}}
+    ]).to_list(len(session_ids))
+    comments_map = {c["_id"]: c["count"] for c in comments_agg}
+    out = []
+    for s in sessions:
+        u = umap.get(s["user_id"], {})
+        lk = likes_map.get(s["session_id"], {"count": 0, "users": []})
+        out.append({
+            "session_id": s["session_id"],
+            "user": {
+                "user_id": s["user_id"],
+                "name": u.get("name", "Runner"),
+                "tier": u.get("tier", "free"),
+            },
+            "title": s.get("title", "Corsa"),
+            "distance_km": s.get("distance_km", 0),
+            "duration_seconds": s.get("duration_seconds", 0),
+            "avg_pace_min_per_km": s.get("avg_pace_min_per_km"),
+            "calories": s.get("calories", 0),
+            "completed_at": s.get("completed_at"),
+            "likes_count": lk["count"],
+            "liked_by_me": user["user_id"] in lk.get("users", []),
+            "comments_count": comments_map.get(s["session_id"], 0),
+        })
+    return out
+
+@api_router.post("/social/workouts/{session_id}/like")
+async def social_like(session_id: str, user: dict = Depends(get_current_user)):
+    session = await db.workout_sessions.find_one({"session_id": session_id}, {"_id": 0, "user_id": 1})
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessione non trovata")
+    if session["user_id"] != user["user_id"] and not await _are_friends(user["user_id"], session["user_id"]):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    existing = await db.workout_likes.find_one({"session_id": session_id, "user_id": user["user_id"]})
+    if existing:
+        return {"ok": True, "already_liked": True}
+    await db.workout_likes.insert_one({
+        "like_id": f"lk_{uuid.uuid4().hex[:12]}",
+        "session_id": session_id,
+        "user_id": user["user_id"],
+        "created_at": datetime.now(timezone.utc),
+    })
+    count = await db.workout_likes.count_documents({"session_id": session_id})
+    return {"ok": True, "likes_count": count}
+
+@api_router.delete("/social/workouts/{session_id}/like")
+async def social_unlike(session_id: str, user: dict = Depends(get_current_user)):
+    await db.workout_likes.delete_one({"session_id": session_id, "user_id": user["user_id"]})
+    count = await db.workout_likes.count_documents({"session_id": session_id})
+    return {"ok": True, "likes_count": count}
+
+@api_router.get("/social/workouts/{session_id}/comments")
+async def social_comments_list(session_id: str, user: dict = Depends(get_current_user)):
+    session = await db.workout_sessions.find_one({"session_id": session_id}, {"_id": 0, "user_id": 1})
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessione non trovata")
+    if session["user_id"] != user["user_id"] and not await _are_friends(user["user_id"], session["user_id"]):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    comments = await db.workout_comments.find(
+        {"session_id": session_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(500)
+    umap = await _users_map([c["user_id"] for c in comments])
+    for c in comments:
+        u = umap.get(c["user_id"], {})
+        c["user_name"] = u.get("name", "Runner")
+    return comments
+
+@api_router.post("/social/workouts/{session_id}/comments")
+async def social_comment_add(session_id: str, data: CommentIn, user: dict = Depends(get_current_user)):
+    text = (data.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Commento vuoto")
+    if len(text) > 500:
+        raise HTTPException(status_code=400, detail="Commento troppo lungo (max 500 caratteri)")
+    session = await db.workout_sessions.find_one({"session_id": session_id}, {"_id": 0, "user_id": 1})
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessione non trovata")
+    if session["user_id"] != user["user_id"] and not await _are_friends(user["user_id"], session["user_id"]):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    comment_id = f"cm_{uuid.uuid4().hex[:12]}"
+    doc = {
+        "comment_id": comment_id,
+        "session_id": session_id,
+        "user_id": user["user_id"],
+        "user_name": user.get("name", "Runner"),
+        "text": text,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.workout_comments.insert_one(dict(doc))
+    doc.pop("_id", None)
+    return doc
+
+@api_router.delete("/social/comments/{comment_id}")
+async def social_comment_delete(comment_id: str, user: dict = Depends(get_current_user)):
+    c = await db.workout_comments.find_one({"comment_id": comment_id})
+    if not c:
+        raise HTTPException(status_code=404, detail="Commento non trovato")
+    session = await db.workout_sessions.find_one({"session_id": c["session_id"]}, {"_id": 0, "user_id": 1})
+    # Allow: comment author or session owner
+    if c["user_id"] != user["user_id"] and (not session or session["user_id"] != user["user_id"]):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    await db.workout_comments.delete_one({"comment_id": comment_id})
+    return {"ok": True}
+
+@api_router.get("/social/leaderboard")
+async def social_leaderboard(period: str = "weekly", metric: str = "km", user: dict = Depends(get_current_user)):
+    if period not in ("weekly", "monthly", "all"):
+        raise HTTPException(status_code=400, detail="Periodo non valido")
+    if metric not in ("km", "runs", "calories"):
+        raise HTTPException(status_code=400, detail="Metrica non valida")
+    now = datetime.now(timezone.utc)
+    if period == "weekly":
+        start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(days=now.weekday())
+    elif period == "monthly":
+        start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    else:
+        start = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    friend_ids = await _friend_ids(user["user_id"])
+    user_ids = friend_ids + [user["user_id"]]
+    match_field = {
+        "km": {"$sum": "$distance_km"},
+        "runs": {"$sum": 1},
+        "calories": {"$sum": "$calories"},
+    }[metric]
+    pipeline = [
+        {"$match": {"user_id": {"$in": user_ids}, "completed_at": {"$gte": start}}},
+        {"$group": {"_id": "$user_id", "value": match_field}},
+        {"$sort": {"value": -1}},
+    ]
+    rows = await db.workout_sessions.aggregate(pipeline).to_list(200)
+    umap = await _users_map([r["_id"] for r in rows])
+    out = []
+    for idx, r in enumerate(rows):
+        u = umap.get(r["_id"], {})
+        out.append({
+            "rank": idx + 1,
+            "user_id": r["_id"],
+            "name": u.get("name", "Runner"),
+            "tier": u.get("tier", "free"),
+            "value": round(r["value"] or 0, 2) if metric == "km" else int(r["value"] or 0),
+            "is_me": r["_id"] == user["user_id"],
+        })
+    return {"period": period, "metric": metric, "entries": out}
+
 # ----------------- Admin -----------------
 @api_router.get("/admin/users")
 async def admin_list_users(admin: dict = Depends(require_admin())):

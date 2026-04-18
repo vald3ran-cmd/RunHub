@@ -106,6 +106,16 @@ export default function Home() {
             </View>
             <Ionicons name="sparkles" size={22} color={colors.primary} />
           </TouchableOpacity>
+          <TouchableOpacity
+            testID="cta-social-button"
+            style={styles.ctaCard} onPress={() => router.push('/social')}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.ctaLabel}>COMMUNITY</Text>
+              <Text style={styles.ctaTitle}>Amici, feed e classifiche</Text>
+            </View>
+            <Ionicons name="people" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
         </View>
 
         <AdBanner />
