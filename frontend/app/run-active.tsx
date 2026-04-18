@@ -136,6 +136,18 @@ export default function RunActive() {
     ]);
   };
 
+  const confirmExit = () => {
+    if (elapsed < 5 && distance < 0.01) {
+      subRef.current?.remove();
+      router.back();
+      return;
+    }
+    Alert.alert('Uscire senza salvare?', 'La sessione verra\' scartata.', [
+      { text: 'Annulla', style: 'cancel' },
+      { text: 'Esci', style: 'destructive', onPress: () => { subRef.current?.remove(); router.back(); } },
+    ]);
+  };
+
   const currentStep = hasSteps && stepIndex < steps.length ? steps[stepIndex] : null;
   const pace = distance > 0 ? (elapsed / 60) / distance : 0;
 
@@ -143,6 +155,12 @@ export default function RunActive() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
         <View style={styles.headerRow}>
+          <TouchableOpacity
+            testID="exit-run-button"
+            style={styles.closeBtn} onPress={confirmExit}
+          >
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1} testID="active-run-title">{title}</Text>
         </View>
 
@@ -260,8 +278,13 @@ function RoutePreview({ coords }: { coords: { lat: number; lng: number }[] }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  headerRow: { flexDirection: 'row', alignItems: 'center' },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: '800' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  closeBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  title: { color: colors.textPrimary, fontSize: 20, fontWeight: '800', flex: 1 },
   stepBox: {
     padding: spacing.md, borderRadius: radius.lg, borderWidth: 2,
     backgroundColor: colors.surface, marginTop: spacing.md,

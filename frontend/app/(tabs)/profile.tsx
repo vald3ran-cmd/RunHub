@@ -81,7 +81,16 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={24} color="#fff" />
           </TouchableOpacity>
-        ) : null}
+        ) : (
+          <TouchableOpacity
+            testID="manage-premium-button"
+            style={styles.row} onPress={() => router.push('/premium')}
+          >
+            <Ionicons name="star" size={20} color={colors.primary} />
+            <Text style={styles.rowText}>Gestisci abbonamento Premium</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           testID="edit-goals-button"

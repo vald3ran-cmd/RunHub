@@ -109,7 +109,7 @@ export default function Premium() {
           highlight
           onPress={() => checkout('yearly')}
           loading={loading === 'yearly'}
-          disabled={user?.is_premium}
+          disabled={!!user?.is_premium}
         />
         <PlanCard
           testID="plan-monthly"
@@ -118,7 +118,7 @@ export default function Premium() {
           sub="/mese · annulla quando vuoi"
           onPress={() => checkout('monthly')}
           loading={loading === 'monthly'}
-          disabled={user?.is_premium}
+          disabled={!!user?.is_premium}
         />
 
         {polling ? (
