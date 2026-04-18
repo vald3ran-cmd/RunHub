@@ -40,11 +40,11 @@ export default function Onboarding() {
   const finish = async () => {
     setSaving(true);
     try {
-      const { data } = await api.post('/onboarding', {
+      await api.post('/onboarding', {
         level, goal, days_per_week: days,
       });
       await refresh();
-      router.replace({ pathname: '/plan/[id]', params: { id: data.recommended_plan_id } });
+      router.replace('/(tabs)/home');
     } catch (e: any) {
       Alert.alert('Errore', 'Salvataggio fallito');
     } finally { setSaving(false); }

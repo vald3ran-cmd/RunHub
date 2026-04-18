@@ -73,14 +73,24 @@ export default function PlanDetail() {
               <Ionicons name="lock-closed" size={24} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.lockTitle}>PIANO BLOCCATO</Text>
-                <Text style={styles.lockSub}>Abbonati a Starter o superiore per avviare gli allenamenti di questo piano.</Text>
+                <Text style={styles.lockSub}>Abbonati a Starter o superiore per avviare questo piano. Intanto puoi fare un run libero dalla Home!</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    testID="locked-plan-home-button"
+                    style={styles.homeBtn}
+                    onPress={() => router.replace('/(tabs)/home')}
+                  >
+                    <Ionicons name="home" size={14} color={colors.textPrimary} />
+                    <Text style={styles.homeBtnText}>HOME</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.lockBtn}
+                    onPress={() => router.push('/premium')}
+                  >
+                    <Text style={styles.lockBtnText}>UPGRADE</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity
-                style={styles.lockBtn}
-                onPress={() => router.push('/premium')}
-              >
-                <Text style={styles.lockBtnText}>UPGRADE</Text>
-              </TouchableOpacity>
             </View>
           ) : null}
           {plan.workouts.map((w: any, idx: number) => (
@@ -167,4 +177,6 @@ const styles = StyleSheet.create({
   lockSub: { color: colors.textPrimary, fontSize: 12, marginTop: 4 },
   lockBtn: { backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill },
   lockBtnText: { color: '#fff', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  homeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill },
+  homeBtnText: { color: colors.textPrimary, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
 });
