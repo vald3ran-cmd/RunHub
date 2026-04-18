@@ -87,6 +87,15 @@ export default function Profile() {
         )}
 
         <TouchableOpacity
+          testID="badges-button"
+          style={styles.row} onPress={() => router.push('/badges')}
+        >
+          <Ionicons name="trophy" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Achievement & Badge</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           testID="edit-goals-button"
           style={styles.row} onPress={() => setShowGoals(true)}
         >

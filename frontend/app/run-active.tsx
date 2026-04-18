@@ -6,6 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import * as Speech from 'expo-speech';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
 import { colors, spacing, radius, stepTypeColors, stepTypeLabels } from '../src/theme';
@@ -35,7 +36,14 @@ export default function RunActive() {
   const [permState, setPermState] = useState<string>('unknown');
   const [showAd, setShowAd] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const lastStepAnnouncedRef = useRef<number>(-1);
   const showAds = useShouldShowAds();
+
+  const speak = (text: string) => {
+    if (!audioEnabled) return;
+    try { Speech.stop(); Speech.speak(text, { language: 'it-IT', rate: 1.0 }); } catch {}
+  };
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
   const pausedRef = useRef(false);
@@ -65,15 +73,25 @@ export default function RunActive() {
         let rem = total;
         for (let i = 0; i < steps.length; i++) {
           if (rem < steps[i].duration_seconds) {
+            if (lastStepAnnouncedRef.current !== i) {
+              lastStepAnnouncedRef.current = i;
+              const step = steps[i];
+              const label = stepTypeLabels[step.type] || step.type;
+              speak(`${label}. ${step.description}`);
+            }
             setStepIndex(i); setStepElapsed(rem); return;
           }
           rem -= steps[i].duration_seconds;
+        }
+        if (lastStepAnnouncedRef.current !== steps.length) {
+          lastStepAnnouncedRef.current = steps.length;
+          speak('Allenamento completato. Ottimo lavoro!');
         }
         setStepIndex(steps.length);
       }
     }, 500);
     return () => clearInterval(id);
-  }, [running, hasSteps]);
+  }, [running, hasSteps, audioEnabled]);
 
   const requestAndStart = async () => {
     try {
@@ -264,6 +282,10 @@ export default function RunActive() {
         calories: Math.round(distance * 65),
         locations: coords,
       });
+      if (data.newly_awarded_badges && data.newly_awarded_badges.length > 0) {
+        const names = data.newly_awarded_badges.join(', ');
+        Alert.alert('🏆 Nuovo Achievement!', `Hai sbloccato: ${names}`, [{ text: 'Fantastico!' }]);
+      }
       if (showAds) {
         // Free tier → show interstitial before navigating
         setPendingSessionId(data.session_id);
@@ -318,6 +340,18 @@ export default function RunActive() {
             <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1} testID="active-run-title">{title}</Text>
+          {hasSteps ? (
+            <TouchableOpacity
+              testID="audio-toggle"
+              style={styles.audioBtn}
+              onPress={() => { setAudioEnabled(a => !a); Speech.stop(); }}
+            >
+              <Ionicons
+                name={audioEnabled ? 'volume-high' : 'volume-mute'}
+                size={20} color={audioEnabled ? colors.primary : colors.textMuted}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {hasSteps && currentStep ? (
@@ -460,6 +494,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   closeBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  audioBtn: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,

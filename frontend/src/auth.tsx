@@ -53,8 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setAuthToken(data.token);
     setUser(data.user);
   };
-
-  const logout = async () => {
     await setAuthToken(null);
     setUser(null);
     try { await api.post('/auth/logout'); } catch {}

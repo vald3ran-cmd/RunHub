@@ -1,66 +1,68 @@
-# RunHub — Product Requirements (v2)
+# RunHub — Product Requirements (v3)
 
 ## Vision
-Running app in italiano con piani personalizzati, GPS tracking live, traguardi e 4 tier di abbonamento (Free/Starter/Performance/Elite).
+App di running in italiano con piani personalizzati, GPS tracking, traguardi, 4 tier di abbonamento, AI coach, achievement, audio guidato e condivisione social.
 
 ## Stack
-- **Frontend**: React Native Expo + expo-router (dark theme, sportive design)
+- **Frontend**: React Native Expo + expo-router (dark theme)
 - **Backend**: FastAPI + MongoDB (motor)
-- **Auth**: JWT email/password (Bearer + httpOnly cookie)
-- **AI**: Claude Sonnet 4.5 via Emergent LLM Key (Performance+)
-- **Payments**: Stripe (test key) — 6 SKU (3 tier × monthly/yearly)
-- **GPS**: expo-location + SVG polyline
+- **Auth**: JWT email/password
+- **AI**: Claude Sonnet 4.5 via Emergent LLM Key
+- **Payments**: Stripe (6 SKU: 3 tier × monthly/yearly)
+- **GPS**: expo-location + react-native-maps (Apple Maps su iOS)
+- **TTS**: expo-speech (audio coach vocale in italiano)
+- **Share**: React Native Share API (social sharing)
 
 ## Tier Structure
 
-| Tier | Nome | €/mese | €/anno | Target |
-|---|---|---|---|---|
-| Free | Corri | 0 | 0 | Runner occasionali |
-| Starter | Allenati | 4.99 | 39.99 | Principianti |
-| Performance | Competi | 8.99 | 79.99 | Runner seri |
-| Elite | Coach | 14.99 | 129.99 | Coach pro |
+| Tier | Prezzo | Features chiave |
+|---|---|---|
+| **Free** | €0 | GPS illimitato, 10 corse storico, pubblicità |
+| **Starter** | €4.99/mese · €39.99/anno | Storico illimitato, piani base (5K, 10K), no ads |
+| **Performance** | €8.99/mese · €79.99/anno | AI Coach, 7 piani avanzati, VO2max, proiezione gare |
+| **Elite** | €14.99/mese · €129.99/anno | Coach dashboard (10 atleti), beta features |
 
-## Features by Tier
+## Feature Complete
 
-### Free
-- GPS tracking illimitato, mappa polyline
-- 10 corse nello storico
-- Cronologia base
+### Core
+- Auth JWT (register/login/logout) con onboarding wizard a 3 step per nuovi utenti
+- 9 piani predefiniti (beginner → expert): 5K, 10K, mezza, maratona, trail, progressione
+- 7 step types: warmup, run, recovery, sprint, walk, **stretching**, **gymnastics**
+- GPS tracking nativo con mappa Apple Maps + polyline percorso
+- AI Coach (Claude Sonnet 4.5) — tier Performance+
+- Proiezione tempi gara (Riegel) + VO2max (Jack Daniels) — Performance+
+- Coach Dashboard 10 atleti — Elite
+- Stripe subscriptions + paywall + tier gating
 
-### Starter (+ Free)
-- Storico illimitato
-- 2 piani base (5K principiante, 10K intermedio)
-- Sync cloud backup
+### Engagement (Ondata A)
+- **Onboarding wizard**: livello → obiettivo → giorni/sett → piano consigliato automatico
+- **10 Achievement/Badge**: primo run, 5/10 corse, primi 5K/10K/Mezza, totali 50/100 km, early bird, settimana perfetta — sbloccati automaticamente a fine corsa
+- **Condivisione corsa** via React Native Share (Instagram/WhatsApp/SMS/email) con km/tempo/passo/calorie
+- **Video pubblicitario interstitial** post-corsa (Free tier) + banner upgrade in Home
 
-### Performance (+ Starter)
-- 7+ piani avanzati (5K sub30, 10K competitivo, Mezza, Maratona, Trail, Progressione, Mezza Performance)
-- **AI Coach**: piani personalizzati (Claude Sonnet 4.5)
-- **Proiezione tempi gara** (formula Riegel)
-- **Stima VO2max** (formula Jack Daniels)
-- Statistiche settimanali
+### Audio (Ondata B)
+- **Audio coach vocale italiano** durante workout con piano: annuncia ogni step ("Riscaldamento: camminata veloce", "Corsa: ritmo 5:30/km")
+- **Toggle on/off** nell'header della pagina Corsa
+- Parla in it-IT via TTS nativo (expo-speech)
 
-### Elite (+ Performance)
-- **Coach Dashboard**: gestione fino a 10 atleti
-- Invito/rimozione atleti
-- Supporto prioritario (placeholder)
-
-## Step Types
-warmup, run, recovery, sprint, walk, **stretching**, **gymnastics** (ginnastica da camera)
+### Production ready (Ondata C)
+- Backend testato 21/21 (iteration 2 + nuovi endpoint badges/onboarding)
+- Permessi iOS configurati in app.json (NSLocationWhenInUseUsageDescription)
+- Permessi Android (ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION)
+- Cross-platform resolver per mappe (RouteMap.native.tsx / RouteMap.web.tsx)
+- Video ads con interfaccia 1:1 ad AdMob (swap one-liner al momento del build nativo)
 
 ## Admin
-- `admin@runhub.com / admin123` — tier `elite` a vita (3650 giorni)
+- `admin@runhub.com / admin123` — tier Elite a vita
 
-## Test Results
-- Iteration 1: 18/22 backend + 100% frontend
-- Iteration 2: **21/21 backend + 100% frontend** ✅
+## Per deploy produzione
+- **EAS Build**: serve Apple Developer ($99/anno) e Google Play Console ($25 una tantum)
+- **AdMob**: sostituire placeholder `InterstitialAd` con `AdMobInterstitial` da `react-native-google-mobile-ads`
+- **Privacy Policy + Termini d'uso**: richiesti da Apple/Google stores
+- **Notifiche push**: configurare con expo-notifications + APNs/FCM nel build nativo
+- **Sign in with Apple**: obbligatorio se offri altri social login (richiede build nativo)
 
-## Next Possible Enhancements
-- Export GPX/FIT/CSV (Performance tier)
-- Grafici mensili interattivi (pace/km/tempo)
-- Sync wearables (Apple HealthKit, Google Fit, Garmin) — richiede build nativo
-- Heatmap percorsi con Mapbox/Google Maps (richiede API key + subscription)
-- Zone cardio reali (richiede wearable per HR data)
-- Sign in with Apple (richiede build nativo iOS)
-- Audio coach vocale durante workout (TTS OpenAI)
-- Social / classifica amici
-- Sfide e achievement con badge
+## API nuove
+- `POST /api/onboarding` — salva level/goal/days e restituisce piano consigliato
+- `GET /api/badges` — lista 10 badge con status earned
+- Automatic badge awarding in `POST /api/workouts/complete` → ritorna `newly_awarded_badges[]`

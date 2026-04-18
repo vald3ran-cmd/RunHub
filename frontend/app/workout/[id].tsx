@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,12 +30,31 @@ export default function WorkoutDetail() {
   if (!session) return <View style={styles.loader}><Text style={{ color: colors.textSecondary }}>Sessione non trovata</Text></View>;
 
   const pace = session.avg_pace_min_per_km;
+
+  const onShare = async () => {
+    try {
+      const paceStr = pace ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}/km` : '';
+      const msg = `🏃 Ho appena completato una corsa con RunHub!\n\n` +
+        `📍 ${session.distance_km.toFixed(2)} km\n` +
+        `⏱️ ${formatTime(session.duration_seconds)}\n` +
+        (paceStr ? `⚡ Passo ${paceStr}\n` : '') +
+        (session.calories ? `🔥 ${session.calories} kcal\n` : '') +
+        `\nUnisciti su RunHub!`;
+      await Share.share({ message: msg, title: 'La mia corsa' });
+    } catch {}
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity testID="share-workout-button" style={styles.iconBtn} onPress={onShare}>
+            <Ionicons name="share-social" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.completedBadge}>
           <Ionicons name="checkmark-circle" size={20} color={colors.success} />
@@ -105,6 +124,8 @@ function formatTime(s: number) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   backBtn: { marginBottom: spacing.md },
   completedBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completedText: { color: colors.success, fontWeight: '900', letterSpacing: 2 },

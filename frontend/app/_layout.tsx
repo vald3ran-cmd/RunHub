@@ -40,6 +40,8 @@ function RootNav() {
       <Stack.Screen name="race-predictor" options={{ presentation: 'modal' }} />
       <Stack.Screen name="coach" options={{ presentation: 'card' }} />
       <Stack.Screen name="gps-test" options={{ presentation: 'card' }} />
+      <Stack.Screen name="onboarding" options={{ presentation: 'card', gestureEnabled: false }} />
+      <Stack.Screen name="badges" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

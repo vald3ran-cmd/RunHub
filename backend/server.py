@@ -192,6 +192,7 @@ async def register(data: RegisterRequest, response: Response):
         "tier": "free",
         "tier_expires_at": None,
         "is_premium": False,
+        "onboarding_completed": False,
         "created_at": datetime.now(timezone.utc),
     }
     await db.users.insert_one(doc)
@@ -596,6 +597,13 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
     }
     await db.workout_sessions.insert_one(doc)
     doc.pop("_id", None)
+    # Award badges
+    try:
+        newly_awarded = await award_badges(user["user_id"])
+        doc["newly_awarded_badges"] = newly_awarded
+    except Exception as e:
+        logger.error(f"badge award error: {e}")
+        doc["newly_awarded_badges"] = []
     return doc
 
 @api_router.get("/workouts/history")
@@ -867,6 +875,105 @@ async def startup():
             update["is_premium"] = True
         if update:
             await db.users.update_one({"email": admin_email}, {"$set": update})
+
+# ----------------- Achievements / Badges -----------------
+BADGES_DEFS = [
+    {"id": "first_run",       "title": "Primo passo",         "description": "Completa la tua prima corsa",              "icon": "flag",          "threshold_type": "count",      "threshold": 1},
+    {"id": "five_runs",       "title": "Runner regolare",     "description": "Completa 5 corse",                         "icon": "ribbon",        "threshold_type": "count",      "threshold": 5},
+    {"id": "ten_runs",        "title": "Abitudine creata",    "description": "Completa 10 corse",                        "icon": "medal",         "threshold_type": "count",      "threshold": 10},
+    {"id": "first_5k",        "title": "Primo 5K",            "description": "Corri 5 km in un'unica sessione",          "icon": "trophy",        "threshold_type": "single_km",  "threshold": 5.0},
+    {"id": "first_10k",       "title": "Primo 10K",           "description": "Corri 10 km in un'unica sessione",         "icon": "trophy",        "threshold_type": "single_km",  "threshold": 10.0},
+    {"id": "half_marathon",   "title": "Mezza Maratona",      "description": "Corri 21.0975 km in un'unica sessione",    "icon": "star",          "threshold_type": "single_km",  "threshold": 21.0},
+    {"id": "total_50km",      "title": "50 km totali",        "description": "Accumula 50 km totali",                    "icon": "flame",         "threshold_type": "total_km",   "threshold": 50.0},
+    {"id": "total_100km",     "title": "Centurione",          "description": "Accumula 100 km totali",                   "icon": "flame",         "threshold_type": "total_km",   "threshold": 100.0},
+    {"id": "early_bird",      "title": "Uccellino mattutino", "description": "Corri prima delle 8:00",                   "icon": "sunny",         "threshold_type": "early_run",  "threshold": 8},
+    {"id": "week_streak",     "title": "Settimana perfetta",  "description": "Corri 3 giorni diversi in una settimana",  "icon": "calendar",      "threshold_type": "week_days",  "threshold": 3},
+]
+
+async def award_badges(user_id: str):
+    """Check user's stats and award any newly-earned badges. Idempotent."""
+    earned = set(a["badge_id"] for a in await db.user_badges.find({"user_id": user_id}, {"_id": 0, "badge_id": 1}).to_list(100))
+    # Compute user stats
+    count = await db.workout_sessions.count_documents({"user_id": user_id})
+    agg = await db.workout_sessions.aggregate([
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": None, "total_km": {"$sum": "$distance_km"}, "max_km": {"$max": "$distance_km"}}},
+    ]).to_list(1)
+    total_km = (agg[0].get("total_km", 0) or 0) if agg else 0
+    max_km = (agg[0].get("max_km", 0) or 0) if agg else 0
+    # Early bird: any session completed before 8:00 UTC (approx)
+    early = await db.workout_sessions.find_one({"user_id": user_id, "$expr": {"$lt": [{"$hour": "$completed_at"}, 8]}})
+    # Week streak: at least 3 distinct days in current week
+    now = datetime.now(timezone.utc)
+    start_week = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(days=now.weekday())
+    days = await db.workout_sessions.aggregate([
+        {"$match": {"user_id": user_id, "completed_at": {"$gte": start_week}}},
+        {"$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$completed_at"}}}},
+    ]).to_list(20)
+    distinct_days = len(days)
+    newly_awarded = []
+    for b in BADGES_DEFS:
+        if b["id"] in earned:
+            continue
+        awarded = False
+        if b["threshold_type"] == "count" and count >= b["threshold"]:
+            awarded = True
+        elif b["threshold_type"] == "single_km" and max_km >= b["threshold"]:
+            awarded = True
+        elif b["threshold_type"] == "total_km" and total_km >= b["threshold"]:
+            awarded = True
+        elif b["threshold_type"] == "early_run" and early:
+            awarded = True
+        elif b["threshold_type"] == "week_days" and distinct_days >= b["threshold"]:
+            awarded = True
+        if awarded:
+            doc = {"user_id": user_id, "badge_id": b["id"], "awarded_at": datetime.now(timezone.utc)}
+            await db.user_badges.insert_one(dict(doc))
+            newly_awarded.append(b["id"])
+    return newly_awarded
+
+@api_router.get("/badges")
+async def list_badges(user: dict = Depends(get_current_user)):
+    earned = await db.user_badges.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(100)
+    earned_map = {e["badge_id"]: e.get("awarded_at") for e in earned}
+    result = []
+    for b in BADGES_DEFS:
+        item = dict(b)
+        item["earned"] = b["id"] in earned_map
+        item["awarded_at"] = earned_map.get(b["id"])
+        result.append(item)
+    return result
+
+# ----------------- Onboarding -----------------
+class OnboardingRequest(BaseModel):
+    level: str  # beginner, intermediate, expert
+    goal: str   # "5k" | "10k" | "half" | "fitness" | "weight_loss"
+    days_per_week: int = 3
+
+@api_router.post("/onboarding")
+async def save_onboarding(data: OnboardingRequest, user: dict = Depends(get_current_user)):
+    # Recommend a plan based on level + goal
+    plan_map = {
+        ("beginner", "5k"): "pl_beginner_5k",
+        ("beginner", "10k"): "pl_beginner_5k",
+        ("beginner", "fitness"): "pl_progressione_10",
+        ("beginner", "weight_loss"): "pl_progressione_10",
+        ("intermediate", "5k"): "pl_5k_sub30",
+        ("intermediate", "10k"): "pl_intermediate_10k",
+        ("intermediate", "half"): "pl_expert_half",
+        ("intermediate", "fitness"): "pl_intermediate_10k",
+        ("expert", "5k"): "pl_5k_sub30",
+        ("expert", "10k"): "pl_10k_competitivo",
+        ("expert", "half"): "pl_mezza_performance",
+        ("expert", "fitness"): "pl_10k_competitivo",
+    }
+    recommended = plan_map.get((data.level, data.goal), "pl_beginner_5k")
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"level": data.level, "goal": data.goal, "days_per_week": data.days_per_week,
+                  "onboarding_completed": True, "recommended_plan": recommended}}
+    )
+    return {"ok": True, "recommended_plan_id": recommended}
 
 @api_router.get("/")
 async def root():

@@ -24,7 +24,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email.trim().toLowerCase(), password, name.trim());
-      router.replace('/(tabs)/home');
+      router.replace('/onboarding');
     } catch (e: any) {
       const d = e?.response?.data?.detail;
       setError(typeof d === 'string' ? d : 'Registrazione fallita');
