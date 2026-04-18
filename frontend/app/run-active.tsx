@@ -29,6 +29,7 @@ export default function RunActive() {
   const [stepIndex, setStepIndex] = useState(0);
   const [stepElapsed, setStepElapsed] = useState(0);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
+  const [gpsError, setGpsError] = useState<string>('');
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
   const pausedRef = useRef(false);
@@ -70,12 +71,23 @@ export default function RunActive() {
 
   const requestAndStart = async () => {
     try {
+      // On web, check if geolocation API is even available (iframe might block it)
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+        if (!navigator.geolocation) {
+          setHasLocationPermission(false);
+          setGpsError('GPS non disponibile nel browser');
+        } else if (window.self !== window.top) {
+          // We're in an iframe — geolocation often blocked
+          setGpsError('Apri la preview in una nuova scheda del browser per usare il GPS');
+        }
+      }
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setHasLocationPermission(false);
-        // still allow run without GPS
+        setGpsError(prev => prev || 'Permesso GPS negato — cronometro attivo senza tracciamento');
       } else {
         setHasLocationPermission(true);
+        setGpsError('');
         subRef.current = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
           (loc) => {
@@ -94,12 +106,45 @@ export default function RunActive() {
           }
         );
       }
-    } catch (e) {
+    } catch (e: any) {
       setHasLocationPermission(false);
+      setGpsError(e?.message || 'Errore accesso GPS');
     }
     startTimeRef.current = Date.now();
     pausedDurationRef.current = 0;
     setRunning(true);
+  };
+
+  const retryGps = async () => {
+    setGpsError(''); setHasLocationPermission(null);
+    subRef.current?.remove();
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        setHasLocationPermission(true);
+        subRef.current = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
+          (loc) => {
+            if (pausedRef.current) return;
+            const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
+            setCoords(prev => {
+              if (prev.length > 0) {
+                const last = prev[prev.length - 1];
+                const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
+                if (d > 0.002 && d < 0.2) setDistance(x => x + d);
+              }
+              return [...prev, pt];
+            });
+          }
+        );
+      } else {
+        setHasLocationPermission(false);
+        setGpsError('Permesso negato. Controlla le impostazioni del browser/device.');
+      }
+    } catch (e: any) {
+      setHasLocationPermission(false);
+      setGpsError(e?.message || 'Errore GPS');
+    }
   };
 
   useEffect(() => {
@@ -197,12 +242,29 @@ export default function RunActive() {
 
         {coords.length > 1 ? <RoutePreview coords={coords} /> : (
           <View style={styles.mapPlaceholder}>
-            <Ionicons name="location" size={24} color={colors.textMuted} />
-            <Text style={styles.placeholderText}>
-              {hasLocationPermission === false
-                ? 'GPS non disponibile — cronometro attivo'
-                : 'In attesa del segnale GPS...'}
-            </Text>
+            <View style={styles.gpsStatusRow}>
+              <View style={[styles.gpsDot, {
+                backgroundColor: hasLocationPermission === true
+                  ? (coords.length > 0 ? colors.success : colors.warning)
+                  : hasLocationPermission === false ? colors.primary : colors.textMuted
+              }]} />
+              <Text style={styles.gpsStatusText}>
+                {hasLocationPermission === true && coords.length === 0
+                  ? 'GPS ATTIVO — IN ATTESA SEGNALE'
+                  : hasLocationPermission === true
+                  ? `GPS ATTIVO · ${coords.length} PUNTI`
+                  : hasLocationPermission === false
+                  ? 'GPS NON DISPONIBILE'
+                  : 'RICHIESTA PERMESSO GPS...'}
+              </Text>
+            </View>
+            {gpsError ? <Text style={styles.placeholderText}>{gpsError}</Text> : null}
+            {hasLocationPermission === false ? (
+              <TouchableOpacity style={styles.retryBtn} onPress={retryGps} testID="retry-gps-button">
+                <Ionicons name="refresh" size={16} color="#fff" />
+                <Text style={styles.retryText}>RIPROVA GPS</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         )}
 
@@ -305,11 +367,16 @@ const styles = StyleSheet.create({
   metricVal: { color: colors.textPrimary, fontSize: 24, fontWeight: '900' },
   metricLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 2 },
   mapPlaceholder: {
-    marginTop: spacing.lg, padding: spacing.xl, borderRadius: radius.lg,
+    marginTop: spacing.lg, padding: spacing.lg, borderRadius: radius.lg,
     backgroundColor: colors.surface, alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderColor: colors.border,
   },
-  placeholderText: { color: colors.textSecondary, fontSize: 12 },
+  gpsStatusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  gpsDot: { width: 10, height: 10, borderRadius: 5 },
+  gpsStatusText: { color: colors.textPrimary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  placeholderText: { color: colors.textSecondary, fontSize: 12, textAlign: 'center' },
+  retryBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, marginTop: spacing.sm },
+  retryText: { color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: 1 },
   routeBox: {
     marginTop: spacing.lg, padding: spacing.sm, backgroundColor: colors.surface,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
