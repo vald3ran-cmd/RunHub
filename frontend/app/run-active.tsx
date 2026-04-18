@@ -30,6 +30,7 @@ export default function RunActive() {
   const [stepElapsed, setStepElapsed] = useState(0);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
   const [gpsError, setGpsError] = useState<string>('');
+  const [permState, setPermState] = useState<string>('unknown');
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
   const pausedRef = useRef(false);
@@ -226,6 +227,18 @@ export default function RunActive() {
   };
 
   useEffect(() => {
+    // Check if permission was previously denied - helps diagnose
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
+      (navigator as any).permissions.query({ name: 'geolocation' })
+        .then((res: any) => {
+          console.log('[GPS] Initial permission state:', res.state);
+          if (res.state === 'denied') {
+            setHasLocationPermission(false);
+            setGpsError('Permesso GPS negato in precedenza. Click icona 🔒 accanto all\'URL → Posizione → Consenti → ricarica la pagina.');
+          }
+        })
+        .catch(() => {});
+    }
     requestAndStart();
     return () => { subRef.current?.remove(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -332,15 +345,15 @@ export default function RunActive() {
                   : hasLocationPermission === true
                   ? `GPS ATTIVO · ${coords.length} PUNTI`
                   : hasLocationPermission === false
-                  ? 'GPS NON DISPONIBILE'
-                  : 'RICHIESTA PERMESSO GPS...'}
+                  ? 'GPS NON ATTIVO'
+                  : 'IN ATTESA DEL GPS...'}
               </Text>
             </View>
             {gpsError ? <Text style={styles.placeholderText}>{gpsError}</Text> : null}
-            {hasLocationPermission === false ? (
+            {hasLocationPermission !== true ? (
               <TouchableOpacity style={styles.retryBtn} onPress={retryGps} testID="retry-gps-button">
-                <Ionicons name="refresh" size={16} color="#fff" />
-                <Text style={styles.retryText}>RIPROVA GPS</Text>
+                <Ionicons name="location" size={18} color="#fff" />
+                <Text style={styles.retryText}>ATTIVA GPS</Text>
               </TouchableOpacity>
             ) : null}
           </View>
