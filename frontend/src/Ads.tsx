@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Platform
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from './theme';
@@ -54,48 +54,52 @@ export function InterstitialAd({ visible, onClose, skipAfter = 5 }: Interstitial
     return () => clearInterval(id);
   }, [visible, skipAfter]);
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} animationType="none" transparent={false} onRequestClose={() => {}}>
-      <View style={adStyles.container}>
-        <View style={adStyles.header}>
-          <View style={adStyles.adBadge}>
-            <Text style={adStyles.adBadgeText}>ANNUNCIO</Text>
-          </View>
-          <TouchableOpacity
-            testID="skip-ad-button"
-            style={[adStyles.skipBtn, countdown > 0 && { opacity: 0.4 }]}
-            onPress={countdown === 0 ? onClose : undefined}
-            disabled={countdown > 0}
-          >
-            <Text style={adStyles.skipText}>
-              {countdown > 0 ? `SALTA TRA ${countdown}s` : 'SALTA ✕'}
-            </Text>
-          </TouchableOpacity>
+    <View style={adStyles.container} pointerEvents="auto">
+      <View style={adStyles.header}>
+        <View style={adStyles.adBadge}>
+          <Text style={adStyles.adBadgeText}>ANNUNCIO</Text>
         </View>
+        <TouchableOpacity
+          testID="skip-ad-button"
+          style={[adStyles.skipBtn, countdown > 0 && { opacity: 0.4 }]}
+          onPress={countdown === 0 ? onClose : undefined}
+          disabled={countdown > 0}
+        >
+          <Text style={adStyles.skipText}>
+            {countdown > 0 ? `SALTA TRA ${countdown}s` : 'SALTA ✕'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={adStyles.content}>
-          <View style={adStyles.videoBox}>
-            <Ionicons name="play-circle" size={80} color="rgba(255,255,255,0.35)" />
-            <Text style={adStyles.videoPlaceholder}>VIDEO PUBBLICITARIO</Text>
-            <ActivityIndicator color="rgba(255,255,255,0.5)" style={{ marginTop: spacing.md }} />
-          </View>
-          <Text style={adStyles.brandTag}>Simulazione placeholder · su build nativa sara\' AdMob</Text>
+      <View style={adStyles.content}>
+        <View style={adStyles.videoBox}>
+          <Ionicons name="play-circle" size={80} color="rgba(255,255,255,0.35)" />
+          <Text style={adStyles.videoPlaceholder}>VIDEO PUBBLICITARIO</Text>
+          <ActivityIndicator color="rgba(255,255,255,0.5)" style={{ marginTop: spacing.md }} />
         </View>
+        <Text style={adStyles.brandTag}>Simulazione placeholder · su build nativa sara\' AdMob</Text>
+      </View>
 
-        <View style={adStyles.upgradeBox}>
-          <Ionicons name="star" size={20} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={adStyles.upgradeTitle}>Stanco della pubblicita\'?</Text>
-            <Text style={adStyles.upgradeSub}>Passa a Starter per rimuovere tutti gli annunci</Text>
-          </View>
+      <View style={adStyles.upgradeBox}>
+        <Ionicons name="star" size={20} color={colors.primary} />
+        <View style={{ flex: 1 }}>
+          <Text style={adStyles.upgradeTitle}>Stanco della pubblicita\'?</Text>
+          <Text style={adStyles.upgradeSub}>Passa a Starter per rimuovere tutti gli annunci</Text>
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }
 
 const adStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  container: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#0a0a0a', zIndex: 999, elevation: 999,
+    paddingTop: 60,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, paddingTop: spacing.xl },
   adBadge: { backgroundColor: colors.warning, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm },
   adBadgeText: { color: '#000', fontSize: 10, fontWeight: '900', letterSpacing: 2 },
