@@ -72,6 +72,35 @@ async def get_current_user(request: Request) -> dict:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# ----------------- Tier utilities -----------------
+TIER_ORDER = {"free": 0, "starter": 1, "performance": 2, "elite": 3}
+
+def user_tier(user: dict) -> str:
+    t = user.get("tier")
+    if t in TIER_ORDER:
+        # Check expiry
+        exp = user.get("tier_expires_at")
+        if t != "free" and exp:
+            exp_dt = exp if isinstance(exp, datetime) else datetime.fromisoformat(str(exp))
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if exp_dt < datetime.now(timezone.utc):
+                return "free"
+        return t
+    # Backward compat with is_premium
+    return "performance" if user.get("is_premium") else "free"
+
+def has_tier(user: dict, min_tier: str) -> bool:
+    return TIER_ORDER.get(user_tier(user), 0) >= TIER_ORDER.get(min_tier, 0)
+
+def require_tier(min_tier: str):
+    async def dep(user: dict = Depends(get_current_user)) -> dict:
+        if not has_tier(user, min_tier):
+            raise HTTPException(status_code=403,
+                                detail=f"Funzione riservata al piano {min_tier.capitalize()} o superiore")
+        return user
+    return dep
+
 # ----------------- Models -----------------
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -87,7 +116,9 @@ class UserOut(BaseModel):
     email: str
     name: str
     level: str = "beginner"
-    is_premium: bool = False
+    tier: str = "free"
+    tier_expires_at: Optional[datetime] = None
+    is_premium: bool = False  # deprecated, kept for backward compat
     created_at: datetime
 
 class WorkoutStep(BaseModel):
@@ -158,6 +189,8 @@ async def register(data: RegisterRequest, response: Response):
         "name": data.name,
         "password_hash": hash_password(data.password),
         "level": "beginner",
+        "tier": "free",
+        "tier_expires_at": None,
         "is_premium": False,
         "created_at": datetime.now(timezone.utc),
     }
@@ -195,6 +228,7 @@ PREDEFINED_PLANS = [
         "duration_weeks": 4,
         "workouts_per_week": 3,
         "is_premium": False,
+        "required_tier": "starter",
         "is_ai_generated": False,
         "image_url": "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800",
         "workouts": [
@@ -240,6 +274,7 @@ PREDEFINED_PLANS = [
         "duration_weeks": 6,
         "workouts_per_week": 4,
         "is_premium": False,
+        "required_tier": "starter",
         "is_ai_generated": False,
         "image_url": "https://images.unsplash.com/photo-1765914448187-ee93dd13e1e6?w=800",
         "workouts": [
@@ -280,6 +315,7 @@ PREDEFINED_PLANS = [
         "duration_weeks": 8,
         "workouts_per_week": 5,
         "is_premium": False,
+        "required_tier": "performance",
         "is_ai_generated": False,
         "image_url": "https://images.unsplash.com/photo-1775225218390-34a8c5135110?w=800",
         "workouts": [
@@ -309,28 +345,37 @@ PREDEFINED_PLANS = [
 
 @api_router.get("/plans")
 async def list_plans(user: dict = Depends(get_current_user)):
-    # Predefined (accessible as-is)
-    plans = list(PREDEFINED_PLANS)
+    # Add tier info and accessibility to plans
+    tier = user_tier(user)
+    plans = []
+    for p in PREDEFINED_PLANS:
+        pc = dict(p)
+        pc["locked"] = not has_tier(user, pc.get("required_tier", "free"))
+        plans.append(pc)
     # User's AI-generated plans
     custom = await db.plans.find({"created_by": user["user_id"]}, {"_id": 0}).to_list(100)
-    return {"predefined": plans, "custom": custom}
+    for c in custom:
+        c["locked"] = False
+    return {"predefined": plans, "custom": custom, "user_tier": tier}
 
 @api_router.get("/plans/{plan_id}")
 async def get_plan(plan_id: str, user: dict = Depends(get_current_user)):
     for p in PREDEFINED_PLANS:
         if p["plan_id"] == plan_id:
+            req = p.get("required_tier", "free")
+            if not has_tier(user, req):
+                raise HTTPException(status_code=403,
+                                    detail=f"Questo piano richiede l'abbonamento {req.capitalize()} o superiore")
             return p
     plan = await db.plans.find_one({"plan_id": plan_id}, {"_id": 0})
     if not plan:
         raise HTTPException(status_code=404, detail="Piano non trovato")
-    if plan.get("is_premium") and not user.get("is_premium") and plan.get("created_by") != user["user_id"]:
-        raise HTTPException(status_code=403, detail="Piano premium richiesto")
+    if plan.get("created_by") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     return plan
 
 @api_router.post("/plans/ai-generate")
-async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(get_current_user)):
-    if not user.get("is_premium"):
-        raise HTTPException(status_code=403, detail="Funzione premium. Abbonati per generare piani personalizzati con AI.")
+async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require_tier("performance"))):
     system_msg = (
         "Sei un allenatore professionista di running. Devi generare un piano di allenamento personalizzato "
         "in formato JSON rigoroso. Rispondi SOLO con JSON valido, senza testo aggiuntivo, senza markdown. "
@@ -426,9 +471,10 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
 
 @api_router.get("/workouts/history")
 async def workouts_history(user: dict = Depends(get_current_user)):
+    limit = 10 if user_tier(user) == "free" else 200
     sessions = await db.workout_sessions.find(
         {"user_id": user["user_id"]}, {"_id": 0, "locations": 0}
-    ).sort("completed_at", -1).to_list(100)
+    ).sort("completed_at", -1).to_list(limit)
     return sessions
 
 @api_router.get("/workouts/{session_id}")
@@ -486,8 +532,12 @@ async def update_goals(data: GoalsUpdate, user: dict = Depends(get_current_user)
 
 # ----------------- Stripe -----------------
 PACKAGES = {
-    "monthly": {"amount": 9.99, "currency": "eur", "label": "Premium Mensile", "duration_days": 30},
-    "yearly": {"amount": 79.99, "currency": "eur", "label": "Premium Annuale", "duration_days": 365},
+    "starter_monthly":     {"tier": "starter",     "amount": 4.99,  "currency": "eur", "label": "Allenati Mensile",  "duration_days": 30},
+    "starter_yearly":      {"tier": "starter",     "amount": 39.99, "currency": "eur", "label": "Allenati Annuale",  "duration_days": 365},
+    "performance_monthly": {"tier": "performance", "amount": 8.99,  "currency": "eur", "label": "Competi Mensile",   "duration_days": 30},
+    "performance_yearly":  {"tier": "performance", "amount": 79.99, "currency": "eur", "label": "Competi Annuale",   "duration_days": 365},
+    "elite_monthly":       {"tier": "elite",       "amount": 14.99, "currency": "eur", "label": "Coach Mensile",     "duration_days": 30},
+    "elite_yearly":        {"tier": "elite",       "amount": 129.99,"currency": "eur", "label": "Coach Annuale",     "duration_days": 365},
 }
 
 @api_router.get("/stripe/packages")
@@ -504,7 +554,7 @@ async def stripe_checkout(data: CheckoutRequest, request: Request, user: dict = 
     stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     success_url = f"{data.origin_url}/premium-success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{data.origin_url}/premium"
-    metadata = {"user_id": user["user_id"], "package_id": data.package_id}
+    metadata = {"user_id": user["user_id"], "package_id": data.package_id, "tier": pkg["tier"]}
     req = CheckoutSessionRequest(
         amount=float(pkg["amount"]), currency=pkg["currency"],
         success_url=success_url, cancel_url=cancel_url, metadata=metadata,
@@ -530,14 +580,15 @@ async def stripe_status(session_id: str, request: Request, user: dict = Depends(
     host = str(request.base_url).rstrip("/")
     stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host}/api/webhook/stripe")
     status: CheckoutStatusResponse = await stripe.get_checkout_status(session_id)
-    # Idempotent premium upgrade
+    # Idempotent tier upgrade
     if status.payment_status == "paid" and tx["payment_status"] != "paid":
         await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"payment_status": "paid"}})
-        pkg = PACKAGES.get(tx["package_id"], PACKAGES["monthly"])
+        pkg = PACKAGES.get(tx["package_id"], PACKAGES["starter_monthly"])
         expires = datetime.now(timezone.utc) + timedelta(days=pkg["duration_days"])
         await db.users.update_one(
             {"user_id": user["user_id"]},
-            {"$set": {"is_premium": True, "premium_expires_at": expires}}
+            {"$set": {"tier": pkg["tier"], "tier_expires_at": expires,
+                      "is_premium": True}}  # keep is_premium for backward compat
         )
     return {"session_id": session_id, "status": status.status, "payment_status": status.payment_status,
             "amount_total": status.amount_total, "currency": status.currency}
@@ -557,10 +608,11 @@ async def webhook_stripe(request: Request):
         tx = await db.payment_transactions.find_one({"session_id": evt.session_id})
         if tx and tx.get("payment_status") != "paid":
             await db.payment_transactions.update_one({"session_id": evt.session_id}, {"$set": {"payment_status": "paid"}})
-            pkg = PACKAGES.get(tx["package_id"], PACKAGES["monthly"])
+            pkg = PACKAGES.get(tx["package_id"], PACKAGES["starter_monthly"])
             expires = datetime.now(timezone.utc) + timedelta(days=pkg["duration_days"])
             await db.users.update_one({"user_id": tx["user_id"]},
-                                      {"$set": {"is_premium": True, "premium_expires_at": expires}})
+                                      {"$set": {"tier": pkg["tier"], "tier_expires_at": expires,
+                                                "is_premium": True}})
     return {"ok": True}
 
 # ----------------- Startup / Seed -----------------
@@ -580,12 +632,22 @@ async def startup():
             "name": "Admin",
             "password_hash": hash_password(admin_password),
             "level": "expert",
+            "tier": "elite",
+            "tier_expires_at": datetime.now(timezone.utc) + timedelta(days=3650),
             "is_premium": True,
+            "role": "admin",
             "created_at": datetime.now(timezone.utc),
         })
-    elif not verify_password(admin_password, existing["password_hash"]):
-        await db.users.update_one({"email": admin_email},
-                                  {"$set": {"password_hash": hash_password(admin_password), "is_premium": True}})
+    else:
+        update = {}
+        if not verify_password(admin_password, existing["password_hash"]):
+            update["password_hash"] = hash_password(admin_password)
+        if existing.get("tier") != "elite":
+            update["tier"] = "elite"
+            update["tier_expires_at"] = datetime.now(timezone.utc) + timedelta(days=3650)
+            update["is_premium"] = True
+        if update:
+            await db.users.update_one({"email": admin_email}, {"$set": update})
 
 @api_router.get("/")
 async def root():

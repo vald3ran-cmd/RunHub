@@ -54,30 +54,24 @@ export default function Profile() {
         <Text style={styles.email}>{user?.email}</Text>
 
         <View style={styles.badgeRow}>
-          {user?.is_premium ? (
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Ionicons name="star" size={12} color="#fff" />
-              <Text style={styles.badgeText}>PREMIUM</Text>
-            </View>
-          ) : (
-            <View style={[styles.badge, { backgroundColor: colors.surfaceSecondary }]}>
-              <Text style={styles.badgeText}>FREE</Text>
-            </View>
-          )}
+          <View style={[styles.badge, { backgroundColor: tierColor(user?.tier || (user?.is_premium ? 'performance' : 'free')) }]}>
+            <Ionicons name="star" size={12} color="#fff" />
+            <Text style={styles.badgeText}>{tierLabel(user?.tier || (user?.is_premium ? 'performance' : 'free'))}</Text>
+          </View>
           <View style={[styles.badge, { backgroundColor: colors.surfaceSecondary }]}>
             <Text style={styles.badgeText}>{(user?.level ?? 'beginner').toUpperCase()}</Text>
           </View>
         </View>
 
-        {!user?.is_premium ? (
+        {(!user?.tier || user.tier === 'free') ? (
           <TouchableOpacity
             testID="goto-premium-button"
             style={styles.premiumCard} onPress={() => router.push('/premium')}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.premiumLabel}>UNLOCK AI COACH</Text>
-              <Text style={styles.premiumTitle}>Passa a Premium</Text>
-              <Text style={styles.premiumSub}>Piani personalizzati, ginnastica da camera, stretching avanzato</Text>
+              <Text style={styles.premiumLabel}>SBLOCCA FUNZIONI PREMIUM</Text>
+              <Text style={styles.premiumTitle}>Passa a Starter, Performance o Elite</Text>
+              <Text style={styles.premiumSub}>AI Coach, piani avanzati, analisi complete</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#fff" />
           </TouchableOpacity>
@@ -87,7 +81,7 @@ export default function Profile() {
             style={styles.row} onPress={() => router.push('/premium')}
           >
             <Ionicons name="star" size={20} color={colors.primary} />
-            <Text style={styles.rowText}>Gestisci abbonamento Premium</Text>
+            <Text style={styles.rowText}>Gestisci abbonamento</Text>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         )}
@@ -149,6 +143,19 @@ export default function Profile() {
       </Modal>
     </SafeAreaView>
   );
+}
+
+function tierColor(t: string) {
+  if (t === 'elite') return '#F59E0B';
+  if (t === 'performance') return colors.primary;
+  if (t === 'starter') return '#10B981';
+  return colors.textMuted;
+}
+function tierLabel(t: string) {
+  if (t === 'elite') return 'ELITE';
+  if (t === 'performance') return 'PERFORMANCE';
+  if (t === 'starter') return 'STARTER';
+  return 'FREE';
 }
 
 const styles = StyleSheet.create({

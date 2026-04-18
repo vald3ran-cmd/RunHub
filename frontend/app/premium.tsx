@@ -9,23 +9,68 @@ import { api } from '../src/api';
 import { useAuth } from '../src/auth';
 import { colors, spacing, radius } from '../src/theme';
 
-const FEATURES = [
-  'Piani personalizzati generati da AI',
-  'Ginnastica da camera + stretching avanzato',
-  'Programmi avanzati per mezza e maratona',
-  'Traguardi e insight personalizzati',
-  'Supporto prioritario',
+type TierKey = 'free' | 'starter' | 'performance' | 'elite';
+
+const TIERS: {
+  key: TierKey; name: string; tag: string; monthly: number; yearly: number;
+  color: string; features: string[]; target: string;
+}[] = [
+  {
+    key: 'free', name: 'Corri', tag: 'FREE', monthly: 0, yearly: 0,
+    color: colors.textMuted, target: 'Runner occasionali',
+    features: [
+      'Tracking GPS illimitato',
+      '10 corse nello storico',
+      'Mappa percorso base',
+      'Grafici base',
+    ],
+  },
+  {
+    key: 'starter', name: 'Allenati', tag: 'STARTER', monthly: 4.99, yearly: 39.99,
+    color: '#10B981', target: 'Principianti & abituali',
+    features: [
+      'Tutto di Free +',
+      'Storico illimitato',
+      '3 programmi base (5K, 10K, Mezza)',
+      'Sync cloud backup',
+    ],
+  },
+  {
+    key: 'performance', name: 'Competi', tag: 'PERFORMANCE', monthly: 8.99, yearly: 79.99,
+    color: colors.primary, target: 'Runner seri',
+    features: [
+      'Tutto di Starter +',
+      '13+ programmi avanzati',
+      'AI Coach: piani personalizzati',
+      'Zone cardio, pace target, intervalli',
+      'VO2max, carico, recupero',
+      'Analisi dislivello e cadenza',
+      'Esportazione GPX/FIT/CSV',
+    ],
+  },
+  {
+    key: 'elite', name: 'Coach', tag: 'ELITE', monthly: 14.99, yearly: 129.99,
+    color: '#F59E0B', target: 'Professionisti & coach',
+    features: [
+      'Tutto di Performance +',
+      'Gestione fino a 10 atleti',
+      'Dashboard coach',
+      'Supporto chat 24h',
+      'Accesso funzionalita\' beta',
+    ],
+  },
 ];
 
 export default function Premium() {
   const router = useRouter();
   const { user, refresh } = useAuth();
   const { session_id } = useLocalSearchParams<{ session_id?: string }>();
-  const [loading, setLoading] = useState<null | 'monthly' | 'yearly'>(null);
+  const [loading, setLoading] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
 
   useEffect(() => {
-    if (session_id) { pollStatus(String(session_id)); }
+    if (session_id) pollStatus(String(session_id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session_id]);
 
@@ -37,7 +82,7 @@ export default function Premium() {
       if (data.payment_status === 'paid') {
         await refresh();
         setPolling(false);
-        Alert.alert('Benvenuto Premium!', 'Ora puoi generare piani con AI.', [
+        Alert.alert('Abbonamento attivato!', 'Benvenuto nel tuo nuovo piano.', [
           { text: 'Inizia', onPress: () => router.replace('/(tabs)/home') }
         ]);
         return;
@@ -47,7 +92,9 @@ export default function Premium() {
     setTimeout(() => pollStatus(sid, attempts + 1), 2000);
   };
 
-  const checkout = async (packageId: 'monthly' | 'yearly') => {
+  const checkout = async (tierKey: TierKey) => {
+    if (tierKey === 'free') return;
+    const packageId = `${tierKey}_${cycle}`;
     setLoading(packageId);
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
@@ -61,7 +108,6 @@ export default function Premium() {
         window.location.href = data.url;
       } else {
         await Linking.openURL(data.url);
-        // begin polling
         pollStatus(data.session_id);
       }
     } catch (e: any) {
@@ -69,6 +115,9 @@ export default function Premium() {
       Alert.alert('Errore', typeof d === 'string' ? d : 'Checkout fallito');
     } finally { setLoading(null); }
   };
+
+  const currentTier = (user?.tier || (user?.is_premium ? 'performance' : 'free')) as TierKey;
+  const tierOrder: TierKey[] = ['free', 'starter', 'performance', 'elite'];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -79,47 +128,89 @@ export default function Premium() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.star}>
-          <Ionicons name="star" size={40} color="#fff" />
+        <Text style={styles.h1}>SCEGLI IL TUO RITMO</Text>
+        <Text style={styles.sub}>Piani progettati per ogni runner, dal principiante al coach pro</Text>
+
+        <View style={styles.cycleToggle}>
+          <TouchableOpacity
+            testID="cycle-monthly"
+            style={[styles.cycleBtn, cycle === 'monthly' && styles.cycleBtnActive]}
+            onPress={() => setCycle('monthly')}
+          >
+            <Text style={[styles.cycleText, cycle === 'monthly' && styles.cycleTextActive]}>MENSILE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="cycle-yearly"
+            style={[styles.cycleBtn, cycle === 'yearly' && styles.cycleBtnActive]}
+            onPress={() => setCycle('yearly')}
+          >
+            <Text style={[styles.cycleText, cycle === 'yearly' && styles.cycleTextActive]}>ANNUALE</Text>
+            <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>-33%</Text></View>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.title}>PREMIUM</Text>
-        <Text style={styles.sub}>Sblocca tutto il potenziale di RunHub</Text>
 
-        {user?.is_premium ? (
-          <View style={styles.activeBox}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.activeText}>Sei gia' Premium</Text>
-          </View>
-        ) : null}
+        {TIERS.map((t) => {
+          const isCurrent = t.key === currentTier;
+          const currentIdx = tierOrder.indexOf(currentTier);
+          const tierIdx = tierOrder.indexOf(t.key);
+          const isLower = tierIdx < currentIdx;
+          const price = cycle === 'monthly' ? t.monthly : t.yearly;
+          const priceLabel = t.key === 'free' ? 'GRATIS' : `€${price.toFixed(2)}`;
+          const priceSub = t.key === 'free' ? 'per sempre' : (cycle === 'monthly' ? '/mese' : '/anno');
+          const pkgId = `${t.key}_${cycle}`;
 
-        <View style={styles.featuresCard}>
-          {FEATURES.map((f, i) => (
-            <View key={i} style={styles.featRow}>
-              <Ionicons name="checkmark" size={20} color={colors.primary} />
-              <Text style={styles.featText}>{f}</Text>
+          return (
+            <View
+              key={t.key}
+              testID={`tier-card-${t.key}`}
+              style={[styles.tierCard, { borderColor: t.color },
+                t.key === 'performance' && styles.tierHighlight,
+                isCurrent && styles.tierCurrent]}
+            >
+              <View style={[styles.tierTagRow, { backgroundColor: t.color }]}>
+                <Text style={styles.tierTag}>{t.tag}</Text>
+                {t.key === 'performance' ? <Text style={styles.mostPopular}>★ PIU\' POPOLARE</Text> : null}
+                {isCurrent ? <Text style={styles.currentBadge}>✓ ATTIVO</Text> : null}
+              </View>
+              <View style={styles.tierHeader}>
+                <Text style={styles.tierName}>{t.name}</Text>
+                <Text style={styles.tierTarget}>{t.target}</Text>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceBig}>{priceLabel}</Text>
+                  <Text style={styles.priceSub}>{priceSub}</Text>
+                </View>
+              </View>
+              <View style={styles.featList}>
+                {t.features.map((f, i) => (
+                  <View key={i} style={styles.featRow}>
+                    <Ionicons name="checkmark" size={18} color={t.color} />
+                    <Text style={styles.featText}>{f}</Text>
+                  </View>
+                ))}
+              </View>
+              {t.key !== 'free' ? (
+                <TouchableOpacity
+                  testID={`subscribe-${t.key}`}
+                  style={[styles.ctaBtn, { backgroundColor: t.color }, (isCurrent || isLower) && { opacity: 0.4 }]}
+                  disabled={isCurrent || isLower || loading === pkgId}
+                  onPress={() => checkout(t.key)}
+                >
+                  {loading === pkgId ? <ActivityIndicator color="#fff" /> : (
+                    <Text style={styles.ctaBtnText}>
+                      {isCurrent ? 'PIANO ATTUALE' : isLower ? 'GIA\' ATTIVO' : 'SOTTOSCRIVI'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.ctaBtn, { backgroundColor: colors.surfaceSecondary }]}>
+                  <Text style={[styles.ctaBtnText, { color: colors.textSecondary }]}>
+                    {isCurrent ? 'PIANO ATTUALE' : 'DOWNGRADE AL FREE'}
+                  </Text>
+                </View>
+              )}
             </View>
-          ))}
-        </View>
-
-        <PlanCard
-          testID="plan-yearly"
-          label="ANNUALE · RISPARMI 33%"
-          price="€79.99"
-          sub="/anno · €6.67/mese"
-          highlight
-          onPress={() => checkout('yearly')}
-          loading={loading === 'yearly'}
-          disabled={!!user?.is_premium}
-        />
-        <PlanCard
-          testID="plan-monthly"
-          label="MENSILE"
-          price="€9.99"
-          sub="/mese · annulla quando vuoi"
-          onPress={() => checkout('monthly')}
-          loading={loading === 'monthly'}
-          disabled={!!user?.is_premium}
-        />
+          );
+        })}
 
         {polling ? (
           <View style={styles.pollingBox}>
@@ -132,40 +223,46 @@ export default function Premium() {
   );
 }
 
-function PlanCard({ label, price, sub, highlight, onPress, loading, disabled, testID }: any) {
-  return (
-    <TouchableOpacity
-      testID={testID}
-      style={[styles.planCard, highlight && styles.planCardHighlight, disabled && { opacity: 0.5 }]}
-      onPress={onPress} disabled={disabled || loading}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.planLabel, highlight && { color: '#fff' }]}>{label}</Text>
-        <Text style={[styles.planPrice, highlight && { color: '#fff' }]}>{price}<Text style={styles.planSub}>{sub}</Text></Text>
-      </View>
-      {loading ? <ActivityIndicator color={highlight ? '#fff' : colors.primary} /> :
-        <Ionicons name="chevron-forward" size={24} color={highlight ? '#fff' : colors.textPrimary} />
-      }
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  headerRow: { alignItems: 'flex-end' },
-  star: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary, alignSelf: 'center', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md },
-  title: { color: colors.textPrimary, fontSize: 40, fontWeight: '900', textAlign: 'center', marginTop: spacing.md, letterSpacing: -1 },
-  sub: { color: colors.textSecondary, textAlign: 'center', marginTop: 4 },
-  featuresCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.xl, gap: spacing.md },
+  headerRow: { alignItems: 'flex-end', marginBottom: spacing.md },
+  h1: { color: colors.textPrimary, fontSize: 32, fontWeight: '900', letterSpacing: -1, textAlign: 'center' },
+  sub: { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs, paddingHorizontal: spacing.md },
+  cycleToggle: {
+    flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.pill,
+    padding: 4, marginTop: spacing.lg, marginBottom: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  cycleBtn: { flex: 1, padding: spacing.sm, borderRadius: radius.pill, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  cycleBtnActive: { backgroundColor: colors.surfaceSecondary },
+  cycleText: { color: colors.textSecondary, fontWeight: '800', letterSpacing: 1, fontSize: 12 },
+  cycleTextActive: { color: colors.textPrimary },
+  saveBadge: { backgroundColor: colors.success, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
+  saveBadgeText: { color: '#fff', fontSize: 9, fontWeight: '900' },
+  tierCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl, borderWidth: 2,
+    marginBottom: spacing.lg, overflow: 'hidden',
+  },
+  tierHighlight: { borderWidth: 3 },
+  tierCurrent: { },
+  tierTagRow: { flexDirection: 'row', paddingHorizontal: spacing.md, paddingVertical: 6, alignItems: 'center', gap: spacing.sm },
+  tierTag: { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 2, flex: 1 },
+  mostPopular: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  currentBadge: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  tierHeader: { padding: spacing.lg, paddingBottom: spacing.md },
+  tierName: { color: colors.textPrimary, fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
+  tierTarget: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: spacing.md },
+  priceBig: { color: colors.textPrimary, fontSize: 40, fontWeight: '900', letterSpacing: -1 },
+  priceSub: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+  featList: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm },
   featRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  featText: { color: colors.textPrimary, flex: 1, fontSize: 14 },
-  planCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.md },
-  planCardHighlight: { backgroundColor: colors.primary, borderColor: colors.primary },
-  planLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  planPrice: { color: colors.textPrimary, fontSize: 28, fontWeight: '900', marginTop: 4 },
-  planSub: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
-  activeBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
-  activeText: { color: colors.success, fontWeight: '800', letterSpacing: 1 },
-  pollingBox: { alignItems: 'center', marginTop: spacing.xl, gap: spacing.sm },
+  featText: { color: colors.textPrimary, flex: 1, fontSize: 13 },
+  ctaBtn: {
+    margin: spacing.lg, marginTop: spacing.sm, padding: spacing.md,
+    borderRadius: radius.pill, alignItems: 'center',
+  },
+  ctaBtnText: { color: '#fff', fontWeight: '900', letterSpacing: 2, fontSize: 14 },
+  pollingBox: { alignItems: 'center', marginTop: spacing.lg, gap: spacing.sm },
   pollingText: { color: colors.textSecondary },
 });

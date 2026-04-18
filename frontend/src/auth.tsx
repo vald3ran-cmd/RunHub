@@ -6,6 +6,8 @@ type User = {
   email: string;
   name: string;
   level: string;
+  tier?: string;
+  tier_expires_at?: string | null;
   is_premium: boolean;
 };
 
