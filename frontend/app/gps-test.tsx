@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { colors, spacing, radius } from '../src/theme';
 
 export default function GpsTest() {
@@ -17,51 +18,83 @@ export default function GpsTest() {
   useEffect(() => {
     const i: Record<string, string> = {};
     i['Platform'] = Platform.OS;
-    if (typeof window !== 'undefined') {
-      i['URL'] = window.location.href;
-      i['Protocol'] = window.location.protocol;
-      i['In iframe?'] = (window.self !== window.top) ? 'SI (problema!)' : 'NO';
-      i['Secure context'] = String((window as any).isSecureContext);
-    }
-    if (typeof navigator !== 'undefined') {
-      i['UserAgent'] = navigator.userAgent.slice(0, 80);
-      i['geolocation API'] = navigator.geolocation ? 'DISPONIBILE' : 'MANCANTE';
-      i['permissions API'] = (navigator as any).permissions ? 'DISPONIBILE' : 'MANCANTE';
+    i['Platform Version'] = String(Platform.Version || 'n/a');
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        i['URL'] = window.location.href;
+        i['Protocol'] = window.location.protocol;
+        i['In iframe?'] = (window.self !== window.top) ? 'SI (problema!)' : 'NO';
+        i['Secure context'] = String((window as any).isSecureContext);
+      }
+      if (typeof navigator !== 'undefined') {
+        i['UserAgent'] = (navigator.userAgent || 'n/a').slice(0, 80);
+        i['geolocation API'] = navigator.geolocation ? 'DISPONIBILE' : 'MANCANTE';
+        i['permissions API'] = (navigator as any).permissions ? 'DISPONIBILE' : 'MANCANTE';
+      }
+    } else {
+      i['Mode'] = 'NATIVO (Expo Go o build)';
+      i['expo-location'] = 'Usa API nativa iOS/Android';
     }
     setInfo(i);
     log('Componente montato');
 
-    if (typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
       (navigator as any).permissions.query({ name: 'geolocation' })
         .then((res: any) => {
           log(`Stato permesso iniziale: ${res.state}`);
           setInfo(prev => ({ ...prev, 'Stato permesso': res.state }));
         })
         .catch((e: any) => log(`Errore query permesso: ${e.message}`));
+    } else if (Platform.OS !== 'web') {
+      // Check current permission status on native
+      Location.getForegroundPermissionsAsync().then(res => {
+        log(`Stato permesso iniziale: ${res.status} (canAskAgain=${res.canAskAgain})`);
+        setInfo(prev => ({ ...prev, 'Stato permesso': res.status, 'Pos. richiederlo?': String(res.canAskAgain) }));
+      }).catch(e => log(`Errore check permesso: ${e?.message}`));
     }
   }, []);
 
-  const testGps = () => {
+  const testGps = async () => {
     log('--- TEST GPS CLICCATO ---');
-    if (typeof navigator === 'undefined') { log('ERRORE: navigator non definito'); return; }
-    if (!navigator.geolocation) { log('ERRORE: navigator.geolocation non disponibile'); return; }
-    log('Chiamata getCurrentPosition...');
-    const t = setTimeout(() => log('ATTENZIONE: 15 sec passati, nessuna risposta. Il popup forse e\' stato bloccato silenziosamente.'), 15000);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        clearTimeout(t);
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+          log('ERRORE: navigator.geolocation non disponibile'); return;
+        }
+        log('Chiamata navigator.geolocation.getCurrentPosition...');
+        const t = setTimeout(() => log('ATTENZIONE: 15 sec passati, nessuna risposta.'), 15000);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clearTimeout(t);
+            log(`SUCCESSO: lat=${pos.coords.latitude.toFixed(5)}, lng=${pos.coords.longitude.toFixed(5)}`);
+            log(`Accuracy: ${pos.coords.accuracy.toFixed(0)}m`);
+          },
+          (err) => {
+            clearTimeout(t);
+            log(`ERRORE code=${err.code}: ${err.message}`);
+            if (err.code === 1) log('(PERMISSION_DENIED — utente ha negato o bloccato)');
+            if (err.code === 2) log('(POSITION_UNAVAILABLE)');
+            if (err.code === 3) log('(TIMEOUT)');
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      } else {
+        // Native (iOS/Android)
+        log('Chiamata Location.requestForegroundPermissionsAsync...');
+        const perm = await Location.requestForegroundPermissionsAsync();
+        log(`Permesso: status=${perm.status}, canAskAgain=${perm.canAskAgain}`);
+        if (perm.status !== 'granted') {
+          log('NON CONCESSO — vai in Impostazioni iOS → Privacy → Localizzazione → Expo Go → Consenti');
+          return;
+        }
+        log('Chiamata Location.getCurrentPositionAsync...');
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         log(`SUCCESSO: lat=${pos.coords.latitude.toFixed(5)}, lng=${pos.coords.longitude.toFixed(5)}`);
-        log(`Accuracy: ${pos.coords.accuracy.toFixed(0)}m`);
-      },
-      (err) => {
-        clearTimeout(t);
-        log(`ERRORE code=${err.code}: ${err.message}`);
-        if (err.code === 1) log('(PERMISSION_DENIED — utente ha negato o permesso bloccato)');
-        if (err.code === 2) log('(POSITION_UNAVAILABLE — GPS non disponibile)');
-        if (err.code === 3) log('(TIMEOUT)');
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+        log(`Accuracy: ${pos.coords.accuracy?.toFixed(0) || '?'}m`);
+      }
+    } catch (e: any) {
+      log(`EXCEPTION: ${e?.message || String(e)}`);
+    }
   };
 
   const clearLogs = () => setLogs([]);
@@ -100,7 +133,7 @@ export default function GpsTest() {
         <Text style={styles.sectionTitle}>LOG IN TEMPO REALE</Text>
         <View style={styles.logBox}>
           {logs.length === 0 ? (
-            <Text style={styles.emptyLog}>Nessun log ancora. Click &quot;TESTA GPS ORA&quot; per iniziare.</Text>
+            <Text style={styles.emptyLog}>Click &quot;TESTA GPS ORA&quot; per iniziare.</Text>
           ) : logs.map((l, i) => (
             <Text key={i} style={styles.logLine}>{l}</Text>
           ))}
