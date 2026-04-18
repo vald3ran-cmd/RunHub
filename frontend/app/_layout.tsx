@@ -50,6 +50,7 @@ function RootNav() {
       <Stack.Screen name="gps-test" options={{ presentation: 'card' }} />
       <Stack.Screen name="onboarding" options={{ presentation: 'card', gestureEnabled: false }} />
       <Stack.Screen name="badges" options={{ presentation: 'card' }} />
+      <Stack.Screen name="admin" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

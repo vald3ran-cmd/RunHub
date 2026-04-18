@@ -101,6 +101,13 @@ def require_tier(min_tier: str):
         return user
     return dep
 
+def require_admin():
+    async def dep(user: dict = Depends(get_current_user)) -> dict:
+        if user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Accesso admin richiesto")
+        return user
+    return dep
+
 # ----------------- Models -----------------
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -874,6 +881,8 @@ async def startup():
             update["tier"] = "elite"
             update["tier_expires_at"] = datetime.now(timezone.utc) + timedelta(days=3650)
             update["is_premium"] = True
+        if existing.get("role") != "admin":
+            update["role"] = "admin"
         if update:
             await db.users.update_one({"email": admin_email}, {"$set": update})
 
@@ -975,6 +984,32 @@ async def save_onboarding(data: OnboardingRequest, user: dict = Depends(get_curr
                   "onboarding_completed": True, "recommended_plan": recommended}}
     )
     return {"ok": True, "recommended_plan_id": recommended}
+
+# ----------------- Admin -----------------
+@api_router.get("/admin/users")
+async def admin_list_users(admin: dict = Depends(require_admin())):
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
+    # Enrich with workout count
+    for u in users:
+        u["workout_count"] = await db.workout_sessions.count_documents({"user_id": u["user_id"]})
+    return users
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, admin: dict = Depends(require_admin())):
+    target = await db.users.find_one({"user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if target.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Impossibile eliminare un admin")
+    # Cascade delete related data
+    await db.workout_sessions.delete_many({"user_id": user_id})
+    await db.goals.delete_many({"user_id": user_id})
+    await db.plans.delete_many({"created_by": user_id})
+    await db.user_badges.delete_many({"user_id": user_id})
+    await db.athletes.delete_many({"$or": [{"coach_id": user_id}, {"linked_user_id": user_id}]})
+    await db.payment_transactions.delete_many({"user_id": user_id})
+    await db.users.delete_one({"user_id": user_id})
+    return {"ok": True, "deleted_user_id": user_id, "email": target.get("email")}
 
 @api_router.get("/")
 async def root():

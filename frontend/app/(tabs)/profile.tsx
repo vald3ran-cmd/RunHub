@@ -126,6 +126,17 @@ export default function Profile() {
           </TouchableOpacity>
         ) : null}
 
+        {user?.role === 'admin' ? (
+          <TouchableOpacity
+            testID="admin-panel-button"
+            style={[styles.row, { borderColor: colors.primary, borderWidth: 1 }]} onPress={() => router.push('/admin')}
+          >
+            <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+            <Text style={[styles.rowText, { color: colors.primary }]}>Admin Panel</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity
           testID="logout-button"
           style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}

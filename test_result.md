@@ -101,3 +101,57 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "App di running con programmi personalizzati, 4-tier subscription Stripe, GPS tracking, AI Coach, auth JWT, onboarding, badge, TTS audio coach. Attualmente l'utente ha richiesto la possibilita' di eliminare account utenti in modalita' admin."
+
+backend:
+  - task: "Admin panel endpoints (GET/DELETE /api/admin/users)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Endpoints esistenti ma il seed admin non era idempotente: il campo role='admin' non veniva impostato sugli admin gia' esistenti in DB. Conseguenza: GET /api/admin/users restituiva 403."
+      - working: true
+        agent: "main"
+        comment: "Aggiornato startup seed per impostare role='admin' se mancante. Verificato via curl: login admin OK, GET /api/admin/users -> 200 con 9 utenti, DELETE su admin -> 400, DELETE su utente normale -> 200."
+      - working: true
+        agent: "testing"
+        comment: "Eseguiti 12/12 test automatici via /app/backend_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. PASS: (1) POST /api/auth/login admin@runhub.com/admin123 -> 200, token + user.role='admin' + tier='elite'. (2) GET /api/auth/me con Bearer token -> role='admin'. (3) GET /api/admin/users -> 200, array di 10 utenti, tutti i campi richiesti (user_id, email, name, workout_count) presenti, nessuno con password_hash esposto. (4) GET /api/admin/users senza token -> 401 'Not authenticated'. (5) GET /api/admin/users con token utente normale (appena registrato) -> 403 'Accesso admin richiesto'. (6) DELETE /api/admin/users/{admin_uid} con token admin -> 400 'Impossibile eliminare un admin'. (7a) Registrato delete_me_<ts>@test.com e DELETE con token admin -> 200 con payload {ok:true, deleted_user_id, email}. (7b) L'utente eliminato non appare piu' in GET /admin/users (cascade conferma). (8) DELETE /api/admin/users/user_doesnotexist_xyz123 -> 404 'Utente non trovato'. (9) DELETE con token non-admin -> 403. Regression: POST /api/auth/register OK; GET /api/plans con token admin OK (9 piani predefiniti). Minor (non blocking): 3 utenti legacy nel DB (test_*@runhub.com, test1@runhub.com) non hanno il campo 'tier' persistito (probabilmente creati prima dell'introduzione del campo). Non impatta la funzionalita' admin ma potrebbe essere normalizzato con una migration."
+    needs_retesting: false
+
+frontend:
+  - task: "Admin panel UI with delete users"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/admin.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pagina /admin gia' implementata, pulsante visibile in Profile solo per role='admin'. Non richiede re-test fino a richiesta utente."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Admin panel endpoints (GET/DELETE /api/admin/users)"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Fixato bug seed admin. Gli endpoint /api/admin/users (GET e DELETE) ora funzionano. Richiesta verifica backend con credenziali admin@runhub.com / admin123. Testare: (1) login admin, (2) GET /api/admin/users, (3) DELETE protezione admin, (4) DELETE utente normale con cascata dati."
+  - agent: "testing"
+    message: "Completato il testing dei 9 casi P0 richiesti + 2 regression (12 asserzioni totali in /app/backend_test.py). Tutti i test passano contro l'URL pubblico. Login admin ritorna role='admin' + tier='elite'. GET /admin/users ritorna 200 con array di 10 utenti, nessun password_hash esposto. RBAC funziona: 401 senza token, 403 con utente normale. Protezione delete admin funziona (400 'Impossibile eliminare un admin'). Cascade delete su utente normale verificato (ok:true + payload completo + utente rimosso dalla lista). 404 per id inesistente. Regression OK: register e GET /plans funzionano con token admin. Nota minor (non blocking): 3 utenti legacy nel DB non hanno il campo 'tier' persistito - l'UserOut model lo default-a a 'free' ma il doc Mongo grezzo non lo contiene. Funzionalita' admin pienamente operativa."
