@@ -33,6 +33,14 @@ export default function RunTab() {
             Necessario il permesso di localizzazione per tracciare la tua corsa.
           </Text>
         </View>
+
+        <TouchableOpacity
+          testID="gps-test-link"
+          style={styles.testLink} onPress={() => router.push('/gps-test')}
+        >
+          <Ionicons name="bug" size={14} color={colors.textSecondary} />
+          <Text style={styles.testLinkText}>Diagnostica GPS</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -57,4 +65,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg,
   },
   infoText: { color: colors.textSecondary, flex: 1, fontSize: 13 },
+  testLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginBottom: spacing.sm, padding: spacing.sm },
+  testLinkText: { color: colors.textSecondary, fontSize: 12, textDecorationLine: 'underline' },
 });

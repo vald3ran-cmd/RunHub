@@ -39,6 +39,7 @@ function RootNav() {
       <Stack.Screen name="ai-generate" options={{ presentation: 'modal' }} />
       <Stack.Screen name="race-predictor" options={{ presentation: 'modal' }} />
       <Stack.Screen name="coach" options={{ presentation: 'card' }} />
+      <Stack.Screen name="gps-test" options={{ presentation: 'card' }} />
     </Stack>
   );
 }
