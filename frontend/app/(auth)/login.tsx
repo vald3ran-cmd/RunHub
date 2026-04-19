@@ -41,7 +41,7 @@ export default function Login() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <Image source={require('../../assets/images/icon.png')} style={styles.logo} resizeMode="contain" />
+              <Image source={require('../../assets/images/logo-transparent.png')} style={styles.logo} resizeMode="contain" />
               <Text style={styles.tagline}>OGNI KM. OGNI BATTITO. OGNI TRAGUARDO.</Text>
             </View>
             <View style={styles.card}>

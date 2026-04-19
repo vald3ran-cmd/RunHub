@@ -38,7 +38,7 @@ export default function Register() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-            <Image source={require('../../assets/images/icon.png')} style={{ width: 140, height: 140 }} resizeMode="contain" />
+            <Image source={require('../../assets/images/logo-transparent.png')} style={{ width: 140, height: 140 }} resizeMode="contain" />
           </View>
           <Text style={styles.title}>UNISCITI AL BRANCO</Text>
           <Text style={styles.subtitle}>Crea il tuo profilo e inizia oggi</Text>
