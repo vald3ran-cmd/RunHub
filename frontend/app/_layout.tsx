@@ -75,6 +75,7 @@ function RootNav() {
       <Stack.Screen name="admin" options={{ presentation: 'card' }} />
       <Stack.Screen name="social" options={{ presentation: 'card' }} />
       <Stack.Screen name="heatmap" options={{ presentation: 'card' }} />
+      <Stack.Screen name="wearables" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

@@ -515,6 +515,50 @@ async def stats_all_routes(user: dict = Depends(get_current_user), limit: int = 
             })
     return out
 
+# ----------------- Wearables Sync (Apple HealthKit / Google Health Connect) -----------------
+
+class WearableSyncIn(BaseModel):
+    steps: int
+    distance_km: float
+    active_calories: float
+    heart_rate_avg: Optional[float] = None
+    platform: str  # "apple_health" | "health_connect"
+    synced_at: Optional[str] = None
+
+@api_router.post("/wearables/sync")
+async def wearables_sync(data: WearableSyncIn, user: dict = Depends(get_current_user)):
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    doc = {
+        "user_id": user["user_id"],
+        "date": today,
+        "steps": data.steps,
+        "distance_km": round(data.distance_km, 3),
+        "active_calories": round(data.active_calories, 1),
+        "heart_rate_avg": data.heart_rate_avg,
+        "platform": data.platform,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    await db.wearable_daily.update_one(
+        {"user_id": user["user_id"], "date": today},
+        {"$set": doc},
+        upsert=True,
+    )
+    return {"ok": True, "date": today.isoformat()}
+
+@api_router.get("/wearables/today")
+async def wearables_today(user: dict = Depends(get_current_user)):
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    doc = await db.wearable_daily.find_one({"user_id": user["user_id"], "date": today}, {"_id": 0})
+    return doc or {}
+
+@api_router.get("/wearables/history")
+async def wearables_history(user: dict = Depends(get_current_user), days: int = 30):
+    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
+    cursor = db.wearable_daily.find(
+        {"user_id": user["user_id"], "date": {"$gte": start}}, {"_id": 0}
+    ).sort("date", -1)
+    return await cursor.to_list(days + 5)
+
 
 class GoogleAuthIn(BaseModel):
     id_token: str

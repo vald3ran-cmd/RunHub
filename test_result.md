@@ -260,6 +260,19 @@ backend:
     stuck_count: 0
     priority: "medium"
     needs_retesting: false
+
+  - task: "Wearables sync (Apple HealthKit + Google Health Connect)"
+    implemented: true
+    working: true
+    file: "backend/server.py, frontend/src/wearables.native.ts, frontend/app/wearables.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Installati react-native-health (iOS) e react-native-health-connect (Android) con config plugins. Backend: 3 endpoints (POST /wearables/sync, GET /wearables/today, GET /wearables/history) con collection wearable_daily (upsert per giorno). Frontend: wearables.native.ts lazy-loads AppleHealthKit/HealthConnect, connectWearable() + fetchWearableStats() leggono steps/distance/calories/heart_rate. Screen /wearables mostra stats oggi, storico 7gg, pulsante SINCRONIZZA. Permissions: iOS NSHealthShare/Update + Android health READ_STEPS/DISTANCE/HEART_RATE/CALORIES. Smoke test backend: sync/today/history tutti 200 OK. Frontend wearables funziona solo in build nativa."
+
     status_history:
       - working: "NA"
         agent: "main"

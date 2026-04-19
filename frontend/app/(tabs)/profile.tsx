@@ -156,6 +156,15 @@ export default function Profile() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="wearables-button"
+          style={styles.row} onPress={() => router.push('/wearables')}
+        >
+          <Ionicons name="watch" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Wearables (Apple Health / Google Fit)</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           testID="logout-button"
           style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
         >

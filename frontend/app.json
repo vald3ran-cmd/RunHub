@@ -15,6 +15,8 @@
         "NSLocationWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSUserTrackingUsageDescription": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi.",
+        "NSHealthShareUsageDescription": "Sincronizza passi, distanza, battito e calorie da Apple Health.",
+        "NSHealthUpdateUsageDescription": "Salva le tue corse in Apple Health.",
         "SKAdNetworkItems": [
           { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
         ]
@@ -30,7 +32,12 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "com.google.android.gms.permission.AD_ID"
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.WRITE_EXERCISE"
       ]
     },
     "web": {
@@ -82,6 +89,20 @@
           "icon": "./assets/images/icon.png",
           "color": "#FF3B30",
           "defaultChannel": "default"
+        }
+      ],
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": false,
+          "healthSharePermission": "Leggi passi, distanza, battito cardiaco e calorie da Apple Health.",
+          "healthUpdatePermission": "Scrivi le tue corse su Apple Health."
+        }
+      ],
+      [
+        "react-native-health-connect",
+        {
+          "package": "com.runhub.app"
         }
       ]
     ],
