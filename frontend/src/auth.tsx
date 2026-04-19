@@ -18,6 +18,7 @@ type AuthContextType = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithSocial: (result: { token: string; user: any }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -56,6 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  const loginWithSocial = async (result: { token: string; user: any }) => {
+    await setAuthToken(result.token);
+    setUser(result.user);
+  };
+
   const logout = async () => {
     await setAuthToken(null);
     setUser(null);
@@ -63,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithSocial, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

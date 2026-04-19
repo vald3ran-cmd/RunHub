@@ -7,6 +7,7 @@ import { useRouter, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
+import { SocialAuthButtons } from '../../src/SocialAuthButtons';
 
 export default function Register() {
   const { register } = useAuth();
@@ -64,6 +65,7 @@ export default function Register() {
           >
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>CREA ACCOUNT</Text>}
           </TouchableOpacity>
+          <SocialAuthButtons mode="register" />
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity testID="goto-login-button">
               <Text style={styles.link}>Hai gia' un account? <Text style={{ color: colors.primary }}>Accedi</Text></Text>

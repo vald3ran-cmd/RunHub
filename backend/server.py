@@ -226,6 +226,132 @@ async def logout(response: Response):
 async def me(user: dict = Depends(get_current_user)):
     return user
 
+# ----------------- Social Auth (Google, Apple) -----------------
+
+class GoogleAuthIn(BaseModel):
+    id_token: str
+
+class AppleAuthIn(BaseModel):
+    identity_token: str
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+
+async def _find_or_create_oauth_user(provider: str, provider_sub: str, email: str, name: Optional[str]) -> dict:
+    """Find existing user by provider_sub OR by email; create if not exists."""
+    # 1) Match by provider sub (primary)
+    existing = await db.users.find_one({f"oauth.{provider}.sub": provider_sub})
+    if existing:
+        # Update last login
+        await db.users.update_one(
+            {"user_id": existing["user_id"]},
+            {"$set": {"last_login_at": datetime.now(timezone.utc)}}
+        )
+        return existing
+
+    # 2) Match by email (link accounts)
+    if email:
+        existing = await db.users.find_one({"email": email.lower()})
+        if existing:
+            await db.users.update_one(
+                {"user_id": existing["user_id"]},
+                {"$set": {
+                    f"oauth.{provider}": {"sub": provider_sub, "linked_at": datetime.now(timezone.utc)},
+                    "last_login_at": datetime.now(timezone.utc),
+                }}
+            )
+            return await db.users.find_one({"user_id": existing["user_id"]})
+
+    # 3) Create new user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    display_name = name or (email.split("@")[0] if email else "Runner")
+    fallback_email = email.lower() if email else f"{provider_sub}@{provider}.runhub.local"
+    doc = {
+        "user_id": user_id,
+        "email": fallback_email,
+        "name": display_name,
+        "password_hash": "",  # social accounts have no password
+        "level": "beginner",
+        "tier": "free",
+        "tier_expires_at": None,
+        "is_premium": False,
+        "onboarding_completed": False,
+        "created_at": datetime.now(timezone.utc),
+        "last_login_at": datetime.now(timezone.utc),
+        "oauth": {
+            provider: {"sub": provider_sub, "linked_at": datetime.now(timezone.utc)}
+        },
+    }
+    await db.users.insert_one(doc)
+    return doc
+
+@api_router.post("/auth/google")
+async def google_auth(data: GoogleAuthIn, response: Response):
+    """Verify Google ID token and return a RunHub JWT."""
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Google auth lib non installata")
+
+    ios_id = os.environ.get("GOOGLE_IOS_CLIENT_ID", "")
+    web_id = os.environ.get("GOOGLE_WEB_CLIENT_ID", "")
+    allowed_audiences = [x for x in (ios_id, web_id) if x]
+
+    try:
+        payload = google_id_token.verify_oauth2_token(
+            data.id_token, google_requests.Request()
+        )
+        if payload.get("aud") not in allowed_audiences:
+            raise HTTPException(status_code=401, detail=f"Audience non valida: {payload.get('aud')}")
+        if payload.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+            raise HTTPException(status_code=401, detail="Issuer non valido")
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=f"Token Google non valido: {str(e)}")
+
+    sub = payload.get("sub")
+    email = payload.get("email") or ""
+    name = payload.get("name") or payload.get("given_name")
+
+    user = await _find_or_create_oauth_user("google", sub, email, name)
+    token = create_access_token(user["user_id"], user["email"])
+    response.set_cookie("access_token", token, httponly=True, samesite="lax", max_age=604800, path="/")
+    user.pop("_id", None); user.pop("password_hash", None)
+    return {"token": token, "user": user}
+
+@api_router.post("/auth/apple")
+async def apple_auth(data: AppleAuthIn, response: Response):
+    """Verify Apple identity token (JWT) using Apple's public keys."""
+    try:
+        import jwt as pyjwt
+        from jwt import PyJWKClient
+    except ImportError:
+        raise HTTPException(status_code=500, detail="PyJWT non installata")
+
+    bundle_id = os.environ.get("APPLE_BUNDLE_ID", "com.runhub.app")
+    try:
+        jwks_client = PyJWKClient("https://appleid.apple.com/auth/keys")
+        signing_key = jwks_client.get_signing_key_from_jwt(data.identity_token)
+        payload = pyjwt.decode(
+            data.identity_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=bundle_id,
+            issuer="https://appleid.apple.com",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token Apple non valido: {str(e)}")
+
+    sub = payload.get("sub")
+    email = payload.get("email") or data.email or ""
+    name = data.name  # Apple fornisce il nome SOLO alla prima autenticazione (dal client)
+
+    user = await _find_or_create_oauth_user("apple", sub, email, name)
+    token = create_access_token(user["user_id"], user["email"])
+    response.set_cookie("access_token", token, httponly=True, samesite="lax", max_age=604800, path="/")
+    user.pop("_id", None); user.pop("password_hash", None)
+    return {"token": token, "user": user}
+
 # ----------------- Plans -----------------
 PREDEFINED_PLANS = [
     {

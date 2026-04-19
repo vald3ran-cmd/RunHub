@@ -68,7 +68,14 @@
         {
           "userTrackingPermission": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi."
         }
-      ]
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.176221098978-0it8kqsk8hp6u4tpo233bfolaeojb93g"
+        }
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true
