@@ -10,12 +10,18 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.runhub.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza"
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
+        "NSUserTrackingUsageDescription": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi.",
+        "SKAdNetworkItems": [
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
+        ]
       }
     },
     "android": {
+      "package": "com.runhub.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#09090B"
@@ -23,7 +29,8 @@
       "edgeToEdgeEnabled": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "com.google.android.gms.permission.AD_ID"
       ]
     },
     "web": {
@@ -46,6 +53,20 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#09090B"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-8711276203998030~5505621507",
+          "iosAppId": "ca-app-pub-8711276203998030~4483137691",
+          "userTrackingUsageDescription": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi."
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi."
         }
       ]
     ],

@@ -1,18 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from './theme';
 import { useAuth } from './auth';
+import { isAdMobAvailable } from './adMobConfig';
+import { RealBannerAd } from './adMobReal';
 
-// ============ BANNER AD (Free tier, Home) ============
+// ============ BANNER AD (Free tier) ============
+// If native AdMob is available -> real Google banner.
+// Otherwise -> Starter upsell placeholder (works in Expo Go / Web).
 export function AdBanner() {
   const { user } = useAuth();
   const tier = user?.tier || (user?.is_premium ? 'performance' : 'free');
   if (tier !== 'free') return null;
+  if (isAdMobAvailable) {
+    return (
+      <View style={bannerStyles.realContainer} testID="ad-banner-admob">
+        <RealBannerAd />
+      </View>
+    );
+  }
+  return <UpsellBanner />;
+}
+
+export function UpsellBanner() {
   return (
-    <View style={bannerStyles.container} testID="ad-banner-free">
+    <View style={bannerStyles.container} testID="ad-banner-upsell">
       <View style={bannerStyles.badge}>
         <Text style={bannerStyles.badgeText}>AD</Text>
       </View>
@@ -32,17 +47,22 @@ const bannerStyles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     marginHorizontal: spacing.lg, marginBottom: spacing.md,
   },
+  realContainer: {
+    marginHorizontal: 0,
+    marginBottom: spacing.md,
+    alignItems: 'center',
+  },
   badge: { backgroundColor: colors.warning, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm },
   badgeText: { color: '#000', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   title: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
   sub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
 });
 
-// ============ INTERSTITIAL AD MODAL (Free tier, post-run) ============
+// ============ INTERSTITIAL AD MODAL (fallback for non-AdMob envs) ============
 type InterstitialProps = {
   visible: boolean;
   onClose: () => void;
-  skipAfter?: number; // seconds
+  skipAfter?: number;
 };
 
 export function InterstitialAd({ visible, onClose, skipAfter = 5 }: InterstitialProps) {

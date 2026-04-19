@@ -12,6 +12,8 @@ import { api } from '../src/api';
 import { colors, spacing, radius, stepTypeColors, stepTypeLabels } from '../src/theme';
 import { RouteMap } from '../src/RouteMap';
 import { InterstitialAd, useShouldShowAds } from '../src/Ads';
+import { interstitialManager } from '../src/adMobReal';
+import { isAdMobAvailable } from '../src/adMobConfig';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -289,7 +291,19 @@ export default function RunActive() {
       if (showAds) {
         // Free tier → show interstitial before navigating
         setPendingSessionId(data.session_id);
-        setShowAd(true);
+        if (isAdMobAvailable) {
+          // Real AdMob interstitial (native builds only)
+          const shown = await interstitialManager.show();
+          if (shown) {
+            router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+            setPendingSessionId(null);
+          } else {
+            // Fall back to placeholder modal if AdMob failed to load
+            setShowAd(true);
+          }
+        } else {
+          setShowAd(true);
+        }
       } else {
         router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
       }

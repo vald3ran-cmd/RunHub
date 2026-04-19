@@ -149,6 +149,18 @@ frontend:
         agent: "main"
         comment: "Creata pagina /social con tab segmentati: Feed (post amici+self, like, commenti modal), Amici (lista + richieste in/out + cerca utenti + aggiungi), Classifica (filtri weekly/monthly/all e km/runs/calories). Link da Home (CTA) e Profile (row). Registrata nel Stack root. Richiede test frontend su richiesta utente."
 
+  - task: "Real AdMob integration (react-native-google-mobile-ads) with graceful fallback"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/adMobReal.native.tsx, frontend/src/adMobReal.web.tsx, frontend/src/Ads.tsx, frontend/app.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Integrato react-native-google-mobile-ads 16.3.2 + expo-tracking-transparency. Config plugin in app.json con iosAppId/androidAppId RunHub (ca-app-pub-8711276203998030~...). Bundle identifier impostato com.runhub.app. SKAdNetworkItems, NSUserTrackingUsageDescription e permission android AD_ID aggiunti. File platform-specific: adMobReal.native.tsx (real BannerAd + InterstitialManager singleton con preload) e adMobReal.web.tsx (stub). In __DEV__ usa TestIds Google, in prod le vere unit ID: Banner iOS 2143901506, Banner Android 9061723134, Interstitial iOS 8309854604, Interstitial Android 2638725524. AdBanner mostra real banner su native build, fallback a UpsellBanner in Expo Go/web. Post-run: real AdMob interstitial per utenti Free su native build, fallback a modal placeholder altrimenti. Richiede EAS build per vedere ads vere."
+
 backend:
   - task: "Social feed endpoints (friends, feed, likes, comments, leaderboard)"
     implemented: true

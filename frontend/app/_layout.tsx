@@ -5,11 +5,20 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/auth';
 import { colors } from '../src/theme';
+import { initializeAdMob } from '../src/adMobReal';
+import { isAdMobAvailable } from '../src/adMobConfig';
 
 function RootNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Initialize AdMob (only on native dev/prod builds, skipped in Expo Go)
+  useEffect(() => {
+    if (isAdMobAvailable) {
+      initializeAdMob().catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (loading) return;
