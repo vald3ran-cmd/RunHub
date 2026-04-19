@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../src/auth';
 import { colors } from '../src/theme';
 import { initializeAdMob } from '../src/adMobReal';
 import { isAdMobAvailable } from '../src/adMobConfig';
+import { initNotifications, registerForPushNotifications } from '../src/notifications';
 
 function RootNav() {
   const { user, loading } = useAuth();
@@ -19,6 +20,18 @@ function RootNav() {
       initializeAdMob().catch(() => {});
     }
   }, []);
+
+  // Initialize notifications handler
+  useEffect(() => {
+    initNotifications().catch(() => {});
+  }, []);
+
+  // Register for push notifications AFTER user logs in
+  useEffect(() => {
+    if (user?.user_id) {
+      registerForPushNotifications().catch(() => {});
+    }
+  }, [user?.user_id]);
 
   useEffect(() => {
     if (loading) return;

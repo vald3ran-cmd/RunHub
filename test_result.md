@@ -192,6 +192,31 @@ backend:
         agent: "testing"
         comment: "Eseguiti 42/42 test automatici via /app/backend_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. TUTTI PASS. (1) Setup: login admin + register/login alice_<ts>@test.com e bob_<ts>@test.com. (2) Friend happy path: POST /social/friends/request (email=bob) -> 200 con ok/friendship_id/target.user_id. GET /social/friends/requests per bob -> 1 incoming con from.user_id=alice. GET /social/friends/outgoing per alice -> 1 outgoing con to.user_id=bob. POST /social/friends/respond/{id}?action=accept con token alice (self) -> 400 'Non puoi rispondere a una tua richiesta'. POST stesso endpoint con token bob -> 200 status=accepted. GET /social/friends per entrambi -> lista contiene l'altro con total_km + total_runs. (3) Edge cases: self request -> 400 'Non puoi inviare una richiesta a te stesso'; already friends -> 400 \"Siete gia' amici\"; email inesistente -> 404 'Utente non trovato'. (4) Search: /social/users/search?q=bob -> bob presente con relation='friend'; ?q=a -> [] (singolo carattere); admin cerca alice -> relation='none'. (5) Feed: POST /api/workouts/complete come alice (workout_id=wk_b1, plan_id=pl_beginner_5k, title='Test Run', dur=600, km=2.0, pace=5.0, cal=150) -> 200 con session_id ws_*. GET /social/feed come bob include la sessione di alice (user.user_id=alice_uid). GET /social/feed come admin NON include la sessione di alice (admin non amico). (6) Likes: POST /social/workouts/{sid}/like come bob -> 200 likes_count=1; GET /feed come bob mostra liked_by_me=true e likes_count=1; secondo like -> 200 already_liked=true (idempotente); admin (non amico) -> 403 'Non autorizzato'; DELETE like -> 200 likes_count=0. (7) Comments: POST /comments {text:'Bravo!'} -> 200 con comment_id cm_*; text vuoto -> 400 'Commento vuoto'; GET /comments include commento di bob con user_name='Bob Sprinter'; admin POST -> 403; DELETE comment_id come autore bob -> 200; alice (session owner) puo' eliminare commento di bob -> 200. (8) Leaderboard: /leaderboard?period=weekly&metric=km come alice -> 200, entries[] contiene alice con is_me=true; monthly&runs -> 200; period=invalid -> 400 'Periodo non valido'; metric=invalid -> 400 'Metrica non valida'. Nota minor: bob non compare nella leaderboard perche' non ha sessioni completate (comportamento corretto dell'aggregation - richiede almeno 1 sessione per apparire). (9) Unfriend: DELETE /social/friends/{bob_uid} come alice -> 200; GET /social/friends dopo unfriend -> []. (10) Regression: GET /admin/users come admin -> 200 con 14 utenti; GET /plans come alice -> 200. Cleanup: DELETE /admin/users/{alice_uid} e {bob_uid} come admin -> 200 entrambi. Social feed endpoints pienamente operativi, pronti per integrazione frontend."
 
+  - task: "Push Notifications backend (Expo Push Service)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Aggiunta funzione send_expo_push(tokens, title, body, data) che invia batch via https://exp.host/--/api/v2/push/send. Endpoints: POST /api/notifications/register (salva token in users.push_tokens), POST /api/notifications/unregister, POST /api/notifications/test. Smoke test: register 200, test restituisce ticket Expo valido (DeviceNotRegistered su token fake = corretto)."
+
+  - task: "Push Notifications frontend (expo-notifications)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/notifications.native.ts, notifications.web.ts, app/_layout.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Installate expo-notifications@55 e expo-device@55. Config plugin con icon+color+channel. File platform-specific .native.ts (handler + requestPermission + getExpoPushToken + schedule locale) e .web.ts (stub). Init al boot del root layout; registrazione token automatica dopo login user. Android channels: default + workout. Funziona solo in build nativa (Expo Go SDK 53+ supporta local notifs ma remote richiede EAS build)."
+
+
 metadata:
   created_by: "main_agent"
   version: "1.0"

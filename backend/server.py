@@ -75,6 +75,43 @@ async def get_current_user(request: Request) -> dict:
 # ----------------- Tier utilities -----------------
 TIER_ORDER = {"free": 0, "starter": 1, "performance": 2, "elite": 3}
 
+# ----------------- Push Notifications (Expo Push Service) -----------------
+
+import httpx as _httpx_push
+
+async def send_expo_push(tokens: List[str], title: str, body: str, data: Optional[dict] = None) -> dict:
+    """Send push notification(s) via Expo Push Service (free, no API key required)."""
+    if not tokens:
+        return {"sent": 0, "tickets": []}
+    valid_tokens = [t for t in tokens if t and t.startswith(("ExponentPushToken[", "ExpoPushToken["))]
+    if not valid_tokens:
+        return {"sent": 0, "tickets": []}
+    messages = [
+        {
+            "to": tok,
+            "sound": "default",
+            "title": title,
+            "body": body,
+            "data": data or {},
+            "priority": "high",
+            "channelId": "default",
+        }
+        for tok in valid_tokens
+    ]
+    try:
+        async with _httpx_push.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                "https://exp.host/--/api/v2/push/send",
+                json=messages,
+                headers={"Accept": "application/json", "Accept-Encoding": "gzip, deflate", "Content-Type": "application/json"},
+            )
+            result = resp.json()
+            tickets = result.get("data", []) if isinstance(result, dict) else []
+            return {"sent": len(valid_tokens), "tickets": tickets}
+    except Exception as e:
+        logger.error(f"Expo push error: {e}")
+        return {"sent": 0, "error": str(e)}
+
 def user_tier(user: dict) -> str:
     t = user.get("tier")
     if t in TIER_ORDER:
@@ -227,6 +264,44 @@ async def me(user: dict = Depends(get_current_user)):
     return user
 
 # ----------------- Social Auth (Google, Apple) -----------------
+
+# Notification endpoints (register/unregister push tokens, send test)
+
+class RegisterTokenIn(BaseModel):
+    token: str
+    platform: Optional[str] = None
+
+class TestNotifyIn(BaseModel):
+    title: str = "Test Notification"
+    body: str = "Questa e' una notifica di test da RunHub"
+
+@api_router.post("/notifications/register")
+async def notifications_register(data: RegisterTokenIn, user: dict = Depends(get_current_user)):
+    if not data.token:
+        raise HTTPException(status_code=400, detail="Token mancante")
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$addToSet": {"push_tokens": {"token": data.token, "platform": data.platform or "unknown"}}}
+    )
+    return {"ok": True}
+
+@api_router.post("/notifications/unregister")
+async def notifications_unregister(data: RegisterTokenIn, user: dict = Depends(get_current_user)):
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$pull": {"push_tokens": {"token": data.token}}}
+    )
+    return {"ok": True}
+
+@api_router.post("/notifications/test")
+async def notifications_test(data: TestNotifyIn, user: dict = Depends(get_current_user)):
+    fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "push_tokens": 1})
+    tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
+    if not tokens:
+        raise HTTPException(status_code=400, detail="Nessun push token registrato. Apri l'app su un dispositivo nativo per registrarne uno.")
+    result = await send_expo_push(tokens, data.title, data.body, data={"type": "test"})
+    return result
+
 
 class GoogleAuthIn(BaseModel):
     id_token: str
