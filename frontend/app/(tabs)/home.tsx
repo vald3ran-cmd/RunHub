@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, RefreshControl
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, RefreshControl, Image
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,7 +54,10 @@ export default function Home() {
         >
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
-            <Text style={styles.greeting}>CIAO, {user?.name?.toUpperCase() ?? 'RUNNER'}</Text>
+            <View style={styles.heroTopRow}>
+              <Image source={require('../../assets/images/logo-transparent.png')} style={styles.heroLogo} resizeMode="contain" />
+              <Text style={styles.greeting}>CIAO{"\n"}{user?.name?.toUpperCase() ?? 'RUNNER'}</Text>
+            </View>
             <Text style={styles.heroTitle}>PRONTO A{"\n"}CORRERE?</Text>
             <TouchableOpacity
               testID="hero-start-run-button"
@@ -158,6 +161,8 @@ const styles = StyleSheet.create({
   hero: { height: 260, justifyContent: 'flex-end' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(9,9,11,0.65)' },
   heroContent: { padding: spacing.lg },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  heroLogo: { width: 52, height: 52 },
   greeting: { color: colors.textSecondary, fontSize: 12, fontWeight: '800', letterSpacing: 2 },
   heroTitle: { color: colors.textPrimary, fontSize: 40, fontWeight: '900', letterSpacing: -1, marginVertical: spacing.sm },
   heroButton: {
