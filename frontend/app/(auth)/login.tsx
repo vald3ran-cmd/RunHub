@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
-  Platform, ImageBackground, ActivityIndicator, ScrollView
+  Platform, ImageBackground, ActivityIndicator, ScrollView, Image
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,7 +41,7 @@ export default function Login() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <Text style={styles.brand} testID="brand-title">RUN<Text style={{ color: colors.primary }}>HUB</Text></Text>
+              <Image source={require('../../assets/images/icon.png')} style={styles.logo} resizeMode="contain" />
               <Text style={styles.tagline}>OGNI KM. OGNI BATTITO. OGNI TRAGUARDO.</Text>
             </View>
             <View style={styles.card}>
@@ -87,9 +87,10 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(9,9,11,0.78)' },
   safe: { flex: 1 },
   scroll: { flexGrow: 1, padding: spacing.lg, justifyContent: 'space-between' },
-  header: { marginTop: spacing.xl },
+  header: { marginTop: spacing.xl, alignItems: 'center' },
+  logo: { width: 180, height: 180, marginBottom: spacing.sm },
   brand: { fontSize: 44, fontWeight: '900', color: colors.textPrimary, letterSpacing: -1 },
-  tagline: { color: colors.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: spacing.sm, fontWeight: '700' },
+  tagline: { color: colors.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: spacing.sm, fontWeight: '700', textAlign: 'center' },
   card: {
     backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border,

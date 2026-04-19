@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
-  Platform, ActivityIndicator, ScrollView
+  Platform, ActivityIndicator, ScrollView, Image
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,7 +37,9 @@ export default function Register() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={styles.brand}>RUN<Text style={{ color: colors.primary }}>HUB</Text></Text>
+          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+            <Image source={require('../../assets/images/icon.png')} style={{ width: 140, height: 140 }} resizeMode="contain" />
+          </View>
           <Text style={styles.title}>UNISCITI AL BRANCO</Text>
           <Text style={styles.subtitle}>Crea il tuo profilo e inizia oggi</Text>
           {error ? <Text style={styles.error} testID="register-error">{error}</Text> : null}
