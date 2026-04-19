@@ -216,6 +216,55 @@ backend:
         agent: "testing"
         comment: "GET /api/stats/routes testato in /app/backend_resend_heatmap_test.py. (1) GET /stats/routes senza Authorization -> 401 'Not authenticated' come atteso. (2) GET /stats/routes con Bearer admin token -> 200 con array di 8 route dell'admin. (3) Schema verificato su ogni route: campi session_id, distance_km, completed_at, coords presenti. (4) coords e' una lista di oggetti {lat, lng} (il backend gestisce sia 'latitude'/'longitude' sia 'lat'/'lng' nel doc Mongo e normalizza in output come lat/lng). (5) Downsampling implementato (step=max(1, len(locs)//80)) per ridurre payload a ~80 punti/route. (6) Solo route con almeno 1 coord valido vengono incluse nell'output, sort by completed_at desc, limit=100 (parametrizzabile). Endpoint pronto per integrazione heatmap UI."
 
+
+  - task: "Resend Email OTP (password reset, verify email, welcome)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Aggiunto send_email() helper via Resend API. Endpoints: /auth/forgot-password, /auth/reset-password, /auth/verify-email/send, /auth/verify-email/confirm. OTP 6 cifre con scadenza 15 min, collection otp_codes. Welcome email automatica al register (fire-and-forget). 38/38 test PASS incluso E2E OTP flow completo."
+
+  - task: "Heatmap all routes endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/stats/routes restituisce array di routes [{session_id, completed_at, distance_km, coords:[{lat,lng}]}] con downsampling a ~80 punti per route. Test: 401 senza auth, 200 con admin (8 route)."
+
+  - task: "Forgot password UI frontend"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/(auth)/forgot-password.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Schermo /forgot-password a 2 step (email → codice+password) con validazione client. Link 'Password dimenticata?' aggiunto in login.tsx."
+
+  - task: "Heatmap UI frontend (polyline overlay)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/Heatmap.native.tsx, Heatmap.web.tsx, app/heatmap.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Componente Heatmap con MapView nativo e polylines colorate per recency (rosso > arancio > giallo). Schermo /heatmap accessibile da Profile. Web: fallback placeholder. Legenda colori in-app."
+
   - task: "Push Notifications backend (Expo Push Service)"
     implemented: true
     working: true
