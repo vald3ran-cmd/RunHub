@@ -147,6 +147,15 @@ export default function Profile() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="heatmap-button"
+          style={styles.row} onPress={() => router.push('/heatmap')}
+        >
+          <Ionicons name="map" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>La mia mappa corse (heatmap)</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           testID="logout-button"
           style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
         >

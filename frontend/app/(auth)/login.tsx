@@ -71,6 +71,11 @@ export default function Login() {
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>ACCEDI</Text>}
               </TouchableOpacity>
               <SocialAuthButtons mode="login" />
+              <Link href="/(auth)/forgot-password" asChild>
+                <TouchableOpacity testID="forgot-password-link">
+                  <Text style={[styles.link, { marginTop: spacing.md }]}>Password dimenticata?</Text>
+                </TouchableOpacity>
+              </Link>
               <Link href="/(auth)/register" asChild>
                 <TouchableOpacity testID="goto-register-button">
                   <Text style={styles.link}>Non hai un account? <Text style={{ color: colors.primary }}>Registrati</Text></Text>

@@ -75,9 +75,187 @@ async def get_current_user(request: Request) -> dict:
 # ----------------- Tier utilities -----------------
 TIER_ORDER = {"free": 0, "starter": 1, "performance": 2, "elite": 3}
 
+# ----------------- Password Reset & Email Verification (OTP via Resend) -----------------
+
+class OtpSendIn(BaseModel):
+    email: EmailStr
+
+class OtpVerifyIn(BaseModel):
+    email: EmailStr
+    code: str
+
+class PasswordResetIn(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
+
+def _generate_otp() -> str:
+    return str(uuid.uuid4().int)[-6:].zfill(6)
+
+async def _save_otp(email: str, code: str, purpose: str) -> None:
+    await db.otp_codes.insert_one({
+        "email": email.lower(),
+        "code": code,
+        "purpose": purpose,  # "verify_email" | "reset_password"
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),
+        "consumed": False,
+    })
+
+async def _consume_otp(email: str, code: str, purpose: str) -> bool:
+    rec = await db.otp_codes.find_one({
+        "email": email.lower(),
+        "code": code,
+        "purpose": purpose,
+        "consumed": False,
+        "expires_at": {"$gt": datetime.now(timezone.utc)},
+    })
+    if not rec:
+        return False
+    await db.otp_codes.update_one({"_id": rec["_id"]}, {"$set": {"consumed": True, "consumed_at": datetime.now(timezone.utc)}})
+    return True
+
+@api_router.post("/auth/verify-email/send")
+async def verify_email_send(data: OtpSendIn):
+    user = await db.users.find_one({"email": data.email.lower()}, {"_id": 0, "name": 1, "email_verified": 1})
+    if not user:
+        # Silent: non rivelare se email esiste
+        return {"ok": True}
+    if user.get("email_verified"):
+        return {"ok": True, "already_verified": True}
+    code = _generate_otp()
+    await _save_otp(data.email, code, "verify_email")
+    asyncio.create_task(send_email(
+        data.email.lower(),
+        f"{APP_NAME}: conferma la tua email",
+        _otp_email_html(user.get("name", "Runner"), code, "verificare la tua email"),
+        f"Il tuo codice di verifica e': {code}",
+    ))
+    return {"ok": True}
+
+@api_router.post("/auth/verify-email/confirm")
+async def verify_email_confirm(data: OtpVerifyIn):
+    ok = await _consume_otp(data.email, data.code, "verify_email")
+    if not ok:
+        raise HTTPException(status_code=400, detail="Codice non valido o scaduto")
+    await db.users.update_one(
+        {"email": data.email.lower()},
+        {"$set": {"email_verified": True, "email_verified_at": datetime.now(timezone.utc)}}
+    )
+    return {"ok": True}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: OtpSendIn):
+    user = await db.users.find_one({"email": data.email.lower()}, {"_id": 0, "name": 1})
+    if user:
+        code = _generate_otp()
+        await _save_otp(data.email, code, "reset_password")
+        asyncio.create_task(send_email(
+            data.email.lower(),
+            f"{APP_NAME}: reimposta la password",
+            _otp_email_html(user.get("name", "Runner"), code, "reimpostare la password"),
+            f"Il tuo codice per il reset password e': {code}",
+        ))
+    # Risposta uguale indipendentemente per privacy
+    return {"ok": True}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: PasswordResetIn):
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password troppo corta (min 6 caratteri)")
+    ok = await _consume_otp(data.email, data.code, "reset_password")
+    if not ok:
+        raise HTTPException(status_code=400, detail="Codice non valido o scaduto")
+    result = await db.users.update_one(
+        {"email": data.email.lower()},
+        {"$set": {"password_hash": hash_password(data.new_password), "password_changed_at": datetime.now(timezone.utc)}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    return {"ok": True}
+
 # ----------------- Push Notifications (Expo Push Service) -----------------
 
 import httpx as _httpx_push
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "RunHub <onboarding@resend.dev>")
+APP_NAME = os.environ.get("APP_NAME", "RunHub")
+
+async def send_email(to: str, subject: str, html: str, text: Optional[str] = None) -> dict:
+    """Send email via Resend API."""
+    if not RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not configured; skipping email")
+        return {"ok": False, "error": "no-api-key"}
+    try:
+        async with _httpx_push.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                "https://api.resend.com/emails",
+                json={
+                    "from": EMAIL_FROM,
+                    "to": [to],
+                    "subject": subject,
+                    "html": html,
+                    "text": text or "",
+                },
+                headers={
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+            )
+            data = resp.json() if resp.text else {}
+            if resp.status_code >= 400:
+                logger.error(f"Resend error {resp.status_code}: {data}")
+                return {"ok": False, "error": data.get("message") or str(resp.status_code)}
+            return {"ok": True, "id": data.get("id")}
+    except Exception as e:
+        logger.error(f"send_email failed: {e}")
+        return {"ok": False, "error": str(e)}
+
+def _otp_email_html(name: str, code: str, action: str) -> str:
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #09090B; color: #fff; padding: 32px; max-width: 600px; margin: 0 auto;">
+      <div style="text-align: center; padding: 24px 0;">
+        <h1 style="color: #FF3B30; font-size: 32px; margin: 0; letter-spacing: -1px;">RUN<span style="color:#fff;">HUB</span></h1>
+      </div>
+      <div style="background: #18181B; padding: 32px; border-radius: 16px; border: 1px solid #27272A;">
+        <h2 style="color: #fff; margin: 0 0 16px;">Ciao {name}!</h2>
+        <p style="color: #A1A1AA; line-height: 1.6;">Ecco il tuo codice per {action}:</p>
+        <div style="background: #FF3B30; color: #fff; padding: 24px; border-radius: 12px; text-align: center; font-size: 36px; font-weight: 900; letter-spacing: 8px; margin: 24px 0;">
+          {code}
+        </div>
+        <p style="color: #A1A1AA; font-size: 14px;">Il codice scade tra <b>15 minuti</b>. Se non hai richiesto tu questa operazione, ignora questa email.</p>
+      </div>
+      <p style="color: #71717A; font-size: 12px; text-align: center; margin-top: 24px;">
+        OGNI KM. OGNI BATTITO. OGNI TRAGUARDO.<br>
+        © 2026 {APP_NAME}
+      </p>
+    </body>
+    </html>
+    """
+
+def _welcome_email_html(name: str) -> str:
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: -apple-system, sans-serif; background: #09090B; color: #fff; padding: 32px; max-width: 600px; margin: 0 auto;">
+      <h1 style="color: #FF3B30; text-align: center;">RUN<span style="color:#fff;">HUB</span></h1>
+      <div style="background: #18181B; padding: 32px; border-radius: 16px;">
+        <h2>Benvenuto nel branco, {name}! 🏃</h2>
+        <p style="color: #A1A1AA; line-height: 1.6;">Siamo felici di averti con noi. RunHub ti aiuta a correre meglio con:</p>
+        <ul style="color: #A1A1AA; line-height: 1.8;">
+          <li>📊 Piani di allenamento personalizzati</li>
+          <li>🗺️ GPS tracking real-time</li>
+          <li>🤖 AI Coach che genera piani su misura</li>
+          <li>🏆 Badge e classifiche con amici</li>
+        </ul>
+        <p style="color: #A1A1AA;">Apri l'app e inizia la tua prima corsa!</p>
+      </div>
+    </body>
+    </html>
+    """
 
 async def send_expo_push(tokens: List[str], title: str, body: str, data: Optional[dict] = None) -> dict:
     """Send push notification(s) via Expo Push Service (free, no API key required)."""
@@ -242,6 +420,13 @@ async def register(data: RegisterRequest, response: Response):
     await db.users.insert_one(doc)
     token = create_access_token(user_id, data.email.lower())
     response.set_cookie("access_token", token, httponly=True, samesite="lax", max_age=604800, path="/")
+    # Fire-and-forget: welcome email
+    asyncio.create_task(send_email(
+        data.email.lower(),
+        f"Benvenuto in {APP_NAME}! 🏃",
+        _welcome_email_html(data.name),
+        f"Ciao {data.name}, benvenuto in {APP_NAME}! Apri l'app per iniziare.",
+    ))
     return {"token": token, "user": {k: v for k, v in doc.items() if k not in ("_id", "password_hash")}}
 
 @api_router.post("/auth/login")
@@ -301,6 +486,34 @@ async def notifications_test(data: TestNotifyIn, user: dict = Depends(get_curren
         raise HTTPException(status_code=400, detail="Nessun push token registrato. Apri l'app su un dispositivo nativo per registrarne uno.")
     result = await send_expo_push(tokens, data.title, data.body, data={"type": "test"})
     return result
+
+@api_router.get("/stats/routes")
+async def stats_all_routes(user: dict = Depends(get_current_user), limit: int = 100):
+    """Return all workout routes of user for heatmap visualization."""
+    cursor = db.workout_sessions.find(
+        {"user_id": user["user_id"]},
+        {"_id": 0, "session_id": 1, "completed_at": 1, "distance_km": 1, "locations": 1}
+    ).sort("completed_at", -1).limit(limit)
+    out = []
+    async for s in cursor:
+        locs = s.get("locations") or []
+        coords = []
+        # Downsample to reduce payload — take max ~80 points per route
+        step = max(1, len(locs) // 80) if locs else 1
+        for i in range(0, len(locs), step):
+            l = locs[i]
+            lat = l.get("latitude") or l.get("lat")
+            lng = l.get("longitude") or l.get("lng")
+            if lat is not None and lng is not None:
+                coords.append({"lat": lat, "lng": lng})
+        if coords:
+            out.append({
+                "session_id": s.get("session_id"),
+                "completed_at": s.get("completed_at"),
+                "distance_km": s.get("distance_km", 0),
+                "coords": coords,
+            })
+    return out
 
 
 class GoogleAuthIn(BaseModel):
