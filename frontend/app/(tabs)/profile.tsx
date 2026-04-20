@@ -183,6 +183,24 @@ export default function Profile() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="terms-button"
+          style={styles.row} onPress={() => router.push('/terms')}
+        >
+          <Ionicons name="document-text" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Termini di Servizio</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="privacy-button"
+          style={styles.row} onPress={() => router.push('/privacy')}
+        >
+          <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Privacy Policy</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           testID="logout-button"
           style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
         >

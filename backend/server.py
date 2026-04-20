@@ -36,6 +36,10 @@ ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
+# RevenueCat (IAP Apple/Google per build nativa)
+REVENUECAT_WEBHOOK_AUTH = os.environ.get('REVENUECAT_WEBHOOK_AUTH', '')
+REVENUECAT_SECRET_KEY = os.environ.get('REVENUECAT_SECRET_KEY', '')
+
 stripe.api_key = STRIPE_API_KEY
 
 app = FastAPI(title="RunHub API")
@@ -1573,6 +1577,138 @@ async def webhook_stripe(request: Request):
     except Exception as e:
         logger.error(f"Webhook handler error: {e}")
     return {"received": True}
+
+# ----------------- RevenueCat Webhook (Apple/Google IAP sync) -----------------
+# Mappa RevenueCat entitlements -> tier interno
+_REVENUECAT_ENTITLEMENT_TO_TIER = {
+    "elite_tier": "elite",
+    "performance_tier": "performance",
+    "starter_tier": "starter",
+}
+# Ordine di priorità (piu' alto primo)
+_REVENUECAT_TIER_PRIORITY = ["elite", "performance", "starter"]
+
+async def _apply_revenuecat_entitlements(app_user_id: str, entitlement_ids: list, expires_at_ms: Optional[int] = None, active: bool = True):
+    """Aggiorna user.tier basandosi sugli entitlements attivi ricevuti da RevenueCat."""
+    if not app_user_id:
+        return
+    # Trova user (puo' essere id custom = nostro user.id)
+    user = await db.users.find_one({"id": app_user_id})
+    if not user:
+        # Fallback: prova per email (se RC usa email come user_id)
+        user = await db.users.find_one({"email": app_user_id})
+    if not user:
+        logger.warning(f"[RevenueCat] User non trovato: {app_user_id}")
+        return
+
+    # Determina tier piu' alto attivo tra entitlement_ids
+    new_tier = "free"
+    if active and entitlement_ids:
+        tiers_attivi = [_REVENUECAT_ENTITLEMENT_TO_TIER.get(e) for e in entitlement_ids]
+        tiers_attivi = [t for t in tiers_attivi if t]
+        for priority in _REVENUECAT_TIER_PRIORITY:
+            if priority in tiers_attivi:
+                new_tier = priority
+                break
+
+    update = {
+        "tier": new_tier,
+        "is_premium": new_tier != "free",
+        "updated_at": datetime.now(timezone.utc),
+        "revenuecat_app_user_id": app_user_id,
+    }
+    if expires_at_ms:
+        update["subscription_expires_at"] = datetime.fromtimestamp(expires_at_ms / 1000, tz=timezone.utc)
+
+    await db.users.update_one({"id": user["id"]}, {"$set": update})
+    logger.info(f"[RevenueCat] User {app_user_id} -> tier={new_tier} (entitlements={entitlement_ids})")
+
+
+@api_router.post("/webhook/revenuecat")
+async def webhook_revenuecat(request: Request):
+    """
+    Riceve eventi webhook da RevenueCat (IAP Apple/Google).
+    Eventi supportati: INITIAL_PURCHASE, RENEWAL, PRODUCT_CHANGE, CANCELLATION,
+    EXPIRATION, BILLING_ISSUE, UNCANCELLATION, SUBSCRIPTION_PAUSED, TRANSFER, TEST.
+
+    Autenticazione via header Authorization: Bearer <REVENUECAT_WEBHOOK_AUTH>
+    configurato nella dashboard RevenueCat.
+    """
+    # Verifica autorizzazione (se configurata)
+    if REVENUECAT_WEBHOOK_AUTH:
+        auth_header = request.headers.get("Authorization", "")
+        expected = f"Bearer {REVENUECAT_WEBHOOK_AUTH}"
+        if auth_header != expected:
+            logger.warning(f"[RevenueCat] Auth header invalido: {auth_header[:20]}...")
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    else:
+        logger.warning("[RevenueCat] REVENUECAT_WEBHOOK_AUTH non configurato: skip verifica (DEV ONLY)")
+
+    try:
+        payload = await request.json()
+    except Exception as e:
+        logger.error(f"[RevenueCat] JSON invalido: {e}")
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+
+    event = payload.get("event", {})
+    event_type = event.get("type", "UNKNOWN")
+    app_user_id = event.get("app_user_id") or event.get("original_app_user_id")
+    entitlement_ids = event.get("entitlement_ids") or []
+    expires_at_ms = event.get("expiration_at_ms")
+
+    logger.info(f"[RevenueCat] Event: {event_type} user={app_user_id} entitlements={entitlement_ids}")
+
+    # Eventi che attivano / rinnovano subscription
+    ACTIVATE_EVENTS = {"INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "PRODUCT_CHANGE", "TRANSFER", "NON_RENEWING_PURCHASE"}
+    # Eventi che disattivano
+    DEACTIVATE_EVENTS = {"EXPIRATION", "CANCELLATION"}
+    # Eventi informativi (nessuna azione su tier)
+    INFO_EVENTS = {"TEST", "SUBSCRIBER_ALIAS", "BILLING_ISSUE", "SUBSCRIPTION_PAUSED"}
+
+    try:
+        if event_type in ACTIVATE_EVENTS:
+            await _apply_revenuecat_entitlements(app_user_id, entitlement_ids, expires_at_ms, active=True)
+        elif event_type in DEACTIVATE_EVENTS:
+            # EXPIRATION: l'entitlement non e' piu' attivo, riportiamo a free
+            # CANCELLATION: l'utente ha disdetto ma e' ancora attivo fino a expires_at
+            if event_type == "EXPIRATION":
+                await _apply_revenuecat_entitlements(app_user_id, [], None, active=False)
+            else:
+                # CANCELLATION: lasciamo il tier attivo ma salviamo la scadenza
+                user = await db.users.find_one({"id": app_user_id}) or await db.users.find_one({"email": app_user_id})
+                if user and expires_at_ms:
+                    await db.users.update_one(
+                        {"id": user["id"]},
+                        {"$set": {
+                            "subscription_cancelled": True,
+                            "subscription_expires_at": datetime.fromtimestamp(expires_at_ms / 1000, tz=timezone.utc),
+                        }}
+                    )
+        elif event_type in INFO_EVENTS:
+            logger.info(f"[RevenueCat] Info event ignorato: {event_type}")
+        else:
+            logger.warning(f"[RevenueCat] Evento sconosciuto: {event_type}")
+
+        # Log transazione in payment_transactions per audit
+        await db.payment_transactions.insert_one({
+            "id": str(uuid.uuid4()),
+            "provider": "revenuecat",
+            "event_type": event_type,
+            "app_user_id": app_user_id,
+            "entitlement_ids": entitlement_ids,
+            "product_id": event.get("product_id"),
+            "store": event.get("store"),
+            "price": event.get("price"),
+            "currency": event.get("currency"),
+            "expires_at_ms": expires_at_ms,
+            "raw_payload": json.dumps(payload)[:5000],  # limita dimensione
+            "created_at": datetime.now(timezone.utc),
+        })
+    except Exception as e:
+        logger.error(f"[RevenueCat] Handler error: {e}", exc_info=True)
+
+    # Rispondi SEMPRE 200 (RevenueCat riprova in caso di errore)
+    return {"received": True, "event_type": event_type}
 
 # ----------------- Startup / Seed -----------------
 @app.on_event("startup")

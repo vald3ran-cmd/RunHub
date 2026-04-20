@@ -8,6 +8,7 @@ import { colors } from '../src/theme';
 import { initializeAdMob } from '../src/adMobReal';
 import { isAdMobAvailable } from '../src/adMobConfig';
 import { initNotifications, registerForPushNotifications } from '../src/notifications';
+import { initRevenueCat, identifyRevenueCatUser, logoutRevenueCat } from '../src/revenuecat';
 
 function RootNav() {
   const { user, loading } = useAuth();
@@ -26,10 +27,24 @@ function RootNav() {
     initNotifications().catch(() => {});
   }, []);
 
+  // Initialize RevenueCat SDK (no-op on web)
+  useEffect(() => {
+    initRevenueCat().catch(() => {});
+  }, []);
+
   // Register for push notifications AFTER user logs in
   useEffect(() => {
     if (user?.user_id) {
       registerForPushNotifications().catch(() => {});
+    }
+  }, [user?.user_id]);
+
+  // Identify user in RevenueCat after login / logout
+  useEffect(() => {
+    if (user?.user_id) {
+      identifyRevenueCatUser(user.user_id).catch(() => {});
+    } else {
+      logoutRevenueCat().catch(() => {});
     }
   }, [user?.user_id]);
 
@@ -76,6 +91,8 @@ function RootNav() {
       <Stack.Screen name="social" options={{ presentation: 'card' }} />
       <Stack.Screen name="heatmap" options={{ presentation: 'card' }} />
       <Stack.Screen name="wearables" options={{ presentation: 'card' }} />
+      <Stack.Screen name="terms" options={{ presentation: 'card' }} />
+      <Stack.Screen name="privacy" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

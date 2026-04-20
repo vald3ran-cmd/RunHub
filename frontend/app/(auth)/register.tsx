@@ -65,6 +65,17 @@ export default function Register() {
           >
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>CREA ACCOUNT</Text>}
           </TouchableOpacity>
+          <Text style={styles.consent}>
+            Creando un account accetti i nostri{' '}
+            <Link href="/terms" asChild>
+              <Text style={{ color: colors.primary, textDecorationLine: 'underline' }}>Termini di Servizio</Text>
+            </Link>
+            {' '}e la{' '}
+            <Link href="/privacy" asChild>
+              <Text style={{ color: colors.primary, textDecorationLine: 'underline' }}>Privacy Policy</Text>
+            </Link>
+            .
+          </Text>
           <SocialAuthButtons mode="register" />
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity testID="goto-login-button">
@@ -95,4 +106,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 2 },
   link: { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.lg },
   error: { color: colors.primary, marginBottom: spacing.md, fontWeight: '600' },
+  consent: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: spacing.md, lineHeight: 18, paddingHorizontal: spacing.sm },
 });

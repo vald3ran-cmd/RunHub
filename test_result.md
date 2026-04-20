@@ -347,20 +347,14 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Frontend E2E smoke test (post-Render deployment)"
-    - "Auth flows (login admin, register new user, Google/Apple buttons rendering)"
-    - "Onboarding wizard"
-    - "Tab navigation (Home, Plans, Run, History, Profile)"
-    - "Training plans list + AI plan generation UI"
-    - "Stripe subscription UI (package selection + redirect to Checkout)"
-    - "Social feed (friends, likes, comments, leaderboard rendering)"
-    - "Safe area & keyboard handling on mobile viewports"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
+  - agent: "main"
+    message: "RevenueCat integration (Step 1/2): installed react-native-purchases@10.0.1 + react-native-purchases-ui@10.0.1. Created platform-specific modules /app/frontend/src/revenuecat.native.ts (init, identify, logIn, logOut, fetchOfferings, purchasePackage, restorePurchases, getCustomerInfo, hasActiveEntitlement, getActiveTier, addCustomerInfoListener) and /app/frontend/src/revenuecat.web.ts (stub returning no-op). Init called in /app/frontend/app/_layout.tsx at app boot. User identified after login via identifyRevenueCatUser(user.user_id) and logged out on logout. Added backend env vars REVENUECAT_WEBHOOK_AUTH and REVENUECAT_SECRET_KEY. Added POST /api/webhook/revenuecat endpoint in /app/backend/server.py that: verifies Bearer auth header, parses event (INITIAL_PURCHASE / RENEWAL / CANCELLATION / EXPIRATION / PRODUCT_CHANGE / UNCANCELLATION / TRANSFER / TEST / etc), maps entitlement_ids (elite_tier/performance_tier/starter_tier) to user.tier (elite/performance/starter/free), updates subscription_expires_at, logs audit trail to payment_transactions collection. Returns 200 always to prevent retry loops. Tested locally with TEST event -> 200 OK. Added Terms of Service (/app/frontend/app/terms.tsx) and Privacy Policy (/app/frontend/app/privacy.tsx) screens in Italian with GDPR compliance. Added Profile menu entries + consent disclaimer on Register screen linking to both. Registered new Stack.Screen routes. Created comprehensive setup guide /app/docs/REVENUECAT_SETUP.md covering: account creation, App Store Connect + Play Console product creation (6 products x 2 platforms), RevenueCat dashboard config (apps, products import, entitlements, offering), webhook setup with auth header, env vars on Render, API keys in eas.json, sandbox testing, troubleshooting. Also created /app/docs/EAS_BUILD_GUIDE.md with TestFlight + Play Internal Testing full walkthrough. Backend already deployed to Render (https://runhub-backend.onrender.com) with Stripe webhook live + verified. Lint clean."
   - agent: "main"
     message: "Fixato bug seed admin. Gli endpoint /api/admin/users (GET e DELETE) ora funzionano. Richiesta verifica backend con credenziali admin@runhub.com / admin123. Testare: (1) login admin, (2) GET /api/admin/users, (3) DELETE protezione admin, (4) DELETE utente normale con cascata dati."
   - agent: "testing"
