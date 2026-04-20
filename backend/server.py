@@ -469,10 +469,9 @@ async def export_user_data(user: dict = Depends(get_current_user)):
     Ritorna TUTTI i dati dell'utente in formato JSON.
     """
     uid = user.get("id") or user.get("user_id")
-    user_email = user.get("email")
 
     # Account data (senza password hash)
-    account = await db.users.find_one({"id": uid}, {"_id": 0, "password_hash": 0})
+    account = await db.users.find_one({"user_id": uid}, {"_id": 0, "password_hash": 0})
 
     # Workouts + steps
     workouts_cursor = db.workouts.find({"user_id": uid}, {"_id": 0}).sort("completed_at", -1)
@@ -579,9 +578,8 @@ async def delete_my_account(user: dict = Depends(get_current_user)):
 
     # Cascade delete
     for coll, filters in [
-        ("users", {"id": uid}),
-        ("workouts", {"user_id": uid}),
-        ("sessions", {"user_id": uid}),
+        ("users", {"user_id": uid}),
+        ("workout_sessions", {"user_id": uid}),
         ("friendships", {"$or": [{"from_user_id": uid}, {"to_user_id": uid}]}),
         ("friend_requests", {"$or": [{"from_user_id": uid}, {"to_user_id": uid}]}),
         ("comments", {"user_id": uid}),
@@ -1749,8 +1747,8 @@ async def _apply_revenuecat_entitlements(app_user_id: str, entitlement_ids: list
     """Aggiorna user.tier basandosi sugli entitlements attivi ricevuti da RevenueCat."""
     if not app_user_id:
         return
-    # Trova user (puo' essere id custom = nostro user.id)
-    user = await db.users.find_one({"id": app_user_id})
+    # Trova user (puo' essere user_id = nostro user.user_id)
+    user = await db.users.find_one({"user_id": app_user_id})
     if not user:
         # Fallback: prova per email (se RC usa email come user_id)
         user = await db.users.find_one({"email": app_user_id})
@@ -1777,7 +1775,7 @@ async def _apply_revenuecat_entitlements(app_user_id: str, entitlement_ids: list
     if expires_at_ms:
         update["subscription_expires_at"] = datetime.fromtimestamp(expires_at_ms / 1000, tz=timezone.utc)
 
-    await db.users.update_one({"id": user["id"]}, {"$set": update})
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": update})
     logger.info(f"[RevenueCat] User {app_user_id} -> tier={new_tier} (entitlements={entitlement_ids})")
 
 
@@ -1832,10 +1830,10 @@ async def webhook_revenuecat(request: Request):
                 await _apply_revenuecat_entitlements(app_user_id, [], None, active=False)
             else:
                 # CANCELLATION: lasciamo il tier attivo ma salviamo la scadenza
-                user = await db.users.find_one({"id": app_user_id}) or await db.users.find_one({"email": app_user_id})
+                user = await db.users.find_one({"user_id": app_user_id}) or await db.users.find_one({"email": app_user_id})
                 if user and expires_at_ms:
                     await db.users.update_one(
-                        {"id": user["id"]},
+                        {"user_id": user["user_id"]},
                         {"$set": {
                             "subscription_cancelled": True,
                             "subscription_expires_at": datetime.fromtimestamp(expires_at_ms / 1000, tz=timezone.utc),
