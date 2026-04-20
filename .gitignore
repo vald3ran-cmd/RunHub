@@ -115,3 +115,12 @@ backend_*_test.py
 /test_*.py
 backend/tests/
 
+-e 
+# Environment and credential files
+.env
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
