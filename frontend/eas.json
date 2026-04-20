@@ -20,6 +20,9 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://runhub-backend.onrender.com"
+      },
       "ios": {
         "resourceClass": "m-medium",
         "simulator": false
@@ -31,6 +34,9 @@
     "production": {
       "channel": "production",
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://runhub-backend.onrender.com"
+      },
       "ios": {
         "resourceClass": "m-medium"
       },
