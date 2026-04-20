@@ -41,6 +41,10 @@ credentials.json
 *.pem
 *.key
 .credentials
+google-service-account.json
+frontend/google-service-account.json
+frontend/*.p8
+frontend/*.p12
 
 # Logs and debug files
 npm-debug.log*

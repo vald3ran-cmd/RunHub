@@ -29,19 +29,28 @@ uvicorn server:app --reload --host 0.0.0.0 --port 8001
 
 ## 📦 Build per lo Store
 
+👉 **Guida completa step-by-step**: [`docs/EAS_BUILD_GUIDE.md`](./docs/EAS_BUILD_GUIDE.md)
+
+Quick reference:
 ```bash
 npm install -g eas-cli
 eas login
 cd frontend
-
-# Build produzione
-eas build --platform ios --profile production
-eas build --platform android --profile production
-
-# Sottomissione allo Store (dopo aver aggiornato eas.json con i tuoi dati)
+eas init                                      # una tantum, aggiunge projectId
+eas build --platform all --profile preview    # test su TestFlight/Play Internal
+eas build --platform all --profile production # release
 eas submit --platform ios --latest
 eas submit --platform android --latest
 ```
+
+## 🌍 Backend produzione
+
+Backend deployato su Render.com:
+- URL pubblico: `https://runhub-backend.onrender.com`
+- Health check: `GET /api/health`
+- Stripe webhook: `POST /api/webhook/stripe`
+
+Per deploy/redeploy: vedi `render.yaml` nella root.
 
 ## 👤 Credenziali test
 
