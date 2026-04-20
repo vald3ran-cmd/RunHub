@@ -183,6 +183,24 @@ export default function Profile() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="paywall-button"
+          style={styles.row} onPress={() => router.push('/paywall')}
+        >
+          <Ionicons name="rocket" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Abbonamenti & Piani</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="account-button"
+          style={styles.row} onPress={() => router.push('/account')}
+        >
+          <Ionicons name="person-circle" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Account & Privacy</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           testID="terms-button"
           style={styles.row} onPress={() => router.push('/terms')}
         >

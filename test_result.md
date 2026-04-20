@@ -340,6 +340,42 @@ backend:
         comment: "Installate expo-notifications@55 e expo-device@55. Config plugin con icon+color+channel. File platform-specific .native.ts (handler + requestPermission + getExpoPushToken + schedule locale) e .web.ts (stub). Init al boot del root layout; registrazione token automatica dopo login user. Android channels: default + workout. Funziona solo in build nativa (Expo Go SDK 53+ supporta local notifs ma remote richiede EAS build)."
 
 
+  - task: "GDPR Data Export (GET /api/user/export)"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Tested via /app/backend_gdpr_revenuecat_test.py. PARTIAL PASS: (1) 401 without token OK. (2) 200 with admin token OK. (3) All 13 required top-level keys present (export_meta, account, onboarding, workouts, sessions, friends, comments, likes, payments, push_tokens, wearables_samples, otp_requests_count, stats). (4) export_meta.gdpr_article = '20 - Data portability' OK. (5) password_hash not exposed. CRITICAL BUG: account field is null/None. Root cause: /app/backend/server.py line ~475 queries db.users.find_one({'id': uid}, ...) but user documents are stored with field 'user_id' (see line 421 in register: doc['user_id'] = user_id). Same bug pattern: uid = user.get('id') or user.get('user_id') resolves to the correct value BUT the subsequent find_one filter uses {'id': uid} instead of {'user_id': uid}. Must be fixed by changing all occurrences of {'id': uid} in export_user_data to {'user_id': uid}. Side effect: the 'account' section of the exported JSON is null for every user — fails GDPR Article 20 data portability completeness. The 'payments' list, in contrast, correctly used {'user_id': uid} OR {'app_user_id': uid} so those entries came through (1 payment returned for admin)."
+
+  - task: "GDPR Right to Erasure (DELETE /api/user/me)"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Tested via /app/backend_gdpr_revenuecat_test.py. PARTIAL PASS + CRITICAL BUG. (1) Admin protection: DELETE /user/me with admin token -> 400 'Gli account admin non possono essere auto-cancellati. Contatta il supporto.' OK. (2) For regular user: endpoint returns 200 with payload {ok:true, deleted:{user_id, collections:{...}}} as expected. (3) deleted.user_id matches the user_id OK. CRITICAL BUG: deleted.collections.users = 0 (should be 1). The user document is NEVER actually deleted from the DB. Verified by: (a) logging in again with the same credentials AFTER delete succeeds with 200 (should 401); (b) calling /auth/me with the old token returns 200 (should 401 'User not found'). ROOT CAUSE: /app/backend/server.py line ~582 'for coll, filters in [(\"users\", {\"id\": uid}), ...]' — the 'users' filter uses {'id': uid} but docs are stored under 'user_id'. Previous backend logs also show an earlier iteration that raised KeyError: 'id' at line 570 'uid = user[\"id\"]', which was partially fixed to 'uid = user.get(\"id\") or user.get(\"user_id\")' but the filter was not updated. (4) Also 'workouts' and 'sessions' cascade filters target collections that do NOT exist in this DB (the app uses 'workout_sessions' collection, not 'workouts'/'sessions') — harmless but misleading. FIX: change users filter to {'user_id': uid}, and consider renaming 'workouts'/'sessions' cascade entries to 'workout_sessions' (user_id filter). THIS IS A GDPR COMPLIANCE FAILURE — app returns success but data is retained. Must be fixed before App Store submission."
+
+  - task: "RevenueCat Webhook (/api/webhook/revenuecat)"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Tested via /app/backend_gdpr_revenuecat_test.py. PARTIAL PASS. Environment: REVENUECAT_WEBHOOK_AUTH NOT set in /app/backend/.env, so dev-mode behavior was exercised. (1) POST /webhook/revenuecat without Authorization -> 200 {received:true, event_type:'TEST'} (dev-mode skip verify). (2) POST with wrong auth -> 200 (dev mode). (3) POST with valid TEST event body -> 200 {received:true, event_type:'TEST'} OK. CRITICAL BUG on INITIAL_PURCHASE simulation: (4) Registered a fresh user (rc_test_<ts>@runhub.com -> user_id=user_xxx). Fired webhook body {event:{type:INITIAL_PURCHASE, app_user_id:<user_id>, entitlement_ids:[performance_tier], expiration_at_ms:<now+30d>, product_id:performance_monthly, store:APP_STORE}} -> 200 {received:true, event_type:'INITIAL_PURCHASE'}. Then GET /auth/me with that user's token -> tier='free', is_premium=false. Expected tier='performance', is_premium=true. ROOT CAUSE: /app/backend/server.py function _apply_revenuecat_entitlements (line ~1748) does db.users.find_one({'id': app_user_id}) then fallback by email. Since our user docs use 'user_id' (not 'id') and app_user_id looks like 'user_xxxx' (not an email), neither branch matches -> logs '[RevenueCat] User non trovato'. Even if the find were to succeed via the email fallback, the subsequent update_one({'id': user['id']}, ...) would KeyError because user docs have no 'id' key. FIX: change 'id' to 'user_id' in lines 1753, 1780, 1835, 1838 (find_one + update_one filters). The webhook audit log into payment_transactions DOES persist correctly. NOTE: entitlement mapping logic, event-type classification (ACTIVATE/DEACTIVATE/INFO), and 200-always response policy are correctly implemented."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -347,7 +383,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "GDPR Data Export (GET /api/user/export)"
+    - "GDPR Right to Erasure (DELETE /api/user/me)"
+    - "RevenueCat Webhook (/api/webhook/revenuecat)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -365,3 +404,5 @@ agent_communication:
     message: "Completato testing Resend Email OTP + Heatmap: 38/38 assertions PASS in /app/backend_resend_heatmap_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. (1) Forgot-password: sia admin che email inesistente -> 200 ok:true (silent response privacy-preserving confermato). (2) Reset-password validazione: password <6 char -> 400 'Password troppo corta'; codice fake 999999 -> 400 'Codice non valido o scaduto'; missing fields -> 422 Pydantic. (3) Verify-email endpoints: send nonexistent -> 200 silent; confirm con codice invalido -> 400 'Codice non valido o scaduto'. (4) E2E OTP flow completo: forgot-password admin -> letto OTP da MongoDB otp_codes (purpose='reset_password', consumed=false, expires_at=+15min) -> reset-password con code reale + new_password='newpass123' -> 200 ok:true -> login con nuova password -> 200 token. Restore: forgot-password -> nuovo OTP -> reset a 'admin123' -> 200 -> login admin123 -> 200. (5) Heatmap GET /api/stats/routes: senza auth -> 401; con admin token -> 200 array di 8 route con schema {session_id, distance_km, completed_at, coords:[{lat,lng}]}. Downsampling a ~80 punti/route implementato. Normalizza sia latitude/longitude sia lat/lng da Mongo. (6) Register nuovo utente emailtest_<ts>@test.com -> 200 con token (welcome email fire-and-forget via asyncio.create_task, non blocca response). (7) Regression: admin login, GET /plans, GET /admin/users, GET /social/feed tutti 200. Cleanup: DELETE /admin/users/{uid} -> 200. NOTE: L'effettivo invio email via Resend API non e' stato verificato (richiederebbe Resend dashboard/inbox reale) ma RESEND_API_KEY e EMAIL_FROM sono configurati in .env e la logica OTP funziona end-to-end via DB. Endpoints pienamente operativi, pronti per integrazione frontend."
   - agent: "testing"
     message: "Completato testing frontend E2E mobile su http://localhost:3000 con viewport iPhone 14 (390x844) e Samsung Galaxy S21 (360x800). RISULTATI: ✅ Login screen rendering perfetto (logo RunHub, titolo BENTORNATO, form email/password, pulsante ACCEDI). ✅ Mobile responsiveness eccellente su entrambi i viewport. ✅ Keyboard handling corretto (input rimangono visibili). ✅ Google/Apple Sign-In buttons NON visibili in web preview (comportamento atteso - richiedono build nativo). ❌ Login flow interrotto: impossibile cliccare pulsante ACCEDI (selector issue), ma form funziona e credenziali si riempiono correttamente. Console logs mostrano 401 errors su /api/stats/progress (normale senza auth). UI/UX mobile ottimale, SafeAreaView e KeyboardAvoidingView funzionano. App pronta per test su device fisico/EAS build per OAuth e login completo."
+  - agent: "testing"
+    message: "Completato testing GDPR + RevenueCat webhook (/app/backend_gdpr_revenuecat_test.py, 25 assertions, 19 PASS / 6 FAIL). CRITICAL BUG UNICO che affligge 3 endpoint: il codice usa filtri Mongo {'id': uid} mentre gli user document sono salvati con il campo 'user_id'. Impatto: (1) GET /api/user/export -> 'account' e' SEMPRE null (uno dei campi obbligatori GDPR Art.20); (2) DELETE /api/user/me -> ritorna 200 ok:true ma deleted.collections.users=0, l'utente NON viene cancellato (verificato: login successivo funziona ancora, /auth/me con token vecchio ritorna 200). QUESTO E' UN FALLIMENTO DI COMPLIANCE GDPR Art.17 - l'app dice di aver cancellato ma conserva i dati. (3) POST /api/webhook/revenuecat con evento INITIAL_PURCHASE -> 200 ma user.tier resta 'free' (log backend: '[RevenueCat] User non trovato: user_xxxx'). FIX RICHIESTO in /app/backend/server.py: (a) export_user_data linea ~475: cambiare db.users.find_one({'id': uid}) in {'user_id': uid}; (b) delete_my_account linea ~582: nella lista cascade, la tupla ('users', {'id': uid}) deve diventare ('users', {'user_id': uid}) — inoltre le tuple ('workouts',...) e ('sessions',...) puntano a collection che non esistono (l'app usa 'workout_sessions'); (c) _apply_revenuecat_entitlements linee 1753, 1780, 1835, 1838: cambiare tutti i filtri {'id': ...} in {'user_id': ...} (stesso bug). SUCCESSI: 401 senza token, 400 per admin self-delete, schema export completo (13 chiavi top-level), gdpr_article='20 - Data portability', password_hash mai esposto, tutti i TEST events webhook -> 200, dev-mode behavior corretto quando REVENUECAT_WEBHOOK_AUTH non e' settato. Payment_transactions audit log scrive correttamente. Entitlement mapping logic e event-type classification (ACTIVATE/DEACTIVATE/INFO) sono logicamente corretti - manca solo il fix del filtro. DETTAGLI COMPLETI nei status_history dei 3 nuovi task."

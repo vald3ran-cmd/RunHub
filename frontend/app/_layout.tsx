@@ -93,6 +93,8 @@ function RootNav() {
       <Stack.Screen name="wearables" options={{ presentation: 'card' }} />
       <Stack.Screen name="terms" options={{ presentation: 'card' }} />
       <Stack.Screen name="privacy" options={{ presentation: 'card' }} />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="account" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

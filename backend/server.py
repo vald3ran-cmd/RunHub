@@ -460,6 +460,163 @@ async def logout(response: Response):
 async def me(user: dict = Depends(get_current_user)):
     return user
 
+# ----------------- GDPR Export & Account Deletion -----------------
+
+@api_router.get("/user/export")
+async def export_user_data(user: dict = Depends(get_current_user)):
+    """
+    GDPR Article 20 - Data portability.
+    Ritorna TUTTI i dati dell'utente in formato JSON.
+    """
+    uid = user.get("id") or user.get("user_id")
+    user_email = user.get("email")
+
+    # Account data (senza password hash)
+    account = await db.users.find_one({"id": uid}, {"_id": 0, "password_hash": 0})
+
+    # Workouts + steps
+    workouts_cursor = db.workouts.find({"user_id": uid}, {"_id": 0}).sort("completed_at", -1)
+    workouts = await workouts_cursor.to_list(length=None)
+    for w in workouts:
+        for key in list(w.keys()):
+            if hasattr(w[key], "isoformat"):
+                w[key] = w[key].isoformat()
+
+    # Sessions (GPS tracking)
+    sessions_cursor = db.sessions.find({"user_id": uid}, {"_id": 0}).sort("started_at", -1)
+    sessions = await sessions_cursor.to_list(length=None)
+    for s in sessions:
+        for key in list(s.keys()):
+            if hasattr(s[key], "isoformat"):
+                s[key] = s[key].isoformat()
+
+    # Social: friends, comments, likes
+    friends = await db.friendships.find(
+        {"$or": [{"from_user_id": uid}, {"to_user_id": uid}]}, {"_id": 0}
+    ).to_list(length=None)
+    comments = await db.comments.find({"user_id": uid}, {"_id": 0}).to_list(length=None)
+    likes = await db.likes.find({"user_id": uid}, {"_id": 0}).to_list(length=None)
+
+    # Onboarding
+    onboarding = await db.onboarding.find_one({"user_id": uid}, {"_id": 0})
+
+    # Subscriptions / payments
+    payments = await db.payment_transactions.find(
+        {"$or": [{"user_id": uid}, {"app_user_id": uid}]}, {"_id": 0}
+    ).to_list(length=None)
+    for p in payments:
+        for key in list(p.keys()):
+            if hasattr(p[key], "isoformat"):
+                p[key] = p[key].isoformat()
+
+    # Notifications tokens
+    push_tokens = await db.push_tokens.find({"user_id": uid}, {"_id": 0}).to_list(length=None)
+
+    # Wearables data (Apple Health / Google Fit sync)
+    wearables = await db.wearables_samples.find({"user_id": uid}, {"_id": 0}).to_list(length=None)
+    for w in wearables:
+        for key in list(w.keys()):
+            if hasattr(w[key], "isoformat"):
+                w[key] = w[key].isoformat()
+
+    # OTP history (informative only, no sensitive data)
+    otp_count = await db.otp_codes.count_documents({"email": user.get("email")})
+
+    # Normalize datetimes
+    if account:
+        for key in list(account.keys()):
+            if hasattr(account[key], "isoformat"):
+                account[key] = account[key].isoformat()
+    if onboarding:
+        for key in list(onboarding.keys()):
+            if hasattr(onboarding[key], "isoformat"):
+                onboarding[key] = onboarding[key].isoformat()
+
+    export = {
+        "export_meta": {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "user_id": uid,
+            "format": "application/json",
+            "gdpr_article": "20 - Data portability",
+        },
+        "account": account,
+        "onboarding": onboarding,
+        "workouts": workouts,
+        "sessions": sessions,
+        "friends": friends,
+        "comments": comments,
+        "likes": likes,
+        "payments": payments,
+        "push_tokens": [{"platform": t.get("platform"), "created_at": t.get("created_at", "").isoformat() if hasattr(t.get("created_at"), "isoformat") else t.get("created_at")} for t in push_tokens],
+        "wearables_samples": wearables,
+        "otp_requests_count": otp_count,
+        "stats": {
+            "total_workouts": len(workouts),
+            "total_sessions": len(sessions),
+            "total_friends": len(friends),
+            "total_comments": len(comments),
+            "total_likes": len(likes),
+        },
+    }
+    return export
+
+
+@api_router.delete("/user/me")
+async def delete_my_account(user: dict = Depends(get_current_user)):
+    """
+    GDPR Article 17 - Right to erasure.
+    Cancella account utente e TUTTI i dati associati (cascade).
+    Obbligatorio per App Store dal 2022.
+    """
+    uid = user.get("id") or user.get("user_id")
+    user_email = user.get("email")
+
+    # Protezione admin: un admin non si puo' auto-cancellare (sicurezza)
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Gli account admin non possono essere auto-cancellati. Contatta il supporto.")
+
+    deleted = {"user_id": uid, "collections": {}}
+
+    # Cascade delete
+    for coll, filters in [
+        ("users", {"id": uid}),
+        ("workouts", {"user_id": uid}),
+        ("sessions", {"user_id": uid}),
+        ("friendships", {"$or": [{"from_user_id": uid}, {"to_user_id": uid}]}),
+        ("friend_requests", {"$or": [{"from_user_id": uid}, {"to_user_id": uid}]}),
+        ("comments", {"user_id": uid}),
+        ("likes", {"user_id": uid}),
+        ("onboarding", {"user_id": uid}),
+        ("push_tokens", {"user_id": uid}),
+        ("wearables_samples", {"user_id": uid}),
+        ("badges", {"user_id": uid}),
+        ("otp_codes", {"email": user_email}),
+    ]:
+        try:
+            result = await db[coll].delete_many(filters)
+            deleted["collections"][coll] = result.deleted_count
+        except Exception as e:
+            logger.warning(f"Errore cancellazione {coll}: {e}")
+            deleted["collections"][coll] = 0
+
+    # NOTA: payment_transactions conservati 10 anni per obbligo fiscale (anonimizzati: rimuoviamo email/nome)
+    try:
+        await db.payment_transactions.update_many(
+            {"$or": [{"user_id": uid}, {"app_user_id": uid}]},
+            {"$set": {"user_deleted": True, "user_deleted_at": datetime.now(timezone.utc), "user_email_snapshot": None}}
+        )
+    except Exception:
+        pass
+
+    logger.info(f"[GDPR] Account cancellato: user_id={uid} email={user.get('email')} deleted_counts={deleted['collections']}")
+
+    return {
+        "ok": True,
+        "message": "Account e dati associati eliminati con successo.",
+        "deleted": deleted,
+    }
+
+
 # ----------------- Social Auth (Google, Apple) -----------------
 
 # Notification endpoints (register/unregister push tokens, send test)

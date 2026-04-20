@@ -189,10 +189,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   backBtn: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '700' },
   scroll: { flex: 1 },
   scrollContent: { padding: 20 },
   updated: { color: colors.textSecondary, fontSize: 13, marginBottom: 20, fontStyle: 'italic' },
   h2: { color: colors.primary, fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 10 },
-  p: { color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 12 },
+  p: { color: colors.textPrimary, fontSize: 15, lineHeight: 22, marginBottom: 12 },
 });
