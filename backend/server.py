@@ -41,6 +41,11 @@ stripe.api_key = STRIPE_API_KEY
 app = FastAPI(title="RunHub API")
 api_router = APIRouter(prefix="/api")
 
+@api_router.get("/health")
+async def health_check():
+    """Public health check endpoint for Render / uptime monitors."""
+    return {"status": "ok", "service": "runhub-backend", "timestamp": datetime.now(timezone.utc).isoformat()}
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
