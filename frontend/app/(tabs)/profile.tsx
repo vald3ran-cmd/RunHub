@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -76,14 +76,32 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={24} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            testID="manage-premium-button"
-            style={styles.row} onPress={() => router.push('/premium')}
-          >
-            <Ionicons name="star" size={20} color={colors.primary} />
-            <Text style={styles.rowText}>Gestisci abbonamento</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              testID="manage-premium-button"
+              style={styles.row} onPress={() => router.push('/premium')}
+            >
+              <Ionicons name="star" size={20} color={colors.primary} />
+              <Text style={styles.rowText}>Cambia piano</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="billing-portal-button"
+              style={styles.row}
+              onPress={async () => {
+                try {
+                  const { data } = await api.post('/stripe/portal');
+                  if (data?.url) Linking.openURL(data.url);
+                } catch (e: any) {
+                  Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile aprire il portale');
+                }
+              }}
+            >
+              <Ionicons name="card" size={20} color={colors.primary} />
+              <Text style={styles.rowText}>Gestisci pagamento e fatture</Text>
+              <Ionicons name="open-outline" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </>
         )}
 
         <TouchableOpacity

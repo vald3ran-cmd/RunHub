@@ -278,6 +278,31 @@ backend:
         agent: "main"
         comment: "Componente Heatmap con MapView nativo e polylines colorate per recency (rosso > arancio > giallo). Schermo /heatmap accessibile da Profile. Web: fallback placeholder. Legenda colori in-app."
 
+
+  - task: "Stripe full integration (native SDK + Subscriptions + Customer Portal + Webhook signature)"
+    implemented: true
+    working: true
+    file: "backend/server.py, frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Rimossa dipendenza emergentintegrations (pacchetto privato, bloccava deploy Render). Integrazione completa con native stripe SDK 15.0.1 + anthropic 0.96.0. Feature nuove: (1) mode=subscription per auto-rinnovo, (2) _ensure_stripe_products_and_prices() crea 6 Product+Recurring Price in Stripe idempotentemente al primo checkout (verificato: 6 prices creati), (3) Stripe Customer creato al primo checkout e salvato su user.stripe_customer_id, (4) webhook con verifica firma STRIPE_WEBHOOK_SECRET + handler per 5 eventi (checkout.session.completed, customer.subscription.created/updated/deleted, invoice.payment_failed), (5) Customer Portal endpoint POST /stripe/portal, (6) Cancel endpoint POST /stripe/cancel (cancel_at_period_end), (7) Subscription status GET /stripe/subscription, (8) Email ricevuta automatica via Resend dopo pagamento, (9) Email notifica a pagamento fallito. Frontend: pulsante 'Gestisci pagamento e fatture' in Profile che apre Customer Portal tramite Linking. Test smoke: packages/subscription 200 OK, checkout crea sessione subscription reale con URL Stripe Checkout valido."
+
+  - task: "Remove emergentintegrations dependency (Render deploy unblock)"
+    implemented: true
+    working: true
+    file: "backend/server.py, backend/requirements.txt"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "emergentintegrations e' pacchetto privato non disponibile su PyPI pubblico -> build Render falliva. Rimosso da requirements.txt. Sostituito import LlmChat con AsyncAnthropic SDK, StripeCheckout wrapper con stripe native SDK. AI Coach ora usa ANTHROPIC_API_KEY (o EMERGENT_LLM_KEY via base_url proxy). Deploy Render ora possibile."
+
   - task: "Push Notifications backend (Expo Push Service)"
     implemented: true
     working: true

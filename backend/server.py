@@ -16,14 +16,13 @@ from typing import List, Optional, Dict, Any
 import bcrypt
 import jwt
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-from emergentintegrations.payments.stripe.checkout import (
-    StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
-)
+import stripe
+from anthropic import AsyncAnthropic
 
 # ----------------- Setup -----------------
 mongo_url = os.environ['MONGO_URL']
@@ -32,8 +31,12 @@ db = client[os.environ['DB_NAME']]
 
 JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALGORITHM = "HS256"
-EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
+stripe.api_key = STRIPE_API_KEY
 
 app = FastAPI(title="RunHub API")
 api_router = APIRouter(prefix="/api")
@@ -989,13 +992,26 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
         f"Note utente: {data.notes or 'nessuna'}."
     )
     try:
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"plan_{user['user_id']}_{uuid.uuid4().hex[:6]}",
-            system_message=system_msg,
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        # Use Anthropic SDK directly. If ANTHROPIC_API_KEY is set we use it,
+        # otherwise we use EMERGENT_LLM_KEY via Emergent's proxy (only works from within Emergent).
+        api_key = ANTHROPIC_API_KEY or EMERGENT_LLM_KEY
+        if not api_key:
+            raise HTTPException(status_code=503, detail="AI Coach non configurato. Contatta il supporto.")
+        base_url = None
+        if not ANTHROPIC_API_KEY and EMERGENT_LLM_KEY:
+            base_url = os.environ.get("EMERGENT_LLM_BASE_URL", "https://integrations.emergentagent.com/llm/anthropic")
+        anthro = AsyncAnthropic(api_key=api_key, base_url=base_url) if base_url else AsyncAnthropic(api_key=api_key)
         try:
-            resp = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=90.0)
+            msg = await asyncio.wait_for(
+                anthro.messages.create(
+                    model="claude-sonnet-4-5-20250929",
+                    max_tokens=4096,
+                    system=system_msg,
+                    messages=[{"role": "user", "content": prompt}],
+                ),
+                timeout=90.0,
+            )
+            resp = msg.content[0].text if msg.content else ""
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
         # Extract JSON
@@ -1223,90 +1239,335 @@ async def remove_athlete(athlete_id: str, user: dict = Depends(require_tier("eli
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     return {"ok": True}
 
-# ----------------- Stripe -----------------
+# ----------------- Stripe (Native SDK, Full Subscriptions) -----------------
 PACKAGES = {
-    "starter_monthly":     {"tier": "starter",     "amount": 4.99,  "currency": "eur", "label": "Allenati Mensile",  "duration_days": 30},
-    "starter_yearly":      {"tier": "starter",     "amount": 39.99, "currency": "eur", "label": "Allenati Annuale",  "duration_days": 365},
-    "performance_monthly": {"tier": "performance", "amount": 8.99,  "currency": "eur", "label": "Competi Mensile",   "duration_days": 30},
-    "performance_yearly":  {"tier": "performance", "amount": 79.99, "currency": "eur", "label": "Competi Annuale",   "duration_days": 365},
-    "elite_monthly":       {"tier": "elite",       "amount": 14.99, "currency": "eur", "label": "Coach Mensile",     "duration_days": 30},
-    "elite_yearly":        {"tier": "elite",       "amount": 129.99,"currency": "eur", "label": "Coach Annuale",     "duration_days": 365},
+    "starter_monthly":     {"tier": "starter",     "amount": 499,   "currency": "eur", "label": "Allenati Mensile",  "interval": "month", "duration_days": 30},
+    "starter_yearly":      {"tier": "starter",     "amount": 3999,  "currency": "eur", "label": "Allenati Annuale",  "interval": "year",  "duration_days": 365},
+    "performance_monthly": {"tier": "performance", "amount": 899,   "currency": "eur", "label": "Competi Mensile",   "interval": "month", "duration_days": 30},
+    "performance_yearly":  {"tier": "performance", "amount": 7999,  "currency": "eur", "label": "Competi Annuale",   "interval": "year",  "duration_days": 365},
+    "elite_monthly":       {"tier": "elite",       "amount": 1499,  "currency": "eur", "label": "Coach Mensile",     "interval": "month", "duration_days": 30},
+    "elite_yearly":        {"tier": "elite",       "amount": 12999, "currency": "eur", "label": "Coach Annuale",     "interval": "year",  "duration_days": 365},
 }
+
+_stripe_price_ids: Dict[str, str] = {}
+
+async def _ensure_stripe_products_and_prices():
+    """Create Stripe Products + Recurring Prices idempotently. Cached per process."""
+    global _stripe_price_ids
+    if _stripe_price_ids:
+        return _stripe_price_ids
+    if not STRIPE_API_KEY or STRIPE_API_KEY.startswith("sk_test_emergent") or STRIPE_API_KEY == "sk_test_emergent":
+        return {}
+    try:
+        existing = await asyncio.to_thread(
+            lambda: stripe.Product.list(limit=100, active=True)
+        )
+        by_name = {p["name"]: p for p in existing["data"]}
+        for pkg_id, pkg in PACKAGES.items():
+            product_name = f"RunHub - {pkg['label']}"
+            product = by_name.get(product_name)
+            if not product:
+                product = await asyncio.to_thread(
+                    lambda: stripe.Product.create(
+                        name=product_name,
+                        metadata={"package_id": pkg_id, "tier": pkg["tier"]},
+                    )
+                )
+            # Find matching price or create
+            prices = await asyncio.to_thread(
+                lambda: stripe.Price.list(product=product["id"], active=True, limit=10)
+            )
+            match = None
+            for pr in prices["data"]:
+                if (pr["unit_amount"] == pkg["amount"] and
+                    pr["currency"] == pkg["currency"] and
+                    pr.get("recurring") and
+                    pr["recurring"]["interval"] == pkg["interval"]):
+                    match = pr
+                    break
+            if not match:
+                match = await asyncio.to_thread(
+                    lambda: stripe.Price.create(
+                        product=product["id"],
+                        unit_amount=pkg["amount"],
+                        currency=pkg["currency"],
+                        recurring={"interval": pkg["interval"]},
+                        metadata={"package_id": pkg_id, "tier": pkg["tier"]},
+                    )
+                )
+            _stripe_price_ids[pkg_id] = match["id"]
+        logger.info(f"Stripe prices initialized: {len(_stripe_price_ids)} entries")
+        return _stripe_price_ids
+    except Exception as e:
+        logger.error(f"Stripe products init failed: {e}")
+        return {}
 
 @api_router.get("/stripe/packages")
 async def stripe_packages():
-    return PACKAGES
+    # Return human-friendly amounts (eur, not cents)
+    return {
+        k: {**v, "amount": v["amount"] / 100.0}
+        for k, v in PACKAGES.items()
+    }
+
+async def _ensure_customer(user: dict) -> str:
+    """Return Stripe customer id for user, creating it if missing."""
+    cust_id = user.get("stripe_customer_id")
+    if cust_id:
+        return cust_id
+    try:
+        cust = await asyncio.to_thread(
+            lambda: stripe.Customer.create(
+                email=user["email"],
+                name=user.get("name") or user["email"].split("@")[0],
+                metadata={"user_id": user["user_id"]},
+            )
+        )
+        await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"stripe_customer_id": cust["id"]}})
+        return cust["id"]
+    except Exception as e:
+        logger.error(f"Stripe customer create failed: {e}")
+        raise HTTPException(status_code=502, detail="Impossibile creare cliente Stripe")
 
 @api_router.post("/stripe/checkout")
-async def stripe_checkout(data: CheckoutRequest, request: Request, user: dict = Depends(get_current_user)):
+async def stripe_checkout(data: CheckoutRequest, user: dict = Depends(get_current_user)):
     if data.package_id not in PACKAGES:
         raise HTTPException(status_code=400, detail="Pacchetto non valido")
     pkg = PACKAGES[data.package_id]
-    host = str(request.base_url).rstrip("/")
-    webhook_url = f"{host}/api/webhook/stripe"
-    stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    # Ensure Stripe products/prices exist
+    prices = await _ensure_stripe_products_and_prices()
+    price_id = prices.get(data.package_id)
+    if not price_id:
+        raise HTTPException(status_code=503, detail="Servizio pagamenti non configurato. Controlla STRIPE_API_KEY.")
+    # Ensure Stripe customer
+    cust_id = await _ensure_customer(user)
     success_url = f"{data.origin_url}/premium-success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{data.origin_url}/premium"
     metadata = {"user_id": user["user_id"], "package_id": data.package_id, "tier": pkg["tier"]}
-    req = CheckoutSessionRequest(
-        amount=float(pkg["amount"]), currency=pkg["currency"],
-        success_url=success_url, cancel_url=cancel_url, metadata=metadata,
-    )
-    session = await stripe.create_checkout_session(req)
+    try:
+        session = await asyncio.to_thread(
+            lambda: stripe.checkout.Session.create(
+                mode="subscription",
+                customer=cust_id,
+                line_items=[{"price": price_id, "quantity": 1}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata=metadata,
+                subscription_data={"metadata": metadata},
+                allow_promotion_codes=True,
+                billing_address_collection="auto",
+                locale="it",
+            )
+        )
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe checkout error: {e}")
+        raise HTTPException(status_code=502, detail=f"Errore Stripe: {str(e)}")
     await db.payment_transactions.insert_one({
-        "session_id": session.session_id,
+        "session_id": session["id"],
         "user_id": user["user_id"],
         "package_id": data.package_id,
-        "amount": pkg["amount"],
+        "amount": pkg["amount"] / 100.0,
         "currency": pkg["currency"],
         "payment_status": "initiated",
         "metadata": metadata,
         "created_at": datetime.now(timezone.utc),
     })
-    return {"url": session.url, "session_id": session.session_id}
+    return {"url": session["url"], "session_id": session["id"]}
 
 @api_router.get("/stripe/status/{session_id}")
-async def stripe_status(session_id: str, request: Request, user: dict = Depends(get_current_user)):
+async def stripe_status(session_id: str, user: dict = Depends(get_current_user)):
     tx = await db.payment_transactions.find_one({"session_id": session_id, "user_id": user["user_id"]}, {"_id": 0})
     if not tx:
         raise HTTPException(status_code=404, detail="Sessione pagamento non trovata")
-    host = str(request.base_url).rstrip("/")
-    stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host}/api/webhook/stripe")
-    status: CheckoutStatusResponse = await stripe.get_checkout_status(session_id)
+    try:
+        session = await asyncio.to_thread(
+            lambda: stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
+        )
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"Stripe: {str(e)}")
+    payment_status = session.get("payment_status")
     # Idempotent tier upgrade
-    if status.payment_status == "paid" and tx["payment_status"] != "paid":
-        await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"payment_status": "paid"}})
+    if payment_status == "paid" and tx.get("payment_status") != "paid":
+        await db.payment_transactions.update_one(
+            {"session_id": session_id},
+            {"$set": {"payment_status": "paid", "stripe_subscription_id": session.get("subscription", {}).get("id") if isinstance(session.get("subscription"), dict) else session.get("subscription")}}
+        )
         pkg = PACKAGES.get(tx["package_id"], PACKAGES["starter_monthly"])
         expires = datetime.now(timezone.utc) + timedelta(days=pkg["duration_days"])
+        sub = session.get("subscription")
+        sub_id = sub["id"] if isinstance(sub, dict) else sub
         await db.users.update_one(
             {"user_id": user["user_id"]},
-            {"$set": {"tier": pkg["tier"], "tier_expires_at": expires,
-                      "is_premium": True}}  # keep is_premium for backward compat
+            {"$set": {
+                "tier": pkg["tier"],
+                "tier_expires_at": expires,
+                "is_premium": True,
+                "stripe_subscription_id": sub_id,
+                "subscription_status": "active",
+            }}
         )
-    return {"session_id": session_id, "status": status.status, "payment_status": status.payment_status,
-            "amount_total": status.amount_total, "currency": status.currency}
+    return {
+        "session_id": session_id,
+        "status": session.get("status"),
+        "payment_status": payment_status,
+        "amount_total": session.get("amount_total"),
+        "currency": session.get("currency"),
+    }
+
+@api_router.post("/stripe/portal")
+async def stripe_portal(user: dict = Depends(get_current_user), return_url: str = "https://runhub.app/profile"):
+    """Create a Stripe Billing Portal session for self-service subscription management."""
+    cust_id = user.get("stripe_customer_id")
+    if not cust_id:
+        raise HTTPException(status_code=404, detail="Nessun abbonamento attivo")
+    try:
+        portal = await asyncio.to_thread(
+            lambda: stripe.billing_portal.Session.create(
+                customer=cust_id,
+                return_url=return_url,
+            )
+        )
+        return {"url": portal["url"]}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"Stripe Portal: {str(e)}")
+
+@api_router.post("/stripe/cancel")
+async def stripe_cancel(user: dict = Depends(get_current_user)):
+    """Cancel subscription at period end (user keeps access until expiry)."""
+    sub_id = user.get("stripe_subscription_id")
+    if not sub_id:
+        raise HTTPException(status_code=404, detail="Nessun abbonamento attivo")
+    try:
+        sub = await asyncio.to_thread(
+            lambda: stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+        )
+        await db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$set": {"subscription_status": "canceling", "subscription_cancel_at": datetime.fromtimestamp(sub.get("cancel_at") or 0, tz=timezone.utc) if sub.get("cancel_at") else None}}
+        )
+        return {"ok": True, "cancel_at": sub.get("cancel_at"), "status": sub.get("status")}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"Stripe: {str(e)}")
+
+@api_router.get("/stripe/subscription")
+async def stripe_subscription(user: dict = Depends(get_current_user)):
+    sub_id = user.get("stripe_subscription_id")
+    if not sub_id:
+        return {"active": False}
+    try:
+        sub = await asyncio.to_thread(lambda: stripe.Subscription.retrieve(sub_id))
+        return {
+            "active": sub["status"] in ("active", "trialing"),
+            "status": sub["status"],
+            "current_period_end": sub.get("current_period_end"),
+            "cancel_at_period_end": sub.get("cancel_at_period_end", False),
+            "cancel_at": sub.get("cancel_at"),
+            "tier": user.get("tier"),
+        }
+    except stripe.error.StripeError as e:
+        logger.warning(f"Stripe sub retrieve error: {e}")
+        return {"active": False, "error": str(e)}
+
+async def _apply_subscription_to_user(subscription: dict):
+    """Update user DB state based on Stripe subscription object."""
+    metadata = subscription.get("metadata") or {}
+    user_id = metadata.get("user_id")
+    pkg_id = metadata.get("package_id")
+    tier = metadata.get("tier")
+    if not user_id or not tier:
+        # Find by customer
+        cust_id = subscription.get("customer")
+        doc = await db.users.find_one({"stripe_customer_id": cust_id})
+        if not doc:
+            return
+        user_id = doc["user_id"]
+        # Derive tier from package_id -> PACKAGES
+        if pkg_id and pkg_id in PACKAGES:
+            tier = PACKAGES[pkg_id]["tier"]
+    if not tier:
+        return
+    status = subscription.get("status")
+    current_period_end = subscription.get("current_period_end")
+    expires = datetime.fromtimestamp(current_period_end, tz=timezone.utc) if current_period_end else None
+    is_active = status in ("active", "trialing")
+    update = {
+        "stripe_subscription_id": subscription.get("id"),
+        "subscription_status": status,
+    }
+    if is_active:
+        update["tier"] = tier
+        update["is_premium"] = True
+        if expires:
+            update["tier_expires_at"] = expires
+    elif status in ("canceled", "unpaid", "incomplete_expired"):
+        # Keep premium until period end; then revert
+        update["tier"] = "free"
+        update["is_premium"] = False
+    await db.users.update_one({"user_id": user_id}, {"$set": update})
 
 @api_router.post("/webhook/stripe")
 async def webhook_stripe(request: Request):
     body = await request.body()
     sig = request.headers.get("Stripe-Signature", "")
-    host = str(request.base_url).rstrip("/")
-    stripe = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=f"{host}/api/webhook/stripe")
     try:
-        evt = await stripe.handle_webhook(body, sig)
+        if STRIPE_WEBHOOK_SECRET and not STRIPE_WEBHOOK_SECRET.startswith("whsec_placeholder"):
+            event = stripe.Webhook.construct_event(body, sig, STRIPE_WEBHOOK_SECRET)
+        else:
+            # No signing secret configured: parse without verification (DEV ONLY)
+            event = json.loads(body)
+            logger.warning("STRIPE_WEBHOOK_SECRET missing: processing without signature verification")
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        return {"ok": False}
-    if evt and evt.session_id and evt.payment_status == "paid":
-        tx = await db.payment_transactions.find_one({"session_id": evt.session_id})
-        if tx and tx.get("payment_status") != "paid":
-            await db.payment_transactions.update_one({"session_id": evt.session_id}, {"$set": {"payment_status": "paid"}})
-            pkg = PACKAGES.get(tx["package_id"], PACKAGES["starter_monthly"])
-            expires = datetime.now(timezone.utc) + timedelta(days=pkg["duration_days"])
-            await db.users.update_one({"user_id": tx["user_id"]},
-                                      {"$set": {"tier": pkg["tier"], "tier_expires_at": expires,
-                                                "is_premium": True}})
-    return {"ok": True}
+        logger.error(f"Webhook signature invalid: {e}")
+        return JSONResponse(status_code=400, content={"error": "Invalid signature"})
+
+    etype = event.get("type") if isinstance(event, dict) else event["type"]
+    obj = event.get("data", {}).get("object", {}) if isinstance(event, dict) else event["data"]["object"]
+
+    try:
+        if etype == "checkout.session.completed":
+            sub_id = obj.get("subscription")
+            if sub_id:
+                sub = await asyncio.to_thread(lambda: stripe.Subscription.retrieve(sub_id))
+                await _apply_subscription_to_user(sub)
+            await db.payment_transactions.update_one(
+                {"session_id": obj.get("id")},
+                {"$set": {"payment_status": "paid"}}
+            )
+            # Email receipt (fire-and-forget)
+            cust_email = obj.get("customer_details", {}).get("email") or obj.get("customer_email")
+            amount = (obj.get("amount_total") or 0) / 100.0
+            currency = (obj.get("currency") or "eur").upper()
+            if cust_email:
+                asyncio.create_task(send_email(
+                    cust_email,
+                    f"{APP_NAME}: pagamento confermato",
+                    f"""<html><body style='font-family:sans-serif;background:#09090B;color:#fff;padding:32px;'>
+                    <h1 style='color:#FF3B30;'>RUN<span style='color:#fff;'>HUB</span></h1>
+                    <h2>Pagamento confermato! 🎉</h2>
+                    <p>Grazie per il tuo supporto. L'abbonamento e' attivo.</p>
+                    <div style='background:#18181B;padding:24px;border-radius:12px;'>
+                      <b>Importo:</b> {amount:.2f} {currency}<br>
+                      <b>ID sessione:</b> {obj.get('id')}
+                    </div>
+                    <p>Puoi gestire il tuo abbonamento in qualsiasi momento dall'app.</p>
+                    </body></html>""",
+                    f"Pagamento di {amount:.2f} {currency} confermato. ID: {obj.get('id')}",
+                ))
+        elif etype in ("customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"):
+            await _apply_subscription_to_user(obj)
+        elif etype == "invoice.payment_failed":
+            cust_id = obj.get("customer")
+            doc = await db.users.find_one({"stripe_customer_id": cust_id}, {"_id": 0, "email": 1, "name": 1})
+            if doc and doc.get("email"):
+                asyncio.create_task(send_email(
+                    doc["email"],
+                    f"{APP_NAME}: pagamento non riuscito",
+                    f"<html><body><p>Ciao {doc.get('name','Runner')}, il pagamento del tuo abbonamento non e' andato a buon fine. Aggiorna il metodo di pagamento dall'app per non perdere l'accesso premium.</p></body></html>",
+                    "Pagamento fallito, aggiorna il metodo di pagamento",
+                ))
+    except Exception as e:
+        logger.error(f"Webhook handler error: {e}")
+    return {"received": True}
 
 # ----------------- Startup / Seed -----------------
 @app.on_event("startup")
