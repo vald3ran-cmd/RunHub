@@ -340,6 +340,12 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     name: str
+    # GDPR consent fields (opzionali per backward compat, ma frontend li invia sempre)
+    accepted_terms: Optional[bool] = None
+    accepted_privacy: Optional[bool] = None
+    accepted_at: Optional[str] = None
+    terms_version: Optional[str] = None
+    privacy_version: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -416,6 +422,24 @@ async def register(data: RegisterRequest, response: Response):
     existing = await db.users.find_one({"email": data.email.lower()})
     if existing:
         raise HTTPException(status_code=400, detail="Email gia' registrata")
+
+    # GDPR: registra proof-of-consent (obbligatorio Art. 7 GDPR)
+    now = datetime.now(timezone.utc)
+    consent_record = None
+    if data.accepted_terms or data.accepted_privacy:
+        try:
+            accepted_dt = datetime.fromisoformat(data.accepted_at.replace('Z', '+00:00')) if data.accepted_at else now
+        except Exception:
+            accepted_dt = now
+        consent_record = {
+            "accepted_terms": bool(data.accepted_terms),
+            "accepted_privacy": bool(data.accepted_privacy),
+            "accepted_at": accepted_dt,
+            "terms_version": data.terms_version or "unversioned",
+            "privacy_version": data.privacy_version or "unversioned",
+            "source": "register",
+        }
+
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     doc = {
         "user_id": user_id,
@@ -427,8 +451,11 @@ async def register(data: RegisterRequest, response: Response):
         "tier_expires_at": None,
         "is_premium": False,
         "onboarding_completed": False,
-        "created_at": datetime.now(timezone.utc),
+        "created_at": now,
     }
+    if consent_record:
+        doc["consent"] = consent_record
+        doc["consent_history"] = [consent_record]
     await db.users.insert_one(doc)
     token = create_access_token(user_id, data.email.lower())
     response.set_cookie("access_token", token, httponly=True, samesite="lax", max_age=604800, path="/")
