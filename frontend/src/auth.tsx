@@ -25,7 +25,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, consent?: RegisterConsent) => Promise<void>;
+  register: (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string) => Promise<void>;
   loginWithSocial: (result: { token: string; user: any }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -59,8 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (email: string, password: string, name: string, consent?: RegisterConsent) => {
+  const register = async (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string) => {
     const payload: any = { email, password, name };
+    if (dateOfBirth) payload.date_of_birth = dateOfBirth;
     if (consent) {
       payload.accepted_terms = consent.accepted_terms;
       payload.accepted_privacy = consent.accepted_privacy;

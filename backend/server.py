@@ -191,7 +191,12 @@ async def reset_password(data: PasswordResetIn):
 import httpx as _httpx_push
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "RunHub <onboarding@resend.dev>")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "RunHub <noreply@secondchancemarket.store>")
+# Email di contatto pubbliche (usate in Terms, Privacy, footer email)
+EMAIL_INFO = os.environ.get("EMAIL_INFO", "info@secondchancemarket.store")
+EMAIL_SUPPORT = os.environ.get("EMAIL_SUPPORT", "support@secondchancemarket.store")
+EMAIL_PRIVACY = os.environ.get("EMAIL_PRIVACY", "support@secondchancemarket.store")
+EMAIL_DPO = os.environ.get("EMAIL_DPO", "support@secondchancemarket.store")
 APP_NAME = os.environ.get("APP_NAME", "RunHub")
 
 async def send_email(to: str, subject: str, html: str, text: Optional[str] = None) -> dict:
@@ -340,6 +345,8 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     name: str
+    # Data di nascita (ISO format YYYY-MM-DD). Obbligatoria per verificare età minima.
+    date_of_birth: Optional[str] = None
     # GDPR consent fields (opzionali per backward compat, ma frontend li invia sempre)
     accepted_terms: Optional[bool] = None
     accepted_privacy: Optional[bool] = None
@@ -417,11 +424,44 @@ class CheckoutRequest(BaseModel):
     origin_url: str
 
 # ----------------- Auth routes -----------------
+# Età minima per iscriversi (normativa italiana D.Lgs. 101/2018 - GDPR Art. 8)
+MIN_AGE_YEARS = 14
+
+def _calculate_age(birthdate_iso: str) -> Optional[int]:
+    """Calcola età in anni da ISO date string (YYYY-MM-DD). None se invalido."""
+    try:
+        if not birthdate_iso:
+            return None
+        # Accetta sia "YYYY-MM-DD" che "YYYY-MM-DDTHH:MM:SS"
+        dob = datetime.fromisoformat(birthdate_iso.split("T")[0] + "T00:00:00+00:00")
+        now = datetime.now(timezone.utc)
+        age = now.year - dob.year - ((now.month, now.day) < (dob.month, dob.day))
+        return age if age >= 0 else None
+    except Exception:
+        return None
+
+
 @api_router.post("/auth/register")
 async def register(data: RegisterRequest, response: Response):
     existing = await db.users.find_one({"email": data.email.lower()})
     if existing:
         raise HTTPException(status_code=400, detail="Email gia' registrata")
+
+    # Validazione data di nascita + età minima
+    dob_iso = None
+    user_age = None
+    if data.date_of_birth:
+        user_age = _calculate_age(data.date_of_birth)
+        if user_age is None:
+            raise HTTPException(status_code=400, detail="Data di nascita non valida. Usa formato GG/MM/AAAA.")
+        if user_age < MIN_AGE_YEARS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Devi avere almeno {MIN_AGE_YEARS} anni per iscriverti a RunHub (normativa italiana)."
+            )
+        if user_age > 120:
+            raise HTTPException(status_code=400, detail="Data di nascita non plausibile.")
+        dob_iso = data.date_of_birth.split("T")[0]
 
     # GDPR: registra proof-of-consent (obbligatorio Art. 7 GDPR)
     now = datetime.now(timezone.utc)
@@ -453,6 +493,9 @@ async def register(data: RegisterRequest, response: Response):
         "onboarding_completed": False,
         "created_at": now,
     }
+    if dob_iso:
+        doc["date_of_birth"] = dob_iso
+        doc["age_at_signup"] = user_age
     if consent_record:
         doc["consent"] = consent_record
         doc["consent_history"] = [consent_record]

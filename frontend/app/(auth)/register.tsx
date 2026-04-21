@@ -11,31 +11,61 @@ import { colors, spacing, radius } from '../../src/theme';
 import { SocialAuthButtons } from '../../src/SocialAuthButtons';
 
 // Versioni dei documenti legali attualmente pubblicati (incrementare quando cambiano)
-const TERMS_VERSION = '2026-04-20';
-const PRIVACY_VERSION = '2026-04-20';
+const TERMS_VERSION = '2026-04-21';
+const PRIVACY_VERSION = '2026-04-21';
+const MIN_AGE_YEARS = 14;
+
+// Utility: calcola età dato un oggetto {day, month, year}
+function calcAge(day: string, month: string, year: string): number | null {
+  const d = parseInt(day, 10);
+  const m = parseInt(month, 10);
+  const y = parseInt(year, 10);
+  if (!d || !m || !y) return null;
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  if (y < 1900 || y > new Date().getFullYear()) return null;
+  const dob = new Date(y, m - 1, d);
+  if (dob.getFullYear() !== y || dob.getMonth() !== m - 1 || dob.getDate() !== d) return null;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const mDiff = now.getMonth() - dob.getMonth();
+  if (mDiff < 0 || (mDiff === 0 && now.getDate() < dob.getDate())) age--;
+  return age >= 0 && age < 120 ? age : null;
+}
 
 export default function Register() {
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [acceptedAge, setAcceptedAge] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const canSubmit = email && password && name && acceptedLegal && acceptedAge && !loading;
+  const age = calcAge(dobDay, dobMonth, dobYear);
+  const ageValid = age !== null && age >= MIN_AGE_YEARS;
+  const canSubmit =
+    email && password && name && ageValid && acceptedLegal && acceptedAge && !loading;
 
   const onSubmit = async () => {
     setError('');
     if (!email || !password || !name) { setError('Compila tutti i campi'); return; }
     if (password.length < 6) { setError('Password almeno 6 caratteri'); return; }
+    if (age === null) { setError('Inserisci una data di nascita valida'); return; }
+    if (age < MIN_AGE_YEARS) {
+      setError(`Devi avere almeno ${MIN_AGE_YEARS} anni per iscriverti`);
+      return;
+    }
     if (!acceptedLegal) { setError('Devi accettare Termini e Privacy per continuare'); return; }
-    if (!acceptedAge) { setError('Devi confermare di avere almeno 13 anni'); return; }
+    if (!acceptedAge) { setError(`Devi confermare di avere almeno ${MIN_AGE_YEARS} anni`); return; }
 
     setLoading(true);
     try {
+      const dobIso = `${dobYear.padStart(4, '0')}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}`;
       await register(
         email.trim().toLowerCase(),
         password,
@@ -46,7 +76,8 @@ export default function Register() {
           accepted_at: new Date().toISOString(),
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
-        }
+        },
+        dobIso
       );
       router.replace('/onboarding');
     } catch (e: any) {
@@ -80,9 +111,40 @@ export default function Register() {
           />
           <TextInput
             testID="register-password-input"
-            style={styles.input} placeholder="Password" placeholderTextColor={colors.textMuted}
+            style={styles.input} placeholder="Password (min 6 caratteri)" placeholderTextColor={colors.textMuted}
             value={password} onChangeText={setPassword} secureTextEntry
           />
+
+          {/* Data di nascita */}
+          <Text style={styles.dobLabel}>Data di nascita</Text>
+          <View style={styles.dobRow}>
+            <TextInput
+              testID="dob-day"
+              style={[styles.dobInput, { flex: 1 }]}
+              placeholder="GG" placeholderTextColor={colors.textMuted}
+              value={dobDay} onChangeText={(v) => setDobDay(v.replace(/\D/g, '').slice(0, 2))}
+              keyboardType="number-pad" maxLength={2}
+            />
+            <TextInput
+              testID="dob-month"
+              style={[styles.dobInput, { flex: 1 }]}
+              placeholder="MM" placeholderTextColor={colors.textMuted}
+              value={dobMonth} onChangeText={(v) => setDobMonth(v.replace(/\D/g, '').slice(0, 2))}
+              keyboardType="number-pad" maxLength={2}
+            />
+            <TextInput
+              testID="dob-year"
+              style={[styles.dobInput, { flex: 1.4 }]}
+              placeholder="AAAA" placeholderTextColor={colors.textMuted}
+              value={dobYear} onChangeText={(v) => setDobYear(v.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad" maxLength={4}
+            />
+          </View>
+          {age !== null && (
+            <Text style={[styles.ageHint, !ageValid && { color: colors.primary }]}>
+              {ageValid ? `✓ Età: ${age} anni` : `❌ Devi avere almeno ${MIN_AGE_YEARS} anni (hai ${age})`}
+            </Text>
+          )}
 
           {/* Checkbox Legal Consent (obbligatorio) */}
           <TouchableOpacity
@@ -107,7 +169,7 @@ export default function Register() {
             </Text>
           </TouchableOpacity>
 
-          {/* Checkbox Age confirmation (COPPA / GDPR-K) */}
+          {/* Checkbox Age confirmation */}
           <TouchableOpacity
             testID="consent-age-checkbox"
             style={styles.consentRow}
@@ -118,7 +180,7 @@ export default function Register() {
               {acceptedAge && <Ionicons name="checkmark" size={18} color="#fff" />}
             </View>
             <Text style={styles.consentText}>
-              Confermo di avere almeno <Text style={{ fontWeight: '700' }}>13 anni</Text>.
+              Confermo di avere almeno <Text style={{ fontWeight: '700' }}>{MIN_AGE_YEARS} anni</Text>.
             </Text>
           </TouchableOpacity>
 
@@ -160,6 +222,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, color: colors.textPrimary,
     padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md,
     borderWidth: 1, borderColor: colors.border, fontSize: 16,
+  },
+  dobLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  dobRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  dobInput: {
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  ageHint: {
+    color: colors.success,
+    fontSize: 12,
+    marginLeft: 4,
+    marginBottom: spacing.sm,
+    fontWeight: '600',
   },
   consentRow: {
     flexDirection: 'row',
