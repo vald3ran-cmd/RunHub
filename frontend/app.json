@@ -11,7 +11,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.runhub.app",
+      "buildNumber": "1",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSUserTrackingUsageDescription": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi.",
