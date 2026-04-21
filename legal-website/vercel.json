@@ -2,7 +2,7 @@
   "rewrites": [
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/support", "destination": "mailto:support@apprunhub.com" }
+    { "source": "/support", "destination": "/support.html" }
   ],
   "headers": [
     {
