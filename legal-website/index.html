@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RunHub — L'app di running con piani personalizzati</title>
+  <meta name="description" content="RunHub: app di running con piani di allenamento personalizzati, AI Coach, GPS tracking, feed social. Per principianti ed esperti.">
+  <style>
+    :root {
+      --bg: #0F1115;
+      --surface: #181B22;
+      --text: #FFFFFF;
+      --text-secondary: #B8BCC5;
+      --text-muted: #8A8F99;
+      --primary: #FF3B30;
+      --border: #2A2E38;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-inner { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-weight: 900; font-size: 20px; color: var(--primary); letter-spacing: -0.5px; }
+    .logo span { color: var(--text); }
+    nav a { color: var(--text-secondary); text-decoration: none; margin-left: 24px; font-size: 14px; font-weight: 600; }
+    nav a:hover { color: var(--primary); }
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 100px 24px 80px;
+      text-align: center;
+    }
+    .hero-title {
+      font-size: 56px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .hero-title .accent { color: var(--primary); }
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto 48px;
+    }
+    .cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-block;
+      padding: 16px 32px;
+      background: var(--primary);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      border-radius: 99px;
+      font-size: 15px;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text);
+    }
+    .features {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--surface);
+      padding: 32px 24px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+    .feature-icon { font-size: 32px; margin-bottom: 12px; }
+    .feature-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: var(--text-secondary); }
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 40px;
+    }
+    footer a { color: var(--text-secondary); margin: 0 12px; text-decoration: none; }
+    footer a:hover { color: var(--primary); }
+    @media (max-width: 600px) {
+      .hero-title { font-size: 36px; }
+      .hero-subtitle { font-size: 16px; }
+      nav a { margin-left: 12px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">Run<span>Hub</span></div>
+    <nav>
+      <a href="/terms">Termini</a>
+      <a href="/privacy">Privacy</a>
+      <a href="mailto:support@apprunhub.com">Supporto</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <h1 class="hero-title">Corri al tuo <span class="accent">massimo</span><br>con piani che si adattano a te.</h1>
+  <p class="hero-subtitle">
+    RunHub è l'app di running con piani di allenamento personalizzati, AI Coach, GPS tracking
+    e community. Per principianti ed esperti.
+  </p>
+  <div class="cta-row">
+    <a href="#" class="btn">Scarica su App Store</a>
+    <a href="#" class="btn btn-outline">Scarica su Google Play</a>
+  </div>
+</section>
+
+<section class="features">
+  <div class="feature-card">
+    <div class="feature-icon">🏃‍♂️</div>
+    <div class="feature-title">Piani Personalizzati</div>
+    <div class="feature-desc">Piani di allenamento adattati al tuo livello: principiante, intermedio, esperto.</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🤖</div>
+    <div class="feature-title">AI Coach</div>
+    <div class="feature-desc">Claude 4.5 crea piani su misura dei tuoi obiettivi e disponibilità.</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">📍</div>
+    <div class="feature-title">GPS Tracking</div>
+    <div class="feature-desc">Registra percorsi, distanza, pace in tempo reale con heatmap avanzata.</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🎯</div>
+    <div class="feature-title">Obiettivi Smart</div>
+    <div class="feature-desc">Traguardi giornalieri, settimanali e mensili. Badge e achievements.</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">👥</div>
+    <div class="feature-title">Community</div>
+    <div class="feature-desc">Condividi allenamenti, fai amicizia, scala le classifiche.</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">⌚</div>
+    <div class="feature-title">Wearables</div>
+    <div class="feature-desc">Sync con Apple Health e Google Fit. Tutti i tuoi dati in un posto.</div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 RunHub. Tutti i diritti riservati.</p>
+  <p style="margin-top: 8px;">
+    <a href="/terms">Termini di Servizio</a> •
+    <a href="/privacy">Privacy Policy</a> •
+    <a href="mailto:support@apprunhub.com">Supporto</a> •
+    <a href="mailto:info@apprunhub.com">Info</a>
+  </p>
+</footer>
+
+</body>
+</html>

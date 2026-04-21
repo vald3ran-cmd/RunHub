@@ -191,12 +191,12 @@ async def reset_password(data: PasswordResetIn):
 import httpx as _httpx_push
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "RunHub <noreply@secondchancemarket.store>")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "RunHub <noreply@apprunhub.com>")
 # Email di contatto pubbliche (usate in Terms, Privacy, footer email)
-EMAIL_INFO = os.environ.get("EMAIL_INFO", "info@secondchancemarket.store")
-EMAIL_SUPPORT = os.environ.get("EMAIL_SUPPORT", "support@secondchancemarket.store")
-EMAIL_PRIVACY = os.environ.get("EMAIL_PRIVACY", "support@secondchancemarket.store")
-EMAIL_DPO = os.environ.get("EMAIL_DPO", "support@secondchancemarket.store")
+EMAIL_INFO = os.environ.get("EMAIL_INFO", "info@apprunhub.com")
+EMAIL_SUPPORT = os.environ.get("EMAIL_SUPPORT", "support@apprunhub.com")
+EMAIL_PRIVACY = os.environ.get("EMAIL_PRIVACY", "support@apprunhub.com")
+EMAIL_DPO = os.environ.get("EMAIL_DPO", "support@apprunhub.com")
 APP_NAME = os.environ.get("APP_NAME", "RunHub")
 
 async def send_email(to: str, subject: str, html: str, text: Optional[str] = None) -> dict:

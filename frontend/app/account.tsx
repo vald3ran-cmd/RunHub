@@ -205,7 +205,7 @@ export default function AccountScreen() {
         </View>
 
         <Text style={styles.footer}>
-          Per assistenza: support@runhub.app{'\n'}DPO: dpo@runhub.app
+          Per assistenza: support@apprunhub.com{'\n'}DPO: support@apprunhub.com
         </Text>
 
         <View style={{ height: 40 }} />

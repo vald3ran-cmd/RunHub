@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — RunHub</title>
+  <meta name="description" content="Privacy Policy dell'app RunHub - come raccogliamo, usiamo e proteggiamo i tuoi dati secondo il GDPR.">
+  <style>
+    :root {
+      --bg: #0F1115;
+      --surface: #181B22;
+      --text: #FFFFFF;
+      --text-secondary: #B8BCC5;
+      --text-muted: #8A8F99;
+      --primary: #FF3B30;
+      --border: #2A2E38;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0;
+    }
+    .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+    .header-inner { max-width: 860px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-weight: 900; font-size: 20px; color: var(--primary); letter-spacing: -0.5px; }
+    .logo span { color: var(--text); }
+    nav a { color: var(--text-secondary); text-decoration: none; margin-left: 24px; font-size: 14px; font-weight: 600; }
+    nav a:hover { color: var(--primary); }
+    h1 {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--surface);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      margin-bottom: 8px;
+    }
+    .effective { color: var(--text-muted); font-style: italic; font-size: 13px; margin-bottom: 32px; }
+    .intro { color: var(--text); font-size: 16px; margin-bottom: 24px; }
+    h2 {
+      color: var(--primary);
+      font-size: 22px;
+      font-weight: 800;
+      margin-top: 48px;
+      margin-bottom: 12px;
+    }
+    h3 {
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+    p {
+      color: var(--text);
+      font-size: 15px;
+      margin-bottom: 14px;
+    }
+    b, strong { font-weight: 700; }
+    a {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    a:hover { opacity: 0.8; }
+    ul { margin-left: 0; padding-left: 20px; }
+    ul li { margin-bottom: 6px; color: var(--text); }
+    .final-note {
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-align: center;
+      margin-top: 48px;
+      font-style: italic;
+    }
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 60px;
+    }
+    footer a { color: var(--text-secondary); margin: 0 12px; }
+    @media (max-width: 600px) {
+      h1 { font-size: 28px; }
+      h2 { font-size: 19px; margin-top: 32px; }
+      nav a { margin-left: 12px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">Run<span>Hub</span></div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/terms">Termini</a>
+      <a href="/privacy">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<div class="container">
+
+  <span class="badge">Versione 2026-04-21</span>
+  <h1>Privacy Policy</h1>
+  <p class="effective">Data di efficacia: 21 aprile 2026</p>
+
+  <p class="intro">
+    La presente Privacy Policy descrive come RunHub ("noi", "RunHub") raccoglie, utilizza, condivide e protegge le
+    tue informazioni personali, nonché come puoi esercitare i tuoi diritti. Conforme al <b>Regolamento UE 2016/679
+    (GDPR)</b> e al <b>D.Lgs. 196/2003 come modificato dal D.Lgs. 101/2018</b> (Codice Privacy italiano).
+  </p>
+
+  <h2>1. Titolare del trattamento</h2>
+  <p>
+    Il titolare del trattamento dei dati è <b>RunHub</b>. Per qualsiasi domanda privacy:<br>
+    • Email generale: <a href="mailto:support@apprunhub.com">support@apprunhub.com</a><br>
+    • Data Protection Officer (DPO): <a href="mailto:support@apprunhub.com">support@apprunhub.com</a><br>
+    • Informazioni commerciali: <a href="mailto:info@apprunhub.com">info@apprunhub.com</a>
+  </p>
+  <p>
+    Sotto questa Privacy Policy, RunHub agisce come <b>titolare del trattamento</b> ("data controller"). Decidiamo
+    noi come raccogliere e processare le informazioni personali.
+  </p>
+
+  <h2>2. Informazioni che raccogliamo</h2>
+  <h3>2.1 Dati che fornisci direttamente</h3>
+  <p><b>Dati di account</b>: email, password (salvata come hash bcrypt), nome, data di nascita (per verificare età minima 14+), data di registrazione.</p>
+  <p><b>Dati di profilo</b>: foto profilo, peso, altezza (facoltativi), tipologie di sport, obiettivi, livello di esperienza.</p>
+  <p><b>Contenuti condivisi</b>: commenti, like, post nel feed, foto caricate nelle attività.</p>
+  <p><b>Dati di supporto</b>: informazioni incluse nei ticket inviati a <a href="mailto:support@apprunhub.com">support@apprunhub.com</a>.</p>
+
+  <h3>2.2 Dati raccolti dall'uso dei Servizi</h3>
+  <p><b>Dati delle attività</b>: allenamenti, distanza, durata, velocità, pace, cadenza, dislivello, tracce GPS. Dati di frequenza cardiaca se fornisci il consenso al collegamento wearables o Apple Health/Google Fit.</p>
+  <p><b>Geolocalizzazione</b>: per le funzioni GPS ti chiediamo il permesso di accedere alla posizione precisa. Puoi revocarlo in qualsiasi momento dalle impostazioni del dispositivo.</p>
+  <p><b>Dati di utilizzo</b>: partecipazione a sfide, like/commenti, amicizie, accessi al profilo altrui.</p>
+  <p><b>Performance metrics</b>: metriche calcolate sui tuoi dati (VO2max stimato, predizione tempi gara, tendenza forma).</p>
+  <p><b>Dispositivo</b>: modello, OS, versione app, identificatore anonimo, log di crash.</p>
+  <p><b>Token push</b>: tramite Expo Push Service, se acconsenti alle notifiche.</p>
+  <p><b>Pagamenti</b>: ultime 4 cifre della carta (dai processori). <b>NON</b> memorizziamo il numero completo. Gestiti da Apple, Google, Stripe, RevenueCat.</p>
+
+  <h3>2.3 Dati da integrazioni di terze parti</h3>
+  <p><b>Wearables e app connesse</b>: se colleghi Apple Health, Google Fit, Garmin: passi, distanza, battito cardiaco, calorie, VO2max, dati sonno (solo con consenso esplicito).</p>
+  <p><b>I dati sanitari</b> non vengono mai venduti, usati per pubblicità, o condivisi senza consenso.</p>
+  <p><b>Google/Apple Sign-In</b>: raccogliamo solo nome, email, avatar.</p>
+
+  <h2>3. Finalità e base giuridica</h2>
+
+  <h3>3.1 Fornire i Servizi (base: contratto - Art. 6.1.b GDPR)</h3>
+  <ul>
+    <li>Creare e gestire il tuo account</li>
+    <li>Processare i tuoi abbonamenti</li>
+    <li>Registrare le tue attività sportive</li>
+    <li>Generare piani di allenamento (AI Coach)</li>
+    <li>Abilitare il tracciamento GPS</li>
+    <li>Personalizzare la tua esperienza</li>
+    <li>Facilitare le interazioni social</li>
+  </ul>
+
+  <h3>3.2 Migliorare i Servizi (base: legittimo interesse)</h3>
+  <ul>
+    <li>Analytics aggregati anonimi</li>
+    <li>Ricerca e sviluppo nuove funzionalità</li>
+    <li>Ottimizzazione e troubleshooting</li>
+  </ul>
+
+  <h3>3.3 Marketing e pubblicità (base: consenso - Art. 6.1.a)</h3>
+  <p>
+    Inviamo email promozionali solo se acconsenti. Sul piano gratuito mostriamo annunci Google AdMob. Su iOS ti
+    chiediamo consenso tracking (App Tracking Transparency).
+  </p>
+
+  <h3>3.4 Protezione e sicurezza</h3>
+  <p>Rilevare frodi, abusi, spam. Rispondere a richieste di autorità giudiziarie legittime.</p>
+
+  <h3>3.5 Verifica età minori (obbligo legale)</h3>
+  <p>Usiamo la tua data di nascita per verificare che tu abbia almeno 14 anni, in conformità alla normativa italiana.</p>
+
+  <h3>3.6 Obblighi fiscali</h3>
+  <p>Conservare le fatture per 10 anni.</p>
+
+  <h2>4. Condivisione delle informazioni</h2>
+
+  <h3>4.1 Visibilità agli altri utenti</h3>
+  <p>
+    I tuoi contenuti possono essere visibili ad altri utenti secondo le tue impostazioni privacy. Per default, i
+    profili maggiorenni sono <b>pubblici</b>. Per minori di 18 anni applichiamo <b>privacy rinforzata</b>.
+  </p>
+
+  <h3>4.2 Fornitori di servizi (Data Processors)</h3>
+  <ul>
+    <li><b>MongoDB Atlas</b> (Irlanda/UE) — database</li>
+    <li><b>Render.com</b> (USA) — hosting backend (SCC)</li>
+    <li><b>Stripe, Inc.</b> (USA/Irlanda) — pagamenti web</li>
+    <li><b>RevenueCat, Inc.</b> (USA) — gestione IAP iOS/Android</li>
+    <li><b>Anthropic PBC</b> (USA) — AI Coach (prompt anonimizzati)</li>
+    <li><b>Resend</b> (USA) — email transazionali</li>
+    <li><b>Expo (Exponent Inc.)</b> (USA) — notifiche push</li>
+    <li><b>Google AdMob</b> (Irlanda) — annunci piano free</li>
+    <li><b>Mapbox</b> (USA) — mappe e heatmap</li>
+    <li><b>Apple Health / Google Fit</b> — sync wearables (solo con consenso)</li>
+  </ul>
+
+  <h3>4.3 Non vendiamo i tuoi dati</h3>
+  <p><b>RunHub non vende i tuoi dati personali a terzi</b>. Mai.</p>
+
+  <h2>5. Trasferimenti extra-UE</h2>
+  <p>
+    Alcuni fornitori USA usano <b>Clausole Contrattuali Standard (SCC)</b> e <b>EU-US Data Privacy Framework</b>.
+    Puoi richiedere copia delle garanzie scrivendo a <a href="mailto:support@apprunhub.com">support@apprunhub.com</a>.
+  </p>
+
+  <h2>6. Conservazione dei dati</h2>
+  <ul>
+    <li><b>Dati account</b>: finché l'account è attivo + 30 giorni</li>
+    <li><b>Allenamenti</b>: indefinito (cancellabili manualmente)</li>
+    <li><b>Fatture</b>: 10 anni (obbligo fiscale)</li>
+    <li><b>Log tecnici</b>: 90 giorni</li>
+    <li><b>Consent history</b>: 3 anni dopo cancellazione (GDPR Art. 7)</li>
+  </ul>
+
+  <h2>7. I tuoi diritti (GDPR)</h2>
+  <h3>7.1 Accesso e portabilità (Art. 15 e 20)</h3>
+  <p>Scarica un file JSON con tutti i tuoi dati da <b>Profilo → Account &amp; Privacy → Scarica i miei dati</b>.</p>
+  <h3>7.2 Rettifica (Art. 16)</h3>
+  <p>Modifica i dati errati dal profilo.</p>
+  <h3>7.3 Cancellazione / oblio (Art. 17)</h3>
+  <p>Cancella il tuo account da <b>Profilo → Account &amp; Privacy → Elimina Account</b>. Rimozione entro 30 giorni (eccetto fatture conservate 10 anni anonimizzate).</p>
+  <h3>7.4 Limitazione (Art. 18)</h3>
+  <p>Scrivi a <a href="mailto:support@apprunhub.com">support@apprunhub.com</a>.</p>
+  <h3>7.5 Opposizione (Art. 21)</h3>
+  <p>Puoi opporti al trattamento basato su legittimo interesse, inclusa disattivazione email promozionali e annunci personalizzati.</p>
+  <h3>7.6 Revoca consenso (Art. 7.3)</h3>
+  <p>Puoi revocare consensi specifici (Apple Health, notifiche, marketing) in qualsiasi momento.</p>
+  <h3>7.7 Reclamo al Garante</h3>
+  <p>
+    <b>Garante per la protezione dei dati personali</b>:<br>
+    Sito: <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">garanteprivacy.it</a><br>
+    Indirizzo: Piazza Venezia 11, 00187 Roma<br>
+    Email: <a href="mailto:protocollo@gpdp.it">protocollo@gpdp.it</a>
+  </p>
+  <h3>7.8 Decisioni automatizzate</h3>
+  <p>L'AI Coach genera suggerimenti ma nessuna decisione con effetti legali è presa solo automaticamente.</p>
+
+  <h2>8. Privacy dei minori</h2>
+  <p>
+    Età minima: <b>14 anni</b> (art. 2-quinquies Codice Privacy italiano). <b>Se hai meno di 14 anni, non utilizzare
+    i Servizi</b>.
+  </p>
+  <p>Per utenti 14-18 anni:</p>
+  <ul>
+    <li>Profilo privato per default</li>
+    <li>Messaggistica diretta ristretta</li>
+    <li>Niente annunci personalizzati</li>
+    <li>Nessuna condivisione con partner commerciali</li>
+  </ul>
+
+  <h2>9. Sicurezza dei dati</h2>
+  <ul>
+    <li>Connessioni cifrate TLS 1.2+</li>
+    <li>Password hashate con <b>bcrypt</b></li>
+    <li>Backup giornalieri cifrati</li>
+    <li>Accesso admin limitato</li>
+    <li>Audit log per eventi sensibili</li>
+    <li>Notifica Garante entro 72h in caso di data breach (Art. 33 GDPR)</li>
+  </ul>
+
+  <h2>10. Cookie (web)</h2>
+  <p>Solo cookie tecnici essenziali (sessione JWT) e analytics anonimi aggregati. Nessun cookie pubblicitario senza consenso.</p>
+
+  <h2>11. Modifiche alla Privacy Policy</h2>
+  <p>Modifiche significative comunicate via email o in-app almeno <b>30 giorni prima</b>, con richiesta di ri-accettazione dove necessario.</p>
+
+  <h2>12. Contatti</h2>
+  <p>
+    • Generale: <a href="mailto:support@apprunhub.com">support@apprunhub.com</a><br>
+    • DPO: <a href="mailto:support@apprunhub.com">support@apprunhub.com</a><br>
+    • Informazioni commerciali: <a href="mailto:info@apprunhub.com">info@apprunhub.com</a>
+  </p>
+  <p>Risponderemo entro <b>30 giorni</b> (Art. 12 GDPR), prorogabili di 60 giorni in casi complessi.</p>
+
+  <p class="final-note">La tua privacy è importante per noi. Grazie per la fiducia. 🔒</p>
+
+</div>
+
+<footer>
+  <p>© 2026 RunHub. Tutti i diritti riservati.</p>
+  <p style="margin-top: 8px;">
+    <a href="/terms">Termini di Servizio</a> •
+    <a href="/privacy">Privacy Policy</a> •
+    <a href="mailto:support@apprunhub.com">Supporto</a>
+  </p>
+</footer>
+
+</body>
+</html>

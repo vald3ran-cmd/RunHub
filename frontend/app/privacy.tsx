@@ -36,9 +36,9 @@ export default function PrivacyScreen() {
         <Text style={styles.p}>
           Il titolare del trattamento dei dati è <Text style={styles.b}>RunHub</Text>. Per qualsiasi
           domanda privacy o esercizio dei tuoi diritti:
-          {'\n'}• Email generale: <Text style={styles.link}>support@secondchancemarket.store</Text>
-          {'\n'}• Data Protection Officer (DPO): <Text style={styles.link}>support@secondchancemarket.store</Text>
-          {'\n'}• Informazioni commerciali: <Text style={styles.link}>info@secondchancemarket.store</Text>
+          {'\n'}• Email generale: <Text style={styles.link}>support@apprunhub.com</Text>
+          {'\n'}• Data Protection Officer (DPO): <Text style={styles.link}>support@apprunhub.com</Text>
+          {'\n'}• Informazioni commerciali: <Text style={styles.link}>info@apprunhub.com</Text>
         </Text>
         <Text style={styles.p}>
           Sotto questa Privacy Policy, RunHub agisce come <Text style={styles.b}>titolare del trattamento</Text>{' '}
@@ -62,7 +62,7 @@ export default function PrivacyScreen() {
         </Text>
         <Text style={styles.p}>
           <Text style={styles.b}>Dati di supporto</Text>: informazioni incluse nei ticket di assistenza
-          inviati a <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          inviati a <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h3}>2.2 Dati raccolti dall'uso dei Servizi</Text>
@@ -257,7 +257,7 @@ export default function PrivacyScreen() {
         </Text>
         <Text style={styles.p}>
           Puoi richiedere copia di queste garanzie scrivendo a{' '}
-          <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h2}>6. Conservazione dei dati</Text>
@@ -304,7 +304,7 @@ export default function PrivacyScreen() {
         <Text style={styles.h3}>7.4 Diritto di limitazione del trattamento (Art. 18)</Text>
         <Text style={styles.p}>
           Puoi chiederci di limitare il trattamento in casi specifici (es. contestazione accuratezza
-          dati). Scrivi a <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          dati). Scrivi a <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h3}>7.5 Diritto di opposizione (Art. 21)</Text>
@@ -351,7 +351,7 @@ export default function PrivacyScreen() {
         <Text style={styles.p}>
           Se scopriamo un account di utente sotto i 14 anni, lo eliminiamo immediatamente. Se sei
           genitore o tutore e ritieni che il tuo figlio abbia fornito dati senza consenso, contattaci a{' '}
-          <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h2}>9. Sicurezza dei dati</Text>
@@ -389,9 +389,9 @@ export default function PrivacyScreen() {
           Per qualsiasi questione privacy, richiesta di esercizio diritti o segnalazione data breach:
         </Text>
         <Text style={styles.p}>
-          • Generale: <Text style={styles.link}>support@secondchancemarket.store</Text>
-          {'\n'}• Data Protection Officer (DPO): <Text style={styles.link}>support@secondchancemarket.store</Text>
-          {'\n'}• Informazioni commerciali: <Text style={styles.link}>info@secondchancemarket.store</Text>
+          • Generale: <Text style={styles.link}>support@apprunhub.com</Text>
+          {'\n'}• Data Protection Officer (DPO): <Text style={styles.link}>support@apprunhub.com</Text>
+          {'\n'}• Informazioni commerciali: <Text style={styles.link}>info@apprunhub.com</Text>
         </Text>
         <Text style={styles.p}>
           Risponderemo alle tue richieste entro <Text style={styles.b}>30 giorni</Text> (Art. 12 GDPR),

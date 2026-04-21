@@ -68,7 +68,7 @@ export default function TermsScreen() {
           Sei pienamente responsabile della riservatezza della tua password e della prevenzione di
           accessi non autorizzati. Accetti la piena responsabilità di tutte le attività svolte con il
           tuo account. Devi notificarci immediatamente qualsiasi accesso non autorizzato scrivendo a{' '}
-          <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h3}>2.4 Integrazioni di terze parti</Text>
@@ -132,7 +132,7 @@ export default function TermsScreen() {
           In quanto consumatore residente nell'Unione Europea, hai il diritto di recedere dall'abbonamento
           entro <Text style={styles.b}>14 giorni</Text> dalla sottoscrizione e ricevere il rimborso completo
           (Codice del Consumo, D.Lgs. 206/2005). Per esercitare il diritto di recesso, contattaci a{' '}
-          <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h3}>3.6 Rimborsi</Text>
@@ -140,7 +140,7 @@ export default function TermsScreen() {
           Al di fuori del diritto di ripensamento UE, i rimborsi sono gestiti secondo le policy di Apple
           App Store, Google Play o Stripe (a seconda del metodo di acquisto). Per problemi o disservizi,
           contatta{' '}
-          <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h3}>3.7 Prove gratuite</Text>
@@ -177,7 +177,7 @@ export default function TermsScreen() {
           Sei responsabile dei Contenuti che pubblichi. RunHub non approva né avalla alcun Contenuto e
           può, in conformità alle leggi applicabili, monitorare, limitare o rimuovere Contenuti che
           violano questi Termini o le nostre norme della community. Per segnalare contenuti inappropriati
-          scrivi a <Text style={styles.link}>support@secondchancemarket.store</Text>.
+          scrivi a <Text style={styles.link}>support@apprunhub.com</Text>.
         </Text>
 
         <Text style={styles.h2}>5. Uso responsabile del GPS e geolocalizzazione</Text>
@@ -339,8 +339,8 @@ export default function TermsScreen() {
         <Text style={styles.h2}>17. Contatti</Text>
         <Text style={styles.p}>
           Per qualsiasi domanda sui Termini di Servizio:
-          {'\n'}• Supporto: <Text style={styles.link}>support@secondchancemarket.store</Text>
-          {'\n'}• Informazioni: <Text style={styles.link}>info@secondchancemarket.store</Text>
+          {'\n'}• Supporto: <Text style={styles.link}>support@apprunhub.com</Text>
+          {'\n'}• Informazioni: <Text style={styles.link}>info@apprunhub.com</Text>
         </Text>
 
         <Text style={styles.h2}>18. Disposizioni generali</Text>
