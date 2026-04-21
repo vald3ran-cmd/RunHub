@@ -52,9 +52,12 @@ function RootNav() {
     if (loading) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
-    if (!user && !inAuth) {
+    // Public routes accessible without auth (legal documents must be readable pre-signup)
+    const PUBLIC_ROUTES = ['terms', 'privacy'];
+    const isPublic = PUBLIC_ROUTES.includes(String(segments[0] || ''));
+    if (!user && !inAuth && !isPublic) {
       router.replace('/(auth)/login');
-    } else if (user && !user.onboarding_completed && !inOnboarding && !inAuth) {
+    } else if (user && !user.onboarding_completed && !inOnboarding && !inAuth && !isPublic) {
       // Force new users to go through onboarding
       router.replace('/onboarding');
     } else if (user && inAuth) {

@@ -146,43 +146,55 @@ export default function Register() {
             </Text>
           )}
 
-          {/* Checkbox Legal Consent (obbligatorio) */}
-          <TouchableOpacity
-            testID="consent-legal-checkbox"
-            style={styles.consentRow}
-            onPress={() => setAcceptedLegal(!acceptedLegal)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, acceptedLegal && styles.checkboxChecked]}>
-              {acceptedLegal && <Ionicons name="checkmark" size={18} color="#fff" />}
-            </View>
-            <Text style={styles.consentText}>
+          {/* Checkbox Legal Consent (obbligatorio) - link testuali navigabili */}
+          <View style={styles.consentRow}>
+            <TouchableOpacity
+              testID="consent-legal-checkbox"
+              onPress={() => setAcceptedLegal(!acceptedLegal)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <View style={[styles.checkbox, acceptedLegal && styles.checkboxChecked]}>
+                {acceptedLegal && <Ionicons name="checkmark" size={18} color="#fff" />}
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.consentText} onPress={() => setAcceptedLegal(!acceptedLegal)}>
               Ho letto e accetto i{' '}
-              <Link href="/terms" asChild>
-                <Text style={styles.consentLink}>Termini di Servizio</Text>
-              </Link>
+              <Text
+                testID="link-terms"
+                style={styles.consentLink}
+                onPress={(e: any) => { e?.stopPropagation?.(); router.push('/terms'); }}
+              >
+                Termini di Servizio
+              </Text>
               {' '}e la{' '}
-              <Link href="/privacy" asChild>
-                <Text style={styles.consentLink}>Privacy Policy</Text>
-              </Link>
+              <Text
+                testID="link-privacy"
+                style={styles.consentLink}
+                onPress={(e: any) => { e?.stopPropagation?.(); router.push('/privacy'); }}
+              >
+                Privacy Policy
+              </Text>
               .
             </Text>
-          </TouchableOpacity>
+          </View>
 
           {/* Checkbox Age confirmation */}
-          <TouchableOpacity
-            testID="consent-age-checkbox"
-            style={styles.consentRow}
-            onPress={() => setAcceptedAge(!acceptedAge)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, acceptedAge && styles.checkboxChecked]}>
-              {acceptedAge && <Ionicons name="checkmark" size={18} color="#fff" />}
-            </View>
-            <Text style={styles.consentText}>
+          <View style={styles.consentRow}>
+            <TouchableOpacity
+              testID="consent-age-checkbox"
+              onPress={() => setAcceptedAge(!acceptedAge)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <View style={[styles.checkbox, acceptedAge && styles.checkboxChecked]}>
+                {acceptedAge && <Ionicons name="checkmark" size={18} color="#fff" />}
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.consentText} onPress={() => setAcceptedAge(!acceptedAge)}>
               Confermo di avere almeno <Text style={{ fontWeight: '700' }}>{MIN_AGE_YEARS} anni</Text>.
             </Text>
-          </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             testID="register-submit-button"
