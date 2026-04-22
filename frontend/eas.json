@@ -38,7 +38,7 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_BACKEND_URL": "https://runhub-backend.onrender.com",
-        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "test_kuMjCPQFRkZeVldmpjPgWHCLenr",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_dcbhFMjcyqcaLpSGCEjBa0qk0AN",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "test_kuMjCPQFRkZeVldmpjPgWHCLenr"
       },
       "ios": {
