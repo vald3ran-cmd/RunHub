@@ -358,6 +358,15 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class CompleteProfileIn(BaseModel):
+    """DOB + consent GDPR per utenti OAuth (Google/Apple) che hanno saltato il flow di registrazione email."""
+    date_of_birth: str  # ISO YYYY-MM-DD
+    accepted_terms: bool
+    accepted_privacy: bool
+    accepted_at: Optional[str] = None
+    terms_version: Optional[str] = None
+    privacy_version: Optional[str] = None
+
 class UserOut(BaseModel):
     user_id: str
     email: str
@@ -528,7 +537,71 @@ async def logout(response: Response):
 
 @api_router.get("/auth/me")
 async def me(user: dict = Depends(get_current_user)):
+    # Flag: l'utente deve completare profilo (DOB + consent)?
+    # Vero per: nuovi utenti OAuth (Google/Apple) o utenti legacy senza consent registrato
+    has_dob = bool(user.get("date_of_birth"))
+    consent = user.get("consent") or {}
+    has_consent = bool(consent.get("accepted_terms") and consent.get("accepted_privacy") and consent.get("accepted_at"))
+    user["needs_profile_completion"] = not (has_dob and has_consent)
     return user
+
+
+@api_router.post("/auth/complete-profile")
+async def complete_profile(data: CompleteProfileIn, user: dict = Depends(get_current_user)):
+    """
+    Completa profilo utente OAuth (Google/Apple) con DOB + consensi GDPR.
+    Obbligatorio per conformità GDPR Art. 7 + D.Lgs. 101/2018 (età minima 14 anni).
+    """
+    uid = user.get("user_id") or user.get("id")
+
+    # Validazione età minima
+    user_age = _calculate_age(data.date_of_birth)
+    if user_age is None:
+        raise HTTPException(status_code=400, detail="Data di nascita non valida. Usa formato GG/MM/AAAA.")
+    if user_age < MIN_AGE_YEARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Devi avere almeno {MIN_AGE_YEARS} anni per usare RunHub (normativa italiana)."
+        )
+    if user_age > 120:
+        raise HTTPException(status_code=400, detail="Data di nascita non plausibile.")
+
+    # Consensi obbligatori
+    if not data.accepted_terms or not data.accepted_privacy:
+        raise HTTPException(status_code=400, detail="Devi accettare Termini di Servizio e Privacy Policy per continuare.")
+
+    now = datetime.now(timezone.utc)
+    try:
+        accepted_dt = datetime.fromisoformat(data.accepted_at.replace('Z', '+00:00')) if data.accepted_at else now
+    except Exception:
+        accepted_dt = now
+
+    consent_record = {
+        "accepted_terms": True,
+        "accepted_privacy": True,
+        "accepted_at": accepted_dt,
+        "terms_version": data.terms_version or "unversioned",
+        "privacy_version": data.privacy_version or "unversioned",
+        "source": "complete_profile_oauth",
+    }
+
+    dob_iso = data.date_of_birth.split("T")[0]
+
+    await db.users.update_one(
+        {"user_id": uid},
+        {
+            "$set": {
+                "date_of_birth": dob_iso,
+                "age_at_signup": user_age,
+                "consent": consent_record,
+            },
+            "$push": {"consent_history": consent_record},
+        }
+    )
+
+    updated = await db.users.find_one({"user_id": uid}, {"_id": 0, "password_hash": 0})
+    updated["needs_profile_completion"] = False
+    return {"ok": True, "user": updated}
 
 # ----------------- GDPR Export & Account Deletion -----------------
 

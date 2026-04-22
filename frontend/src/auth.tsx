@@ -11,9 +11,19 @@ type User = {
   is_premium: boolean;
   onboarding_completed?: boolean;
   role?: string;
+  needs_profile_completion?: boolean;
 };
 
 type RegisterConsent = {
+  accepted_terms: boolean;
+  accepted_privacy: boolean;
+  accepted_at?: string;
+  terms_version?: string;
+  privacy_version?: string;
+};
+
+type ProfileCompletionPayload = {
+  date_of_birth: string; // ISO YYYY-MM-DD
   accepted_terms: boolean;
   accepted_privacy: boolean;
   accepted_at?: string;
@@ -27,6 +37,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string) => Promise<void>;
   loginWithSocial: (result: { token: string; user: any }) => Promise<void>;
+  completeProfile: (payload: ProfileCompletionPayload) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -76,7 +87,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithSocial = async (result: { token: string; user: any }) => {
     await setAuthToken(result.token);
-    setUser(result.user);
+    // Reload full user from /auth/me to get needs_profile_completion flag
+    try {
+      const { data } = await api.get('/auth/me');
+      setUser(data);
+    } catch {
+      setUser(result.user);
+    }
+  };
+
+  const completeProfile = async (payload: ProfileCompletionPayload) => {
+    const { data } = await api.post('/auth/complete-profile', payload);
+    if (data?.user) {
+      setUser(data.user);
+    } else {
+      await refresh();
+    }
   };
 
   const logout = async () => {
@@ -86,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, loginWithSocial, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithSocial, completeProfile, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

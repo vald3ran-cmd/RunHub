@@ -52,15 +52,19 @@ function RootNav() {
     if (loading) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
+    const inCompleteProfile = String(segments[1] || '') === 'complete-profile';
     // Public routes accessible without auth (legal documents must be readable pre-signup)
     const PUBLIC_ROUTES = ['terms', 'privacy'];
     const isPublic = PUBLIC_ROUTES.includes(String(segments[0] || ''));
     if (!user && !inAuth && !isPublic) {
       router.replace('/(auth)/login');
-    } else if (user && !user.onboarding_completed && !inOnboarding && !inAuth && !isPublic) {
+    } else if (user && user.needs_profile_completion && !inCompleteProfile && !isPublic) {
+      // Utenti OAuth (Google/Apple) senza DOB/consenso: forza completamento profilo (GDPR + Apple guidelines)
+      router.replace('/(auth)/complete-profile');
+    } else if (user && !user.needs_profile_completion && !user.onboarding_completed && !inOnboarding && !inAuth && !isPublic) {
       // Force new users to go through onboarding
       router.replace('/onboarding');
-    } else if (user && inAuth) {
+    } else if (user && !user.needs_profile_completion && inAuth && !inCompleteProfile) {
       if (!user.onboarding_completed) {
         router.replace('/onboarding');
       } else {
