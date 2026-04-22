@@ -190,6 +190,8 @@ async def reset_password(data: PasswordResetIn):
 
 import httpx as _httpx_push
 
+# Email service: MailerSend (primary) con fallback su Resend (legacy)
+MAILERSEND_API_KEY = os.environ.get("MAILERSEND_API_KEY", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_FROM = os.environ.get("EMAIL_FROM", "RunHub <noreply@apprunhub.com>")
 # Email di contatto pubbliche (usate in Terms, Privacy, footer email)
@@ -199,35 +201,82 @@ EMAIL_PRIVACY = os.environ.get("EMAIL_PRIVACY", "support@apprunhub.com")
 EMAIL_DPO = os.environ.get("EMAIL_DPO", "support@apprunhub.com")
 APP_NAME = os.environ.get("APP_NAME", "RunHub")
 
+
+def _parse_email_from(email_from: str) -> dict:
+    """Parse 'Name <email@domain>' into {'name': 'Name', 'email': 'email@domain'} for MailerSend."""
+    email_from = (email_from or "").strip()
+    if "<" in email_from and ">" in email_from:
+        name = email_from.split("<")[0].strip().strip('"')
+        email = email_from.split("<")[1].split(">")[0].strip()
+        return {"name": name or APP_NAME, "email": email}
+    return {"name": APP_NAME, "email": email_from}
+
+
 async def send_email(to: str, subject: str, html: str, text: Optional[str] = None) -> dict:
-    """Send email via Resend API."""
-    if not RESEND_API_KEY:
-        logger.warning("RESEND_API_KEY not configured; skipping email")
-        return {"ok": False, "error": "no-api-key"}
-    try:
-        async with _httpx_push.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                "https://api.resend.com/emails",
-                json={
-                    "from": EMAIL_FROM,
-                    "to": [to],
-                    "subject": subject,
-                    "html": html,
-                    "text": text or "",
-                },
-                headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-            )
-            data = resp.json() if resp.text else {}
-            if resp.status_code >= 400:
-                logger.error(f"Resend error {resp.status_code}: {data}")
-                return {"ok": False, "error": data.get("message") or str(resp.status_code)}
-            return {"ok": True, "id": data.get("id")}
-    except Exception as e:
-        logger.error(f"send_email failed: {e}")
-        return {"ok": False, "error": str(e)}
+    """Send email via MailerSend API (preferred) or Resend (fallback)."""
+    # Tentativo 1: MailerSend
+    if MAILERSEND_API_KEY:
+        try:
+            sender = _parse_email_from(EMAIL_FROM)
+            async with _httpx_push.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    "https://api.mailersend.com/v1/email",
+                    json={
+                        "from": sender,
+                        "to": [{"email": to}],
+                        "subject": subject,
+                        "html": html,
+                        "text": text or "",
+                    },
+                    headers={
+                        "Authorization": f"Bearer {MAILERSEND_API_KEY}",
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                )
+                if resp.status_code in (200, 202):
+                    msg_id = resp.headers.get("x-message-id") or ""
+                    return {"ok": True, "id": msg_id, "provider": "mailersend"}
+                try:
+                    data = resp.json()
+                except Exception:
+                    data = {"raw": resp.text}
+                logger.error(f"MailerSend error {resp.status_code}: {data}")
+                # non ritorno subito: provo Resend come fallback se configurato
+                if not RESEND_API_KEY:
+                    return {"ok": False, "error": data.get("message") or str(resp.status_code), "provider": "mailersend"}
+        except Exception as e:
+            logger.error(f"MailerSend send_email failed: {e}")
+            if not RESEND_API_KEY:
+                return {"ok": False, "error": str(e), "provider": "mailersend"}
+    # Tentativo 2 / Fallback: Resend (solo se MailerSend non configurato o ha fallito)
+    if RESEND_API_KEY:
+        try:
+            async with _httpx_push.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    "https://api.resend.com/emails",
+                    json={
+                        "from": EMAIL_FROM,
+                        "to": [to],
+                        "subject": subject,
+                        "html": html,
+                        "text": text or "",
+                    },
+                    headers={
+                        "Authorization": f"Bearer {RESEND_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                data = resp.json() if resp.text else {}
+                if resp.status_code >= 400:
+                    logger.error(f"Resend error {resp.status_code}: {data}")
+                    return {"ok": False, "error": data.get("message") or str(resp.status_code), "provider": "resend"}
+                return {"ok": True, "id": data.get("id"), "provider": "resend"}
+        except Exception as e:
+            logger.error(f"Resend send_email failed: {e}")
+            return {"ok": False, "error": str(e), "provider": "resend"}
+    logger.warning("No email provider configured (MAILERSEND_API_KEY / RESEND_API_KEY); skipping email")
+    return {"ok": False, "error": "no-api-key"}
 
 def _otp_email_html(name: str, code: str, action: str) -> str:
     return f"""
