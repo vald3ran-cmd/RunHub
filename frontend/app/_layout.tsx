@@ -64,7 +64,8 @@ function RootNav() {
     } else if (user && !user.needs_profile_completion && !user.onboarding_completed && !inOnboarding && !inAuth && !isPublic) {
       // Force new users to go through onboarding
       router.replace('/onboarding');
-    } else if (user && !user.needs_profile_completion && inAuth && !inCompleteProfile) {
+    } else if (user && !user.needs_profile_completion && inAuth) {
+      // Auth completata (anche appena terminato /complete-profile) → onboarding o home
       if (!user.onboarding_completed) {
         router.replace('/onboarding');
       } else {
