@@ -382,11 +382,39 @@ metadata:
   test_sequence: 1
   run_ui: false
 
+  - task: "POST /api/auth/complete-profile - DOB + GDPR consent per utenti OAuth"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Eseguiti 38 assertions via /app/backend_profile_completion_test.py contro https://run-training-hub-1.preview.emergentagent.com/api, 36/38 PASS. TUTTI I TEST SULL'ENDPOINT complete-profile PASSANO. (1) Happy path: registrato utente oauth_sim_<ts>@runhub.com, rimossi DOB/consent via Mongo update (unset date_of_birth/age_at_signup/consent/consent_history) per simulare utente OAuth. POST /auth/complete-profile con body {date_of_birth:'1990-05-15', accepted_terms:true, accepted_privacy:true, accepted_at:'2026-04-22T13:00:00Z', terms_version:'2026-04-21', privacy_version:'2026-04-21'} + Bearer token -> 200 con {ok:true, user:{...needs_profile_completion:false, date_of_birth:'1990-05-15', age_at_signup:35, consent:{accepted_terms:true, accepted_privacy:true, accepted_at, terms_version, privacy_version, source:'complete_profile_oauth'}, consent_history:[{...}]}}. (2) DB verification: doc ora contiene date_of_birth='1990-05-15', age_at_signup=35, consent complete con source='complete_profile_oauth', consent_history lista con 1 entry. (3) Validazioni: DOB '2015-01-01' (<14 anni) -> 400 'Devi avere almeno 14 anni per usare RunHub (normativa italiana).'; DOB '1800-01-01' (>120 anni) -> 400 'Data di nascita non plausibile.'; DOB 'not-a-date' -> 400 'Data di nascita non valida. Usa formato GG/MM/AAAA.'; accepted_terms=false -> 400 'Devi accettare Termini di Servizio e Privacy Policy per continuare.'; accepted_privacy=false -> 400 stesso detail; senza Authorization -> 401 'Not authenticated'. (4) GET /auth/me post-complete -> 200 con needs_profile_completion=false. (5) Regression: admin login admin@runhub.com/admin123 -> 200, token valido; GET /admin/users etc intatti. Cleanup: DELETE /admin/users/{oauth_sim_uid} come admin -> eseguito."
+
+  - task: "GET /api/auth/me - flag needs_profile_completion"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Test logic dell'endpoint FUNZIONA CORRETTAMENTE, ma la review request richiede che admin@runhub.com abbia needs_profile_completion=false ('admin ha già DOB+consent da seed'). RISULTATO: GET /auth/me con admin token -> 200 con needs_profile_completion=TRUE. ROOT CAUSE (verificato via Mongo): il documento admin (user_id=user_849366fc3ee4) ha keys=['_id','created_at','days_per_week','email','goal','is_premium','level','name','onboarding_completed','password_changed_at','push_tokens','recommended_plan','role','stripe_customer_id','tier','tier_expires_at','user_id'] ma NON contiene 'date_of_birth' né 'consent'. Controllando /app/backend/server.py linee 2011-2046 (funzione startup/seed admin): il seed crea doc con user_id, email, name, password_hash, level, tier, tier_expires_at, is_premium, role, created_at MA NON include date_of_birth né consent. L'aggiornamento idempotente poi tocca solo password_hash/tier/role. Quindi per l'admin esistente nel DB (e per qualsiasi fresh deploy) needs_profile_completion sarà sempre true. La LOGICA della computazione del flag in /auth/me (linee 542-546) è corretta (has_dob and has_consent). Per risolvere il main agent deve aggiungere in seed admin le chiavi date_of_birth (es. '1990-01-01') e consent={accepted_terms:true, accepted_privacy:true, accepted_at:<dt>, terms_version:'seed', privacy_version:'seed', source:'seed'} (sia nel ramo 'if not existing' sia nel ramo 'else' con $set se mancanti). Nota: per gli utenti OAuth (simulati) l'endpoint GET /auth/me restituisce correttamente needs_profile_completion=true quando mancano DOB/consent, e false dopo aver chiamato /complete-profile — questa parte è verificata e funzionante. Failing assertions: 'GET /auth/me admin needs_profile_completion=false' e 'Regression: admin /auth/me still returns needs_profile_completion=false'. Tutti gli altri 36/38 assertions PASS."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 2
+  run_ui: false
+
 test_plan:
   current_focus:
-    - "GDPR Data Export (GET /api/user/export)"
-    - "GDPR Right to Erasure (DELETE /api/user/me)"
-    - "RevenueCat Webhook (/api/webhook/revenuecat)"
+    - "GET /api/auth/me - flag needs_profile_completion (admin seed mancante)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -405,4 +433,4 @@ agent_communication:
   - agent: "testing"
     message: "Completato testing frontend E2E mobile su http://localhost:3000 con viewport iPhone 14 (390x844) e Samsung Galaxy S21 (360x800). RISULTATI: ✅ Login screen rendering perfetto (logo RunHub, titolo BENTORNATO, form email/password, pulsante ACCEDI). ✅ Mobile responsiveness eccellente su entrambi i viewport. ✅ Keyboard handling corretto (input rimangono visibili). ✅ Google/Apple Sign-In buttons NON visibili in web preview (comportamento atteso - richiedono build nativo). ❌ Login flow interrotto: impossibile cliccare pulsante ACCEDI (selector issue), ma form funziona e credenziali si riempiono correttamente. Console logs mostrano 401 errors su /api/stats/progress (normale senza auth). UI/UX mobile ottimale, SafeAreaView e KeyboardAvoidingView funzionano. App pronta per test su device fisico/EAS build per OAuth e login completo."
   - agent: "testing"
-    message: "Completato testing GDPR + RevenueCat webhook (/app/backend_gdpr_revenuecat_test.py, 25 assertions, 19 PASS / 6 FAIL). CRITICAL BUG UNICO che affligge 3 endpoint: il codice usa filtri Mongo {'id': uid} mentre gli user document sono salvati con il campo 'user_id'. Impatto: (1) GET /api/user/export -> 'account' e' SEMPRE null (uno dei campi obbligatori GDPR Art.20); (2) DELETE /api/user/me -> ritorna 200 ok:true ma deleted.collections.users=0, l'utente NON viene cancellato (verificato: login successivo funziona ancora, /auth/me con token vecchio ritorna 200). QUESTO E' UN FALLIMENTO DI COMPLIANCE GDPR Art.17 - l'app dice di aver cancellato ma conserva i dati. (3) POST /api/webhook/revenuecat con evento INITIAL_PURCHASE -> 200 ma user.tier resta 'free' (log backend: '[RevenueCat] User non trovato: user_xxxx'). FIX RICHIESTO in /app/backend/server.py: (a) export_user_data linea ~475: cambiare db.users.find_one({'id': uid}) in {'user_id': uid}; (b) delete_my_account linea ~582: nella lista cascade, la tupla ('users', {'id': uid}) deve diventare ('users', {'user_id': uid}) — inoltre le tuple ('workouts',...) e ('sessions',...) puntano a collection che non esistono (l'app usa 'workout_sessions'); (c) _apply_revenuecat_entitlements linee 1753, 1780, 1835, 1838: cambiare tutti i filtri {'id': ...} in {'user_id': ...} (stesso bug). SUCCESSI: 401 senza token, 400 per admin self-delete, schema export completo (13 chiavi top-level), gdpr_article='20 - Data portability', password_hash mai esposto, tutti i TEST events webhook -> 200, dev-mode behavior corretto quando REVENUECAT_WEBHOOK_AUTH non e' settato. Payment_transactions audit log scrive correttamente. Entitlement mapping logic e event-type classification (ACTIVATE/DEACTIVATE/INFO) sono logicamente corretti - manca solo il fix del filtro. DETTAGLI COMPLETI nei status_history dei 3 nuovi task."
+    message: "Completato testing GDPR Profile Completion + /auth/me flag (/app/backend_profile_completion_test.py, 38 assertions, 36 PASS / 2 FAIL). ✅ POST /api/auth/complete-profile FUNZIONA PERFETTAMENTE: (a) happy path su utente OAuth simulato -> 200 con ok:true + user completo (needs_profile_completion:false, date_of_birth:'1990-05-15', age_at_signup:35, consent completo con source='complete_profile_oauth', consent_history con 1 entry); (b) DB verification conferma date_of_birth/age_at_signup/consent/consent_history salvati correttamente; (c) tutte le validazioni funzionano: DOB<14 -> 400 'Devi avere almeno 14 anni...', DOB>120 -> 400 'non plausibile', DOB invalido -> 400 'non valida', accepted_terms/privacy=false -> 400 'Devi accettare Termini...', senza Authorization -> 401. (d) GET /auth/me post-complete -> needs_profile_completion=false. ✅ GET /auth/me logic corretta per utenti OAuth simulati (needs_profile_completion=true quando mancano DOB/consent, false dopo complete-profile). ❌ PROBLEMA ADMIN: la review richiede che admin@runhub.com abbia needs_profile_completion=false ('admin ha già DOB+consent da seed') MA il doc admin nel DB NON contiene date_of_birth né consent. ROOT CAUSE: /app/backend/server.py funzione startup() linee 2017-2045 seed admin crea/aggiorna il doc senza mai impostare date_of_birth/consent. FIX RICHIESTO: aggiungere nel seed (sia branch 'insert_one' sia branch 'update con $set') i campi date_of_birth (es. '1980-01-01'), age_at_signup, e consent={accepted_terms:true, accepted_privacy:true, accepted_at:<dt>, terms_version:'seed', privacy_version:'seed', source:'seed'}. Dopo la fix basta riavviare il backend per attivare l'update idempotente su admin. Cleanup: utente test oauth_sim_<ts>@runhub.com eliminato via DELETE /admin/users/{uid}."
