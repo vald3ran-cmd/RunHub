@@ -2017,6 +2017,15 @@ async def startup():
     # Seed admin
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@runhub.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    # Seed consent (data fittizia per admin di sistema, marcata source="seed")
+    seed_consent = {
+        "accepted_terms": True,
+        "accepted_privacy": True,
+        "accepted_at": datetime.now(timezone.utc),
+        "terms_version": "seed",
+        "privacy_version": "seed",
+        "source": "seed",
+    }
     existing = await db.users.find_one({"email": admin_email})
     if not existing:
         await db.users.insert_one({
@@ -2030,6 +2039,10 @@ async def startup():
             "is_premium": True,
             "role": "admin",
             "created_at": datetime.now(timezone.utc),
+            "date_of_birth": "1980-01-01",
+            "age_at_signup": 45,
+            "consent": seed_consent,
+            "consent_history": [seed_consent],
         })
     else:
         update = {}
@@ -2041,6 +2054,14 @@ async def startup():
             update["is_premium"] = True
         if existing.get("role") != "admin":
             update["role"] = "admin"
+        # Backfill DOB + consent per admin legacy (fix needs_profile_completion per admin)
+        if not existing.get("date_of_birth"):
+            update["date_of_birth"] = "1980-01-01"
+            update["age_at_signup"] = 45
+        if not existing.get("consent") or not (existing.get("consent") or {}).get("accepted_at"):
+            update["consent"] = seed_consent
+            if not existing.get("consent_history"):
+                update["consent_history"] = [seed_consent]
         if update:
             await db.users.update_one({"email": admin_email}, {"$set": update})
 
