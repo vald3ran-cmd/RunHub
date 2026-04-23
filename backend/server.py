@@ -168,7 +168,10 @@ async def forgot_password(data: OtpSendIn):
             _otp_email_html(user.get("name", "Runner"), code, "reimpostare la password"),
             f"Il tuo codice per il reset password e': {code}",
         ))
-    # Risposta uguale indipendentemente per privacy
+        logger.info(f"forgot-password: OTP email dispatched to {data.email.lower()}")
+    else:
+        logger.warning(f"forgot-password: email {data.email.lower()} not found in DB (silent 200)")
+    # Risposta uguale indipendentemente per privacy (non rivelare se email esiste)
     return {"ok": True}
 
 @api_router.post("/auth/reset-password")
