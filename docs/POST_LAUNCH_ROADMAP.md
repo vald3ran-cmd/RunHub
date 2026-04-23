@@ -47,6 +47,26 @@ Da iniziare ~1 settimana dopo il lancio ufficiale su App Store, dopo aver raccol
   - App Store Connect: metadata localizzati per IT, EN, ES (descrizione, keyword, screenshot caption)
 - **Strategia:** device language auto-detect + override manuale in Settings
 
+#### 4. 🗺️ Mappa interattiva nel report sessione (workout summary)
+- **Obiettivo:** sostituire l'attuale linea SVG schematica con una vera mappa Mapbox tileata nel report post-corsa
+- **Stima:** 2-3 ore di lavoro
+- **Stato attuale:**
+  - In `app/workout/[id].tsx` c'è il componente `Route` che plotta le coordinate GPS come `<Polyline>` SVG dentro un box grigio (linea rossa su sfondo scuro)
+  - Funziona ma non mostra strade/quartieri/landmark — utente non riconosce dove ha corso
+- **Da implementare:**
+  - Sostituire `<Svg><Polyline .../></Svg>` con `<MapView>` (`react-native-maps` + Mapbox tiles) già usato in `run-active.tsx` per il live tracking
+  - Bounds auto-fit su percorso (calcolo min/max lat/lng già fatto nel codice esistente, va solo passato a `fitToCoordinates`)
+  - **Marker verde di partenza** (primo coord)
+  - **Marker rosso rosso di arrivo** (ultimo coord)
+  - **Polyline rossa del tracciato**
+  - Pulsante per passare da vista "Street" a "Satellite" (opzionale, usa stesso Mapbox)
+  - Tap sulla mappa → fullscreen modal con mappa grande + pan/zoom
+- **Vantaggi utente:**
+  - Riconosce il percorso ("ah, sono passato per Piazza Duomo!")
+  - Condivide più volentieri il workout sui social (mappa bella → post più virali)
+  - Confronta percorsi diversi ("stesso giro ma percorso più largo")
+- **Nota:** i dati sono **già tutti salvati nel backend** (campo `route: [{lat, lng, timestamp}]` della session), quindi niente modifiche DB — è puro lavoro frontend
+
 ---
 
 ## 📅 V1.2 — "Stretching & Wellness" (target: 6-8 settimane dopo lancio)
