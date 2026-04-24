@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 import stripe
 from anthropic import AsyncAnthropic
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 # ----------------- Setup -----------------
 mongo_url = os.environ['MONGO_URL']
@@ -1351,26 +1352,19 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
         f"Note utente: {data.notes or 'nessuna'}."
     )
     try:
-        # Use Anthropic SDK directly. If ANTHROPIC_API_KEY is set we use it,
-        # otherwise we use EMERGENT_LLM_KEY via Emergent's proxy (only works from within Emergent).
-        api_key = ANTHROPIC_API_KEY or EMERGENT_LLM_KEY
+        # Use emergentintegrations LlmChat (works both in dev and prod via EMERGENT_LLM_KEY).
+        # Falls back to direct Anthropic SDK if user has their own ANTHROPIC_API_KEY.
+        api_key = EMERGENT_LLM_KEY or ANTHROPIC_API_KEY
         if not api_key:
             raise HTTPException(status_code=503, detail="AI Coach non configurato. Contatta il supporto.")
-        base_url = None
-        if not ANTHROPIC_API_KEY and EMERGENT_LLM_KEY:
-            base_url = os.environ.get("EMERGENT_LLM_BASE_URL", "https://integrations.emergentagent.com/llm/anthropic")
-        anthro = AsyncAnthropic(api_key=api_key, base_url=base_url) if base_url else AsyncAnthropic(api_key=api_key)
         try:
-            msg = await asyncio.wait_for(
-                anthro.messages.create(
-                    model="claude-sonnet-4-5-20250929",
-                    max_tokens=4096,
-                    system=system_msg,
-                    messages=[{"role": "user", "content": prompt}],
-                ),
-                timeout=90.0,
-            )
-            resp = msg.content[0].text if msg.content else ""
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"ai_plan_{user['user_id']}_{uuid.uuid4().hex[:8]}",
+                system_message=system_msg,
+            ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_max_tokens(4096)
+            user_msg = UserMessage(text=prompt)
+            resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=90.0)
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
         # Extract JSON
@@ -2609,6 +2603,75 @@ async def admin_delete_user(user_id: str, admin: dict = Depends(require_admin())
     await db.payment_transactions.delete_many({"user_id": user_id})
     await db.users.delete_one({"user_id": user_id})
     return {"ok": True, "deleted_user_id": user_id, "email": target.get("email")}
+
+@api_router.post("/admin/seed-test-users")
+async def admin_seed_test_users(admin: dict = Depends(require_admin())):
+    """Idempotent seed for Apple Reviewer + free test user.
+    Safe to call multiple times. Resets password each call so credentials
+    are always valid for App Store Review submission."""
+    now = datetime.now(timezone.utc)
+    seed_consent = {
+        "accepted_terms": True,
+        "accepted_privacy": True,
+        "accepted_at": now,
+        "terms_version": "seed",
+        "privacy_version": "seed",
+        "source": "admin_seed",
+    }
+    test_users = [
+        {
+            "email": "applereview@runhub.com",
+            "password": "RunHubReview2026!",
+            "name": "Apple Reviewer",
+            "tier": "elite",
+            "is_premium": True,
+            "date_of_birth": "1990-01-01",
+            "age_at_signup": 35,
+            "level": "esperto",
+            "goal": "maratona",
+        },
+        {
+            "email": "testfree@runhub.com",
+            "password": "test123",
+            "name": "Free Test User",
+            "tier": "free",
+            "is_premium": False,
+            "date_of_birth": "1995-05-15",
+            "age_at_signup": 30,
+            "level": "principiante",
+            "goal": "5k",
+        },
+    ]
+    results = []
+    for u in test_users:
+        existing = await db.users.find_one({"email": u["email"]})
+        pwd_hash = bcrypt.hashpw(u["password"].encode(), bcrypt.gensalt()).decode()
+        user_doc = {
+            "user_id": existing["user_id"] if existing else f"user_{uuid.uuid4().hex[:12]}",
+            "email": u["email"],
+            "name": u["name"],
+            "password_hash": pwd_hash,
+            "tier": u["tier"],
+            "is_premium": u["is_premium"],
+            "level": u["level"],
+            "goal": u["goal"],
+            "days_per_week": 3,
+            "role": "user",
+            "onboarding_completed": True,
+            "date_of_birth": u["date_of_birth"],
+            "age_at_signup": u["age_at_signup"],
+            "consent": seed_consent,
+            "consent_history": (existing.get("consent_history", []) if existing else []) + [seed_consent],
+            "created_at": existing.get("created_at", now) if existing else now,
+            "updated_at": now,
+        }
+        if existing:
+            await db.users.update_one({"email": u["email"]}, {"$set": user_doc})
+            results.append({"email": u["email"], "action": "updated", "tier": u["tier"]})
+        else:
+            await db.users.insert_one(user_doc)
+            results.append({"email": u["email"], "action": "created", "tier": u["tier"]})
+    return {"ok": True, "seeded": results}
 
 @api_router.get("/")
 async def root():

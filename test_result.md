@@ -428,10 +428,35 @@ metadata:
   test_sequence: 2
   run_ui: false
 
+  - task: "AI plan generation refactored with emergentintegrations LlmChat"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Tested POST /api/plans/ai-generate via /app/backend_ai_seed_test.py against https://run-training-hub-1.preview.emergentagent.com/api. PARTIAL PASS. (1) Without auth -> 401 Not authenticated OK. (2) With testfree@runhub.com (Free tier) token -> 403 'Funzione riservata al piano Performance o superiore' OK. (3) With admin@runhub.com (Elite tier) token + body {goal:'5k', level:'principiante', days_per_week:3, experience_months:6, target_pace_min_km:6.5, current_fitness:'base', preferences:{avoid:[], focus:['endurance']}} -> 500 {detail:\"Errore generazione AI: 'LlmChat' object has no attribute 'with_max_tokens'\"}. CRITICAL BUG: /app/backend/server.py line 1365 calls `.with_max_tokens(4096)` on LlmChat, but this method does NOT exist in emergentintegrations 0.1.0 (installed version). Verified via `python -c 'from emergentintegrations.llm.chat import LlmChat; print(dir(LlmChat))'` -> only methods available are: get_messages, send_message, send_message_multimodal_response, with_model, with_params. FIX: replace `.with_max_tokens(4096)` with `.with_params(max_tokens=4096)`. After fix, the call should either return 200 with a valid JSON plan OR the graceful 503 'Servizio AI momentaneamente non disponibile' on Emergent proxy transient errors. IMPORTANTLY: the old 404 bug is NOT reproduced (status is 500 due to Python AttributeError, not a proxy 404), so the refactor DID successfully move away from the AsyncAnthropic+base_url path; it's just a typo'd method name. (4) NOT 404 assertion passes. (5) Regression: GET /api/plans admin -> 200 OK, GET /api/coach/athletes admin -> 200 OK with 3 athletes. Re-test required after main agent applies the one-line fix."
+
+  - task: "Admin seed test users endpoint (POST /api/admin/seed-test-users)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Tested POST /api/admin/seed-test-users via /app/backend_ai_seed_test.py against https://run-training-hub-1.preview.emergentagent.com/api. ALL PASS (24/24 assertions for this task). (1) Without auth -> 401 'Not authenticated'. (2) With non-admin token (testfree@runhub.com after seed / or fresh registered user) -> 403 'Accesso admin richiesto'. (3) With admin token -> 200 {ok:true, seeded:[{email:'applereview@runhub.com', action:'updated', tier:'elite'}, {email:'testfree@runhub.com', action:'updated', tier:'free'}]}. Both emails present, tiers correct, action in {created,updated}. (4) Idempotency: 2nd consecutive admin call -> 200 with both actions='updated' confirmed. (5) Login applereview@runhub.com / RunHubReview2026! -> 200 with token + user.tier='elite' + user.is_premium=true. (6) Login testfree@runhub.com / test123 -> 200 with token + user.tier='free' + user.is_premium=false. (7) GET /api/auth/me with applereview token -> 200 with tier='elite' AND needs_profile_completion=false (DOB '1990-01-01' + consent seeded correctly). Endpoint is safe for repeated calls, resets passwords each time, always yields the two accounts ready for App Store submission. Fully operational."
+
 test_plan:
   current_focus:
-    - "Stripe PACKAGES rinominati con prefisso runhub_ + nuovo prezzo performance"
-  stuck_tasks: []
+    - "AI plan generation refactored with emergentintegrations LlmChat"
+  stuck_tasks:
+    - "AI plan generation refactored with emergentintegrations LlmChat"
   test_all: false
   test_priority: "high_first"
 
@@ -449,4 +474,4 @@ agent_communication:
   - agent: "testing"
     message: "Completato testing frontend E2E mobile su http://localhost:3000 con viewport iPhone 14 (390x844) e Samsung Galaxy S21 (360x800). RISULTATI: ✅ Login screen rendering perfetto (logo RunHub, titolo BENTORNATO, form email/password, pulsante ACCEDI). ✅ Mobile responsiveness eccellente su entrambi i viewport. ✅ Keyboard handling corretto (input rimangono visibili). ✅ Google/Apple Sign-In buttons NON visibili in web preview (comportamento atteso - richiedono build nativo). ❌ Login flow interrotto: impossibile cliccare pulsante ACCEDI (selector issue), ma form funziona e credenziali si riempiono correttamente. Console logs mostrano 401 errors su /api/stats/progress (normale senza auth). UI/UX mobile ottimale, SafeAreaView e KeyboardAvoidingView funzionano. App pronta per test su device fisico/EAS build per OAuth e login completo."
   - agent: "testing"
-    message: "Completato testing GDPR Profile Completion + /auth/me flag (/app/backend_profile_completion_test.py, 38 assertions, 36 PASS / 2 FAIL). ✅ POST /api/auth/complete-profile FUNZIONA PERFETTAMENTE: (a) happy path su utente OAuth simulato -> 200 con ok:true + user completo (needs_profile_completion:false, date_of_birth:'1990-05-15', age_at_signup:35, consent completo con source='complete_profile_oauth', consent_history con 1 entry); (b) DB verification conferma date_of_birth/age_at_signup/consent/consent_history salvati correttamente; (c) tutte le validazioni funzionano: DOB<14 -> 400 'Devi avere almeno 14 anni...', DOB>120 -> 400 'non plausibile', DOB invalido -> 400 'non valida', accepted_terms/privacy=false -> 400 'Devi accettare Termini...', senza Authorization -> 401. (d) GET /auth/me post-complete -> needs_profile_completion=false. ✅ GET /auth/me logic corretta per utenti OAuth simulati (needs_profile_completion=true quando mancano DOB/consent, false dopo complete-profile). ❌ PROBLEMA ADMIN: la review richiede che admin@runhub.com abbia needs_profile_completion=false ('admin ha già DOB+consent da seed') MA il doc admin nel DB NON contiene date_of_birth né consent. ROOT CAUSE: /app/backend/server.py funzione startup() linee 2017-2045 seed admin crea/aggiorna il doc senza mai impostare date_of_birth/consent. FIX RICHIESTO: aggiungere nel seed (sia branch 'insert_one' sia branch 'update con $set') i campi date_of_birth (es. '1980-01-01'), age_at_signup, e consent={accepted_terms:true, accepted_privacy:true, accepted_at:<dt>, terms_version:'seed', privacy_version:'seed', source:'seed'}. Dopo la fix basta riavviare il backend per attivare l'update idempotente su admin. Cleanup: utente test oauth_sim_<ts>@runhub.com eliminato via DELETE /admin/users/{uid}."
+    message: "Completato testing 2 change-requests: (1) POST /api/plans/ai-generate refactor LlmChat, (2) POST /api/admin/seed-test-users. Script: /app/backend_ai_seed_test.py (29/30 assertions PASS). ❌ CRITICAL BUG in ai-generate: il refactor LlmChat chiama `.with_max_tokens(4096)` che NON esiste nella classe LlmChat di emergentintegrations 0.1.0 installata. Metodi disponibili (verificato): get_messages, send_message, send_message_multimodal_response, with_model, with_params. Result: POST /plans/ai-generate con admin Elite -> 500 con detail \"Errore generazione AI: 'LlmChat' object has no attribute 'with_max_tokens'\". BUONA NOTIZIA: il vecchio bug 404 (AsyncAnthropic+base_url Emergent proxy) NON si riproduce più — il refactor ha fatto progressi, è solo un typo metodo. FIX ONE-LINER per il main agent: /app/backend/server.py linea 1365 — sostituire `.with_max_tokens(4096)` con `.with_params(max_tokens=4096)` (with_params accetta **params e aggiorna extra_params). 401 senza auth OK, 403 per Free user OK. ✅ POST /api/admin/seed-test-users: TUTTO OK: 401 senza auth; 403 non-admin; 200 admin con payload corretto {ok:true, seeded:[{applereview, action, elite}, {testfree, action, free}]}; idempotency (2 chiamate consecutive -> entrambi action=updated); login applereview@runhub.com/RunHubReview2026! -> 200 tier=elite is_premium=true; login testfree@runhub.com/test123 -> 200 tier=free is_premium=false; /auth/me applereview -> tier=elite needs_profile_completion=false. Regression OK: /plans e /coach/athletes 200 admin. Main agent deve applicare il fix single-line e richiedere retest."
