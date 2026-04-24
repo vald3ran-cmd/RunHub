@@ -1600,12 +1600,21 @@ async def remove_athlete(athlete_id: str, user: dict = Depends(require_tier("eli
 
 # ----------------- Stripe (Native SDK, Full Subscriptions) -----------------
 PACKAGES = {
-    "starter_monthly":     {"tier": "starter",     "amount": 499,   "currency": "eur", "label": "Allenati Mensile",  "interval": "month", "duration_days": 30},
-    "starter_yearly":      {"tier": "starter",     "amount": 3999,  "currency": "eur", "label": "Allenati Annuale",  "interval": "year",  "duration_days": 365},
-    "performance_monthly": {"tier": "performance", "amount": 899,   "currency": "eur", "label": "Competi Mensile",   "interval": "month", "duration_days": 30},
-    "performance_yearly":  {"tier": "performance", "amount": 7999,  "currency": "eur", "label": "Competi Annuale",   "interval": "year",  "duration_days": 365},
-    "elite_monthly":       {"tier": "elite",       "amount": 1499,  "currency": "eur", "label": "Coach Mensile",     "interval": "month", "duration_days": 30},
-    "elite_yearly":        {"tier": "elite",       "amount": 12999, "currency": "eur", "label": "Coach Annuale",     "interval": "year",  "duration_days": 365},
+    # RevenueCat / App Store / Google Play Product IDs - naming convention: runhub_{tier}_{period}
+    "runhub_starter_monthly":     {"tier": "starter",     "amount": 499,   "currency": "eur", "label": "Starter Mensile",     "interval": "month", "duration_days": 30},
+    "runhub_starter_yearly":      {"tier": "starter",     "amount": 3999,  "currency": "eur", "label": "Starter Annuale",     "interval": "year",  "duration_days": 365},
+    "runhub_performance_monthly": {"tier": "performance", "amount": 999,   "currency": "eur", "label": "Performance Mensile", "interval": "month", "duration_days": 30},
+    "runhub_performance_yearly":  {"tier": "performance", "amount": 7999,  "currency": "eur", "label": "Performance Annuale", "interval": "year",  "duration_days": 365},
+    "runhub_elite_monthly":       {"tier": "elite",       "amount": 1499,  "currency": "eur", "label": "Elite Mensile",       "interval": "month", "duration_days": 30},
+    "runhub_elite_yearly":        {"tier": "elite",       "amount": 12999, "currency": "eur", "label": "Elite Annuale",       "interval": "year",  "duration_days": 365},
+    # --- LEGACY ALIASES (back-compat) - same tier mapping, kept only for existing Stripe sessions.
+    # Remove after all legacy subs have expired (typically 14 months).
+    "starter_monthly":     {"tier": "starter",     "amount": 499,   "currency": "eur", "label": "Starter Mensile",     "interval": "month", "duration_days": 30, "legacy": True},
+    "starter_yearly":      {"tier": "starter",     "amount": 3999,  "currency": "eur", "label": "Starter Annuale",     "interval": "year",  "duration_days": 365, "legacy": True},
+    "performance_monthly": {"tier": "performance", "amount": 999,   "currency": "eur", "label": "Performance Mensile", "interval": "month", "duration_days": 30, "legacy": True},
+    "performance_yearly":  {"tier": "performance", "amount": 7999,  "currency": "eur", "label": "Performance Annuale", "interval": "year",  "duration_days": 365, "legacy": True},
+    "elite_monthly":       {"tier": "elite",       "amount": 1499,  "currency": "eur", "label": "Elite Mensile",       "interval": "month", "duration_days": 30, "legacy": True},
+    "elite_yearly":        {"tier": "elite",       "amount": 12999, "currency": "eur", "label": "Elite Annuale",       "interval": "year",  "duration_days": 365, "legacy": True},
 }
 
 _stripe_price_ids: Dict[str, str] = {}

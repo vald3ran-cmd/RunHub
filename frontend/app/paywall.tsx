@@ -51,8 +51,8 @@ const TIERS: TierDef[] = [
       'Storia allenamenti illimitata',
       'Senza pubblicità',
     ],
-    monthlyProductId: 'starter_monthly',
-    yearlyProductId: 'starter_yearly',
+    monthlyProductId: 'runhub_starter_monthly',
+    yearlyProductId: 'runhub_starter_yearly',
     monthlyPrice: 4.99,
     yearlyPrice: 39.99,
   },
@@ -69,9 +69,9 @@ const TIERS: TierDef[] = [
       'Predizione tempi gara',
       'Obiettivi intelligenti',
     ],
-    monthlyProductId: 'performance_monthly',
-    yearlyProductId: 'performance_yearly',
-    monthlyPrice: 8.99,
+    monthlyProductId: 'runhub_performance_monthly',
+    yearlyProductId: 'runhub_performance_yearly',
+    monthlyPrice: 9.99,
     yearlyPrice: 79.99,
   },
   {
@@ -87,8 +87,8 @@ const TIERS: TierDef[] = [
       'Supporto prioritario',
       'Piani esclusivi',
     ],
-    monthlyProductId: 'elite_monthly',
-    yearlyProductId: 'elite_yearly',
+    monthlyProductId: 'runhub_elite_monthly',
+    yearlyProductId: 'runhub_elite_yearly',
     monthlyPrice: 14.99,
     yearlyPrice: 129.99,
   },
@@ -236,8 +236,16 @@ export default function PaywallScreen() {
 
         {/* Cards tier */}
         {TIERS.map((tier) => {
-          const price = period === 'monthly' ? tier.monthlyPrice : tier.yearlyPrice;
-          const pricePerMonth = period === 'yearly' ? (price / 12).toFixed(2) : null;
+          const fallbackPrice = period === 'monthly' ? tier.monthlyPrice : tier.yearlyPrice;
+          const pkg = getPackageForTier(tier);
+          // Prezzo localizzato da RevenueCat (es. "4,99 €", "$4.99", "£3.99")
+          // Fallback al prezzo hardcoded (€) se l'offering non è ancora caricata.
+          const priceDisplay = pkg?.product?.priceString || `€${fallbackPrice.toFixed(2)}`;
+          const priceNumeric = pkg?.product?.price ?? fallbackPrice;
+          const pricePerMonth = period === 'yearly' ? (priceNumeric / 12).toFixed(2) : null;
+          const currencySymbol = pkg?.product?.currencyCode
+            ? (priceDisplay.match(/^[^\d\s]+|[^\d\s,.]+$/)?.[0] || '€')
+            : '€';
           const isCurrent = currentTier === tier.key;
           const isLoadingThis = loading === tier.key;
 
@@ -265,11 +273,11 @@ export default function PaywallScreen() {
               </View>
 
               <View style={styles.priceRow}>
-                <Text style={styles.price}>€{price.toFixed(2)}</Text>
+                <Text style={styles.price}>{priceDisplay}</Text>
                 <Text style={styles.priceUnit}>/{period === 'monthly' ? 'mese' : 'anno'}</Text>
               </View>
               {pricePerMonth && (
-                <Text style={styles.pricePerMonth}>≈ €{pricePerMonth}/mese</Text>
+                <Text style={styles.pricePerMonth}>≈ {currencySymbol}{pricePerMonth}/mese</Text>
               )}
 
               <View style={styles.features}>

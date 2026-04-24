@@ -406,6 +406,22 @@ metadata:
         agent: "testing"
         comment: "Test logic dell'endpoint FUNZIONA CORRETTAMENTE, ma la review request richiede che admin@runhub.com abbia needs_profile_completion=false ('admin ha già DOB+consent da seed'). RISULTATO: GET /auth/me con admin token -> 200 con needs_profile_completion=TRUE. ROOT CAUSE (verificato via Mongo): il documento admin (user_id=user_849366fc3ee4) ha keys=['_id','created_at','days_per_week','email','goal','is_premium','level','name','onboarding_completed','password_changed_at','push_tokens','recommended_plan','role','stripe_customer_id','tier','tier_expires_at','user_id'] ma NON contiene 'date_of_birth' né 'consent'. Controllando /app/backend/server.py linee 2011-2046 (funzione startup/seed admin): il seed crea doc con user_id, email, name, password_hash, level, tier, tier_expires_at, is_premium, role, created_at MA NON include date_of_birth né consent. L'aggiornamento idempotente poi tocca solo password_hash/tier/role. Quindi per l'admin esistente nel DB (e per qualsiasi fresh deploy) needs_profile_completion sarà sempre true. La LOGICA della computazione del flag in /auth/me (linee 542-546) è corretta (has_dob and has_consent). Per risolvere il main agent deve aggiungere in seed admin le chiavi date_of_birth (es. '1990-01-01') e consent={accepted_terms:true, accepted_privacy:true, accepted_at:<dt>, terms_version:'seed', privacy_version:'seed', source:'seed'} (sia nel ramo 'if not existing' sia nel ramo 'else' con $set se mancanti). Nota: per gli utenti OAuth (simulati) l'endpoint GET /auth/me restituisce correttamente needs_profile_completion=true quando mancano DOB/consent, e false dopo aver chiamato /complete-profile — questa parte è verificata e funzionante. Failing assertions: 'GET /auth/me admin needs_profile_completion=false' e 'Regression: admin /auth/me still returns needs_profile_completion=false'. Tutti gli altri 36/38 assertions PASS."
 
+  - task: "Stripe PACKAGES rinominati con prefisso runhub_ + nuovo prezzo performance_monthly"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Rinominati 6 Product ID con prefisso 'runhub_' per allinearli a App Store Connect + RevenueCat. Nuovi ID: runhub_starter_monthly (499), runhub_starter_yearly (3999), runhub_performance_monthly (999 - CAMBIATO da 899), runhub_performance_yearly (7999), runhub_elite_monthly (1499), runhub_elite_yearly (12999). Manteniamo anche i 6 ID legacy (starter_monthly, ecc.) con flag 'legacy:true' per back-compat su checkout Stripe esistenti. DA TESTARE: (1) GET /api/stripe/packages ritorna 12 pacchetti totali (6 nuovi + 6 legacy) con amount corretti (in EUR, convertiti /100). (2) POST /api/stripe/checkout con package_id='runhub_starter_monthly' lavora (almeno fino al tentativo di creare session Stripe - o 503 se Stripe non config). (3) POST /api/stripe/checkout con package_id='runhub_performance_monthly' ha amount=999 (non piu 899). (4) Legacy package_id='starter_monthly' continua a funzionare. (5) Regression: admin login + GET /admin/users + GET /plans intatti. NOTA: attendersi 503 su /stripe/checkout se STRIPE_API_KEY non valida in env - non e' un bug del nostro codice, è OK se il test verifica solo il routing/validazione package_id (400 per ID invalido vs 503 per Stripe down)."
+      - working: true
+        agent: "testing"
+        comment: "Eseguiti 77/77 assertions PASS via /app/backend_stripe_packages_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. (1) GET /api/stripe/packages (no auth) -> 200 con esattamente 12 chiavi. Tutte le 6 NEW keys presenti (runhub_starter_monthly, runhub_starter_yearly, runhub_performance_monthly, runhub_performance_yearly, runhub_elite_monthly, runhub_elite_yearly) + tutte le 6 LEGACY keys presenti (starter_monthly, starter_yearly, performance_monthly, performance_yearly, elite_monthly, elite_yearly). (2) Amount EUR (cents/100) verificati: runhub_starter_monthly=4.99, runhub_starter_yearly=39.99, runhub_performance_monthly=9.99 (NUOVO, era 8.99), runhub_performance_yearly=79.99, runhub_elite_monthly=14.99, runhub_elite_yearly=129.99. Tutti i legacy hanno gli stessi amount (performance_monthly legacy = 9.99 anche lui). (3) Tier mapping corretto: starter_* -> 'starter', performance_* -> 'performance', elite_* -> 'elite' (12/12). (4) Interval: *_monthly -> 'month', *_yearly -> 'year' (12/12). (5) Currency='eur' per tutti (12/12). (6) POST /api/stripe/checkout con package_id='runhub_starter_monthly' + origin_url='https://apprunhub.com' + Bearer admin -> 200 con URL checkout Stripe reale (cs_test_b1W36...). (7) package_id='runhub_elite_yearly' -> 200 con URL Stripe. (8) package_id='starter_monthly' (legacy alias) -> 200 (accettato dal validator). (9) package_id='performance_monthly' (legacy) -> 200. (10) package_id='nonexistent_fake_id' -> 400 con detail 'Pacchetto non valido'. (11) Senza Authorization -> 401 'Not authenticated'. (12) Regression: admin login -> 200, GET /auth/me -> 200 role='admin', GET /admin/users -> 200 array 3 utenti, GET /plans -> 200. NOTA: STRIPE_API_KEY sul backend e' configurata correttamente (chiave test), quindi /stripe/checkout ha creato sessioni reali anziche' restituire 503. Tutti i nuovi Product ID sono accettati dal validator PACKAGES (line 1702), performance_monthly amount = 999 cents (€9.99) confermato, legacy IDs back-compat funzionano. FIX COMPLETO e funzionante, pronto per submission iOS App Store."
+
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -414,7 +430,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "GET /api/auth/me - flag needs_profile_completion (admin seed mancante)"
+    - "Stripe PACKAGES rinominati con prefisso runhub_ + nuovo prezzo performance"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
