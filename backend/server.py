@@ -1604,7 +1604,8 @@ PACKAGES = {
     # Bundle: com.runhub.app → namespace: com.runhub.app.sub.{tier}.{period}
     "com.runhub.app.sub.starter.monthly":     {"tier": "starter",     "amount": 499,   "currency": "eur", "label": "Starter Mensile",     "interval": "month", "duration_days": 30},
     "com.runhub.app.sub.starter.yearly":      {"tier": "starter",     "amount": 3999,  "currency": "eur", "label": "Starter Annuale",     "interval": "year",  "duration_days": 365},
-    "com.runhub.app.sub.performance.monthly": {"tier": "performance", "amount": 999,   "currency": "eur", "label": "Performance Mensile", "interval": "month", "duration_days": 30},
+    "com.runhub.app.sub.performance.monthly.v2": {"tier": "performance", "amount": 999,   "currency": "eur", "label": "Performance Mensile", "interval": "month", "duration_days": 30},
+    "com.runhub.app.sub.performance.monthly": {"tier": "performance", "amount": 999,   "currency": "eur", "label": "Performance Mensile (deprecated)", "interval": "month", "duration_days": 30, "legacy": True},
     "com.runhub.app.sub.performance.yearly":  {"tier": "performance", "amount": 7999,  "currency": "eur", "label": "Performance Annuale", "interval": "year",  "duration_days": 365},
     "com.runhub.app.sub.elite.monthly":       {"tier": "elite",       "amount": 1499,  "currency": "eur", "label": "Elite Mensile",       "interval": "month", "duration_days": 30},
     "com.runhub.app.sub.elite.yearly":        {"tier": "elite",       "amount": 12999, "currency": "eur", "label": "Elite Annuale",       "interval": "year",  "duration_days": 365},

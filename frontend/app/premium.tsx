@@ -94,8 +94,15 @@ export default function Premium() {
 
   const checkout = async (tierKey: TierKey) => {
     if (tierKey === 'free') return;
-    // Product ID allineato ad App Store Connect + RevenueCat (reverse-DNS)
-    const packageId = `com.runhub.app.sub.${tierKey}.${cycle}`;
+    // Product ID allineato ad App Store Connect + RevenueCat (reverse-DNS).
+    // NOTE: performance.monthly è stato bruciato su ASC (cancellato e non riutilizzabile),
+    // quindi usiamo la v2 solo per quel product. Gli altri 5 sono su ID base.
+    let packageId: string;
+    if (tierKey === 'performance' && cycle === 'monthly') {
+      packageId = 'com.runhub.app.sub.performance.monthly.v2';
+    } else {
+      packageId = `com.runhub.app.sub.${tierKey}.${cycle}`;
+    }
     setLoading(packageId);
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'

@@ -69,7 +69,7 @@ const TIERS: TierDef[] = [
       'Predizione tempi gara',
       'Obiettivi intelligenti',
     ],
-    monthlyProductId: 'com.runhub.app.sub.performance.monthly',
+    monthlyProductId: 'com.runhub.app.sub.performance.monthly.v2',
     yearlyProductId: 'com.runhub.app.sub.performance.yearly',
     monthlyPrice: 9.99,
     yearlyPrice: 79.99,
