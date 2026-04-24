@@ -1362,14 +1362,21 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                 api_key=api_key,
                 session_id=f"ai_plan_{user['user_id']}_{uuid.uuid4().hex[:8]}",
                 system_message=system_msg,
-            ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_max_tokens(4096)
+            ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_params(max_tokens=8192)
             user_msg = UserMessage(text=prompt)
             resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=90.0)
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
-        # Extract JSON
-        match = re.search(r'\{.*\}', resp, re.DOTALL)
-        raw = match.group(0) if match else resp
+        # Extract JSON — Claude often wraps response in ```json ... ``` code blocks.
+        # Strategy: strip markdown fences, then grab the outermost {...} block.
+        cleaned = resp.strip()
+        if cleaned.startswith("```"):
+            # Remove opening fence (```json or ```) and closing fence
+            cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned)
+            cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+        # Find the outermost JSON object
+        match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+        raw = match.group(0) if match else cleaned
         parsed = json.loads(raw)
     except HTTPException:
         raise
@@ -1379,6 +1386,8 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
     except Exception as e:
         logger.error(f"AI generate error: {e}")
         msg = str(e)
+        if "Budget has been exceeded" in msg or "budget" in msg.lower() and "exceed" in msg.lower():
+            raise HTTPException(status_code=503, detail="Servizio AI esaurito: credito LLM terminato. Il team è stato notificato.")
         if "502" in msg or "BadGateway" in msg:
             raise HTTPException(status_code=503, detail="Servizio AI momentaneamente non disponibile. Riprova tra qualche minuto.")
         raise HTTPException(status_code=500, detail=f"Errore generazione AI: {msg[:200]}")
