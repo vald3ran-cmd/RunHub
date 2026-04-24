@@ -87,7 +87,7 @@ export default function TermsScreen() {
         <Text style={styles.p}>
           RunHub offre un piano gratuito e tre piani a pagamento:
           {'\n'}• <Text style={styles.b}>Starter</Text> — €4,99/mese o €39,99/anno
-          {'\n'}• <Text style={styles.b}>Performance</Text> — €8,99/mese o €79,99/anno
+          {'\n'}• <Text style={styles.b}>Performance</Text> — €9,99/mese o €79,99/anno
           {'\n'}• <Text style={styles.b}>Elite</Text> — €14,99/mese o €129,99/anno
         </Text>
         <Text style={styles.p}>

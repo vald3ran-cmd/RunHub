@@ -36,7 +36,7 @@ const TIERS: {
     ],
   },
   {
-    key: 'performance', name: 'Competi', tag: 'PERFORMANCE', monthly: 8.99, yearly: 79.99,
+    key: 'performance', name: 'Competi', tag: 'PERFORMANCE', monthly: 9.99, yearly: 79.99,
     color: colors.primary, target: 'Runner seri',
     features: [
       'Tutto di Starter +',
@@ -94,7 +94,8 @@ export default function Premium() {
 
   const checkout = async (tierKey: TierKey) => {
     if (tierKey === 'free') return;
-    const packageId = `${tierKey}_${cycle}`;
+    // Product ID allineato ad App Store Connect + RevenueCat (reverse-DNS)
+    const packageId = `com.runhub.app.sub.${tierKey}.${cycle}`;
     setLoading(packageId);
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
