@@ -44,11 +44,18 @@ export default function AIGenerate() {
         duration_weeks: parseInt(weeks) || 4,
         available_minutes: parseInt(minutes) || 45,
         notes: notes.trim() || null,
+      }, {
+        // L'AI può impiegare 60-90s per generare un piano completo.
+        // Default global timeout (30s) è troppo poco.
+        timeout: 150000,
       });
       router.replace({ pathname: '/plan/[id]', params: { id: data.plan_id } });
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      Alert.alert('Errore', typeof d === 'string' ? d : 'Generazione fallita');
+      const isTimeout = e?.code === 'ECONNABORTED' || /timeout/i.test(e?.message || '');
+      Alert.alert('Errore', typeof d === 'string' ? d : isTimeout
+        ? 'L\'AI sta impiegando più tempo del previsto. Riprova tra qualche istante.'
+        : 'Generazione fallita');
     } finally { setLoading(false); }
   };
 
