@@ -23,7 +23,15 @@ from pydantic import BaseModel, Field, EmailStr
 
 import stripe
 from anthropic import AsyncAnthropic
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+# emergentintegrations is only available inside Emergent's container.
+# On Render production the import will fail and we fall back to direct Anthropic SDK.
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    EMERGENT_INTEGRATIONS_AVAILABLE = True
+except ImportError:
+    LlmChat = None  # type: ignore
+    UserMessage = None  # type: ignore
+    EMERGENT_INTEGRATIONS_AVAILABLE = False
 
 # ----------------- Setup -----------------
 mongo_url = os.environ['MONGO_URL']
@@ -1369,7 +1377,7 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                 resp = msg.content[0].text if msg.content else ""
             except asyncio.TimeoutError:
                 raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
-        elif EMERGENT_LLM_KEY:
+        elif EMERGENT_LLM_KEY and EMERGENT_INTEGRATIONS_AVAILABLE:
             try:
                 chat = LlmChat(
                     api_key=EMERGENT_LLM_KEY,
