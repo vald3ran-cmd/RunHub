@@ -1365,16 +1365,24 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
         if ANTHROPIC_API_KEY and ANTHROPIC_API_KEY.startswith("sk-ant-"):
             try:
                 anthro = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+                # JSON prefill technique: by ending assistant turn with "{",
+                # we force Claude to continue from there, guaranteeing the
+                # response starts as valid JSON (no markdown, no preamble).
                 msg = await asyncio.wait_for(
                     anthro.messages.create(
                         model="claude-sonnet-4-5-20250929",
-                        max_tokens=8192,
+                        max_tokens=16384,
                         system=system_msg,
-                        messages=[{"role": "user", "content": prompt}],
+                        messages=[
+                            {"role": "user", "content": prompt},
+                            {"role": "assistant", "content": "{"},
+                        ],
                     ),
-                    timeout=90.0,
+                    timeout=120.0,
                 )
-                resp = msg.content[0].text if msg.content else ""
+                # Re-prepend the "{" we forced as prefill, since the response
+                # only contains what Claude generated AFTER the prefill.
+                resp = "{" + (msg.content[0].text if msg.content else "")
             except asyncio.TimeoutError:
                 raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
         elif EMERGENT_LLM_KEY and EMERGENT_INTEGRATIONS_AVAILABLE:
@@ -1390,17 +1398,42 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                 raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
         else:
             raise HTTPException(status_code=503, detail="AI Coach non configurato. Contatta il supporto.")
-        # Extract JSON — Claude often wraps response in ```json ... ``` code blocks.
-        # Strategy: strip markdown fences, then grab the outermost {...} block.
+        # JSON parsing with prefill technique: response should already start with "{".
+        # Strip any defensive markdown fencing (rare with prefill but possible).
         cleaned = resp.strip()
         if cleaned.startswith("```"):
-            # Remove opening fence (```json or ```) and closing fence
             cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned)
             cleaned = re.sub(r'\n?```\s*$', '', cleaned)
-        # Find the outermost JSON object
-        match = re.search(r'\{.*\}', cleaned, re.DOTALL)
-        raw = match.group(0) if match else cleaned
-        parsed = json.loads(raw)
+        # If response was truncated (missing closing brace), try to recover
+        # by finding the deepest valid balanced subset.
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError as first_err:
+            # Try to find the largest valid JSON prefix by balancing braces
+            depth = 0
+            in_str = False
+            esc = False
+            last_valid = -1
+            for i, ch in enumerate(cleaned):
+                if esc:
+                    esc = False; continue
+                if ch == "\\":
+                    esc = True; continue
+                if ch == '"':
+                    in_str = not in_str; continue
+                if in_str: continue
+                if ch == "{": depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0: last_valid = i
+            if last_valid > 0:
+                truncated = cleaned[:last_valid + 1]
+                logger.warning(f"AI JSON was truncated, recovering at char {last_valid}/{len(cleaned)}")
+                parsed = json.loads(truncated)
+            else:
+                # Cannot recover - log full response (truncated to 2000 chars) and re-raise
+                logger.error(f"AI JSON parse error: {first_err}. Response (first 2000 chars): {cleaned[:2000]}")
+                raise first_err
     except HTTPException:
         raise
     except json.JSONDecodeError as e:
