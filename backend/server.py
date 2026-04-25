@@ -1352,21 +1352,36 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
         f"Note utente: {data.notes or 'nessuna'}."
     )
     try:
-        # Use emergentintegrations LlmChat (works both in dev and prod via EMERGENT_LLM_KEY).
-        # Falls back to direct Anthropic SDK if user has their own ANTHROPIC_API_KEY.
-        api_key = EMERGENT_LLM_KEY or ANTHROPIC_API_KEY
-        if not api_key:
+        # Prefer direct Anthropic API (most reliable, no proxy 502s).
+        # Fallback to Emergent proxy via LlmChat if no Anthropic key.
+        if ANTHROPIC_API_KEY and ANTHROPIC_API_KEY.startswith("sk-ant-"):
+            try:
+                anthro = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+                msg = await asyncio.wait_for(
+                    anthro.messages.create(
+                        model="claude-sonnet-4-5-20250929",
+                        max_tokens=8192,
+                        system=system_msg,
+                        messages=[{"role": "user", "content": prompt}],
+                    ),
+                    timeout=90.0,
+                )
+                resp = msg.content[0].text if msg.content else ""
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+        elif EMERGENT_LLM_KEY:
+            try:
+                chat = LlmChat(
+                    api_key=EMERGENT_LLM_KEY,
+                    session_id=f"ai_plan_{user['user_id']}_{uuid.uuid4().hex[:8]}",
+                    system_message=system_msg,
+                ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_params(max_tokens=8192)
+                user_msg = UserMessage(text=prompt)
+                resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=90.0)
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+        else:
             raise HTTPException(status_code=503, detail="AI Coach non configurato. Contatta il supporto.")
-        try:
-            chat = LlmChat(
-                api_key=api_key,
-                session_id=f"ai_plan_{user['user_id']}_{uuid.uuid4().hex[:8]}",
-                system_message=system_msg,
-            ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_params(max_tokens=8192)
-            user_msg = UserMessage(text=prompt)
-            resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=90.0)
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
         # Extract JSON — Claude often wraps response in ```json ... ``` code blocks.
         # Strategy: strip markdown fences, then grab the outermost {...} block.
         cleaned = resp.strip()
