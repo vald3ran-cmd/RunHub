@@ -11,7 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
+      "usesAppleSignIn": true,
+      "entitlements": {
+        "com.apple.developer.applesignin": ["Default"]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
@@ -20,7 +24,9 @@
         "NSHealthShareUsageDescription": "Sincronizza passi, distanza, battito e calorie da Apple Health.",
         "NSHealthUpdateUsageDescription": "Salva le tue corse in Apple Health.",
         "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          }
         ]
       }
     },
@@ -106,7 +112,8 @@
         {
           "package": "com.runhub.app"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

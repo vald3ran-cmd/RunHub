@@ -104,6 +104,20 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
     Alert.alert('Non disponibile', 'Il login con Apple funziona solo su iOS in build nativa.');
     return null;
   }
+  // Pre-flight: verify the entitlement is actually present at runtime.
+  // If usesAppleSignIn is missing from app.json, isAvailableAsync() returns false.
+  try {
+    const available = await mod.isAvailableAsync();
+    if (!available) {
+      Alert.alert(
+        'Apple Sign-In non disponibile',
+        'Il dispositivo o la build corrente non supporta Sign In with Apple. Aggiorna l\'app all\'ultima versione.'
+      );
+      return null;
+    }
+  } catch (e) {
+    console.warn('[SocialAuth] Apple isAvailableAsync threw:', e);
+  }
   try {
     const credential = await mod.signInAsync({
       requestedScopes: [
@@ -111,20 +125,45 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
         mod.AppleAuthenticationScope.EMAIL,
       ],
     });
-    if (!credential?.identityToken) throw new Error('Identity token mancante');
+    if (!credential?.identityToken) {
+      throw new Error('Apple non ha restituito un identity token. Riprova.');
+    }
     const fullName = credential.fullName;
     const name = [fullName?.givenName, fullName?.familyName].filter(Boolean).join(' ') || undefined;
-    const { data: resp } = await api.post('/auth/apple', {
-      identity_token: credential.identityToken,
-      user_id: credential.user,
-      email: credential.email,
-      name,
-    });
-    return resp;
+    try {
+      const { data: resp } = await api.post('/auth/apple', {
+        identity_token: credential.identityToken,
+        user_id: credential.user,
+        email: credential.email,
+        name,
+      });
+      return resp;
+    } catch (apiErr: any) {
+      const detail = apiErr?.response?.data?.detail;
+      const status = apiErr?.response?.status;
+      console.error('[SocialAuth] Apple backend rejected token', { status, detail });
+      Alert.alert(
+        'Accesso Apple fallito',
+        typeof detail === 'string' ? detail : 'Server non disponibile, riprova tra qualche secondo'
+      );
+      return null;
+    }
   } catch (e: any) {
-    if (e?.code === 'ERR_REQUEST_CANCELED') return null;
-    console.error('[SocialAuth] Apple sign in error', e);
-    Alert.alert('Accesso Apple fallito', e?.message || 'Riprova piu\' tardi');
+    // User cancelled — silent
+    if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') return null;
+    console.error('[SocialAuth] Apple sign in error', { code: e?.code, message: e?.message });
+    const code = e?.code || '';
+    let message = e?.message || 'Riprova piu\' tardi';
+    if (code === 'ERR_REQUEST_UNKNOWN') {
+      message = 'Configurazione Apple Sign-In mancante in questa build. Riprova dopo l\'aggiornamento.';
+    } else if (code === 'ERR_REQUEST_NOT_HANDLED' || code === 'ERR_REQUEST_FAILED') {
+      message = 'Apple Sign-In non ha completato la richiesta. Verifica la connessione e riprova.';
+    } else if (code === 'ERR_REQUEST_NOT_INTERACTIVE') {
+      message = 'Apple Sign-In richiede interazione utente. Apri l\'app e riprova.';
+    } else if (code === 'ERR_REQUEST_INVALID_RESPONSE') {
+      message = 'Risposta Apple non valida. Riprova tra poco.';
+    }
+    Alert.alert('Accesso Apple fallito', message);
     return null;
   }
 }

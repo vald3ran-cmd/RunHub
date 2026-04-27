@@ -1029,30 +1029,66 @@ async def apple_auth(data: AppleAuthIn, response: Response):
         import jwt as pyjwt
         from jwt import PyJWKClient
     except ImportError:
-        raise HTTPException(status_code=500, detail="PyJWT non installata")
+        logger.error("[AppleAuth] PyJWT non installata")
+        raise HTTPException(status_code=500, detail="Configurazione server non completa")
 
+    # Accept both the iOS app bundle ID and any Service ID (used for web flows)
     bundle_id = os.environ.get("APPLE_BUNDLE_ID", "com.runhub.app")
+    service_id = os.environ.get("APPLE_SERVICE_ID", "")
+    allowed_audiences = [a for a in [bundle_id, service_id] if a]
+
+    logger.info(f"[AppleAuth] Incoming token verification, allowed_aud={allowed_audiences}, has_email={bool(data.email)}")
+
     try:
         jwks_client = PyJWKClient("https://appleid.apple.com/auth/keys")
         signing_key = jwks_client.get_signing_key_from_jwt(data.identity_token)
-        payload = pyjwt.decode(
-            data.identity_token,
-            signing_key.key,
-            algorithms=["RS256"],
-            audience=bundle_id,
-            issuer="https://appleid.apple.com",
-        )
+        # First try with strict audience list
+        try:
+            payload = pyjwt.decode(
+                data.identity_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=allowed_audiences,
+                issuer="https://appleid.apple.com",
+            )
+        except pyjwt.InvalidAudienceError as aud_err:
+            # Decode without audience to log the actual aud, then reject
+            unverified = pyjwt.decode(
+                data.identity_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                issuer="https://appleid.apple.com",
+                options={"verify_aud": False},
+            )
+            logger.error(f"[AppleAuth] Audience mismatch. token_aud={unverified.get('aud')}, allowed={allowed_audiences}")
+            raise HTTPException(
+                status_code=401,
+                detail=f"Apple Sign-In: bundle ID non autorizzato (aud={unverified.get('aud')})"
+            )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception(f"[AppleAuth] Token verification failed: {e}")
         raise HTTPException(status_code=401, detail=f"Token Apple non valido: {str(e)}")
 
     sub = payload.get("sub")
+    if not sub:
+        logger.error(f"[AppleAuth] Missing 'sub' in payload: {payload}")
+        raise HTTPException(status_code=401, detail="Token Apple senza identificativo utente")
+
     email = payload.get("email") or data.email or ""
     name = data.name  # Apple fornisce il nome SOLO alla prima autenticazione (dal client)
 
-    user = await _find_or_create_oauth_user("apple", sub, email, name)
+    try:
+        user = await _find_or_create_oauth_user("apple", sub, email, name)
+    except Exception as e:
+        logger.exception(f"[AppleAuth] DB error during find_or_create: {e}")
+        raise HTTPException(status_code=500, detail="Errore creazione account, riprova")
+
     token = create_access_token(user["user_id"], user["email"])
     response.set_cookie("access_token", token, httponly=True, samesite="lax", max_age=604800, path="/")
     user.pop("_id", None); user.pop("password_hash", None)
+    logger.info(f"[AppleAuth] Login OK user_id={user.get('user_id')} email={user.get('email')}")
     return {"token": token, "user": user}
 
 # ----------------- Plans -----------------

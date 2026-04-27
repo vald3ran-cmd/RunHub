@@ -454,11 +454,25 @@ metadata:
 
 test_plan:
   current_focus:
-    - "AI plan generation refactored with emergentintegrations LlmChat"
-  stuck_tasks:
-    - "AI plan generation refactored with emergentintegrations LlmChat"
+    - "Apple Sign-In endpoint /api/auth/apple - improved error logging and audience handling"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+  - task: "Apple Sign-In endpoint /api/auth/apple - improved error logging and audience handling"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Hardened POST /api/auth/apple in /app/backend/server.py (lines ~1025-1095). Changes: (1) audience now accepts both APPLE_BUNDLE_ID and APPLE_SERVICE_ID env vars (list-based audience verification). (2) On InvalidAudienceError, the token is decoded WITHOUT audience verification just to log the actual aud claim, then a clear 401 is returned with the offending aud value. (3) Added `if not sub` guard returning 401 with clear message instead of attempting to create a user with sub=None. (4) DB errors during _find_or_create_oauth_user are caught and turned into 500 with 'Errore creazione account, riprova' (preventing crash). (5) All error paths now log via logger.exception/logger.error with [AppleAuth] prefix for Render log filtering. (6) Success path logs user_id+email. The Pydantic input model AppleAuthIn already accepts identity_token (required), user_id, email, name (optional). Backend reloaded automatically via WatchFiles. Need backend testing: validate endpoint returns 422 for missing identity_token, 401 'Token Apple non valido' for malformed JWT, regression check that pre-existing routes /auth/login, /auth/google, /auth/me still work."
+      - working: true
+        agent: "testing"
+        comment: "Eseguiti 25/25 assertions PASS via /app/backend_apple_auth_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. (A) NEGATIVE TESTS /api/auth/apple: A1) POST body vuoto {} -> 422 con detail array Pydantic contenente 'identity_token' field required. A2) POST {identity_token:'not-a-jwt'} -> 401 con detail string che inizia con 'Token Apple non valido' (precisamente 'Token Apple non valido: Not enough segments'); nessuno stack trace esposto al client. A3) POST con fake JWT RS256 + aud=com.fake.app firma fasulla -> 401 con detail string che inizia con 'Token Apple non valido' (la PyJWKClient non trova la kid 'AIDOPK' nel JWKS Apple e cade nel branch except Exception -> log [AppleAuth] Token verification failed); nessuno stack trace nel body JSON (verificato assenza di 'traceback', 'file \"', '/app/backend'). A4) Aggregate check: nessuna response di errore espone stack trace al client (solo campo 'detail' string o array Pydantic). (B) REGRESSION POSITIVE: B5) POST /auth/login admin@runhub.com/admin123 -> 200 con token + user.role='admin'. B6) GET /auth/me con Bearer admin token -> 200 con email='admin@runhub.com'. B7) POST /auth/login applereview@runhub.com/RunHubReview2026! -> 200 con user.tier='elite' + token. B8) POST /auth/login testfree@runhub.com/test123 -> 200 con user.tier='free'. B9) POST /auth/google {id_token:'abc.def.ghi'} -> 401 con detail string che inizia con 'Token Google non valido' (regression OK, route Google parallel non danneggiata). (C) ENDPOINT/METHOD CHECK: C10) GET /api/auth/apple -> 405 Method Not Allowed (route POST-only correttamente registrata). Tutti i 5 hardening change applicati funzionano: audience list-based, InvalidAudienceError logged with actual aud, sub guard, DB error catch, [AppleAuth] log prefix. Endpoint pronto per produzione."
 
 agent_communication:
   - agent: "main"
