@@ -125,8 +125,15 @@ export default function PaywallScreen() {
   const handleSubscribe = async (tier: TierDef) => {
     setLoading(tier.key);
     try {
-      // Preferenza: RevenueCat su iOS/Android nativi con key configurata
-      if (isNative && rcReady) {
+      // Su iOS/Android native: SOLO RevenueCat (policy Apple 3.1.1 — vietato Stripe per contenuti digitali)
+      if (isNative) {
+        if (!rcReady) {
+          Alert.alert(
+            'Servizio pagamenti non disponibile',
+            'Il servizio abbonamenti non è ancora pronto. Riavvia l\'app e riprova tra qualche secondo. Se il problema persiste, aggiorna l\'app all\'ultima versione.'
+          );
+          return;
+        }
         const pkg = getPackageForTier(tier);
         if (!pkg) {
           Alert.alert(
@@ -146,7 +153,7 @@ export default function PaywallScreen() {
         return;
       }
 
-      // Fallback: Stripe Checkout (web o native senza RC)
+      // Stripe Checkout SOLO su web (niente Stripe su iOS/Android — violerebbe Apple 3.1.1)
       const pkgId = period === 'monthly' ? tier.monthlyProductId : tier.yearlyProductId;
       const res = await api.post('/stripe/checkout', { package_id: pkgId });
       const url = res.data?.url;
@@ -154,12 +161,7 @@ export default function PaywallScreen() {
         if (Platform.OS === 'web') {
           window.location.href = url;
         } else {
-          const supported = await Linking.canOpenURL(url);
-          if (supported) {
-            await Linking.openURL(url);
-          } else {
-            Alert.alert('Errore', 'Impossibile aprire il link di pagamento');
-          }
+          Alert.alert('Errore', 'Pagamenti non disponibili su questa piattaforma');
         }
       } else {
         Alert.alert('Errore', 'URL di checkout non ricevuto');
