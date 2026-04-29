@@ -45,7 +45,16 @@ export default function WearablesScreen() {
     if (!isWearablesAvailable()) {
       Alert.alert(
         'Sincronizzazione wearable',
-        'Funziona solo in build nativa (EAS). In Expo Go non sono disponibili.\n\nPer testare: fai una EAS development build dal tuo computer.',
+        'La sincronizzazione con Apple Health / Google Health Connect funziona solo in build nativa (EAS). In Expo Go non è disponibile.',
+      );
+      return;
+    }
+    // Su iPad HealthKit ha funzionalità limitate; informa l'utente prima di tentare
+    if (Platform.OS === 'ios' && (Platform as any).isPad) {
+      Alert.alert(
+        'Apple Health su iPad',
+        'Apple Health è progettata per iPhone. Su iPad la sincronizzazione potrebbe non avere dati disponibili. Per la migliore esperienza usa l\'app su iPhone.',
+        [{ text: 'OK' }]
       );
       return;
     }
@@ -53,13 +62,19 @@ export default function WearablesScreen() {
     try {
       const conn = await connectWearable();
       if (!conn.ok) {
-        Alert.alert('Non autorizzato', 'Concedi i permessi nelle impostazioni per sincronizzare.');
+        Alert.alert(
+          'Permesso non concesso',
+          'Per sincronizzare Apple Health concedi il permesso nelle Impostazioni > Privacy > Salute. Puoi anche continuare a usare l\'app senza Apple Health.'
+        );
         setSyncing(false);
         return;
       }
       const stats = await fetchWearableStats();
       if (!stats) {
-        Alert.alert('Nessun dato', 'Non siamo riusciti a leggere dati dal wearable.');
+        Alert.alert(
+          'Nessun dato disponibile',
+          'Apple Health non ha ancora dati per oggi. Sincronizza dopo aver fatto attività fisica monitorata da iPhone o Apple Watch.'
+        );
         setSyncing(false);
         return;
       }
@@ -67,7 +82,12 @@ export default function WearablesScreen() {
       await loadData();
       Alert.alert('Sincronizzato!', 'I dati di oggi sono stati aggiornati.');
     } catch (e: any) {
-      Alert.alert('Errore sync', e?.message || 'Riprova piu\' tardi');
+      // Errore generico → messaggio user-friendly, niente stack trace
+      console.warn('[Wearables] sync error', e);
+      Alert.alert(
+        'Sincronizzazione non disponibile',
+        'Non è stato possibile collegarsi ad Apple Health al momento. Riprova più tardi o usa l\'app senza sync.'
+      );
     } finally {
       setSyncing(false);
     }

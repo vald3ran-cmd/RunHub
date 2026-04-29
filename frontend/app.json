@@ -14,7 +14,9 @@
       "buildNumber": "2",
       "usesAppleSignIn": true,
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": ["Default"],
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

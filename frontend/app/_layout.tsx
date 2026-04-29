@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/auth';
 import { colors } from '../src/theme';
@@ -14,6 +14,25 @@ function RootNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // iOS App Tracking Transparency - MUST be requested at boot, regardless of AdMob status.
+  // Apple Review (Guideline 2.1) flagged us when this prompt did not appear.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    (async () => {
+      try {
+        // Tiny delay to ensure UI is mounted before showing native prompt
+        await new Promise((r) => setTimeout(r, 800));
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const tt = require('expo-tracking-transparency');
+        if (typeof tt.requestTrackingPermissionsAsync === 'function') {
+          await tt.requestTrackingPermissionsAsync();
+        }
+      } catch (e) {
+        console.warn('[ATT] permission request failed:', e);
+      }
+    })();
+  }, []);
 
   // Initialize AdMob (only on native dev/prod builds, skipped in Expo Go)
   useEffect(() => {
