@@ -106,18 +106,95 @@ export default function PaywallScreen() {
   const rcReady = isRevenueCatConfigured();
 
   useEffect(() => {
-    if (rcReady) {
-      fetchOfferings().then(setOfferings).catch(() => {});
-    }
+    if (!rcReady) return;
+    let cancelled = false;
+
+    const loadOfferings = async (attempt = 0) => {
+      try {
+        const o = await fetchOfferings();
+        if (cancelled) return;
+        if (o?.availablePackages?.length) {
+          setOfferings(o);
+          console.log('[Paywall] offerings loaded:', o.availablePackages.map((p: any) => p.product?.identifier).join(', '));
+          return;
+        }
+        // retry con backoff fino a 3 tentativi: il sandbox Apple a volte
+        // impiega qualche secondo a rispondere con i prodotti.
+        if (attempt < 2) {
+          console.log(`[Paywall] offerings vuote, retry in ${(attempt + 1) * 1500}ms...`);
+          setTimeout(() => !cancelled && loadOfferings(attempt + 1), (attempt + 1) * 1500);
+        } else {
+          console.warn('[Paywall] offerings ancora vuote dopo 3 tentativi');
+          setOfferings(o);
+        }
+      } catch (err) {
+        console.error('[Paywall] fetchOfferings error:', err);
+        if (attempt < 2 && !cancelled) {
+          setTimeout(() => loadOfferings(attempt + 1), (attempt + 1) * 1500);
+        }
+      }
+    };
+
+    loadOfferings();
+    return () => {
+      cancelled = true;
+    };
   }, [rcReady]);
+
+  /**
+   * Matching permissivo per il sandbox Apple: il reviewer a volte riceve
+   * product identifier leggermente diversi (suffissi, case, bundle-id prefix
+   * mancante). Proviamo nell'ordine:
+   *   1. match esatto su package.identifier (es. "$rc_monthly")
+   *   2. match esatto su product.identifier
+   *   3. includes (suffix o prefix)
+   *   4. match sul tier.key dentro l'identifier (es. "starter", "elite")
+   *      + periodo corretto (monthly/yearly)
+   */
+  const findPackage = (
+    availablePackages: any[],
+    tier: TierDef,
+    p: Period
+  ) => {
+    if (!availablePackages?.length) return null;
+    const targetId = p === 'monthly' ? tier.monthlyProductId : tier.yearlyProductId;
+    const targetIdLower = targetId.toLowerCase();
+
+    // 1. match esatto
+    let pkg = availablePackages.find(
+      (x: any) => x.identifier === targetId || x.product?.identifier === targetId
+    );
+    if (pkg) return pkg;
+
+    // 2. case-insensitive
+    pkg = availablePackages.find(
+      (x: any) =>
+        x.identifier?.toLowerCase() === targetIdLower ||
+        x.product?.identifier?.toLowerCase() === targetIdLower
+    );
+    if (pkg) return pkg;
+
+    // 3. includes (utile se sandbox aggiunge suffissi tipo ".1" o cambia prefix)
+    pkg = availablePackages.find(
+      (x: any) =>
+        x.product?.identifier?.toLowerCase().includes(targetIdLower) ||
+        targetIdLower.includes(x.product?.identifier?.toLowerCase() || '___')
+    );
+    if (pkg) return pkg;
+
+    // 4. match euristico: tier + periodo nel productId
+    const periodKey = p === 'monthly' ? 'month' : 'year';
+    pkg = availablePackages.find((x: any) => {
+      const id = (x.product?.identifier || '').toLowerCase();
+      return id.includes(tier.key) && id.includes(periodKey);
+    });
+    return pkg || null;
+  };
 
   const getPackageForTier = useCallback(
     (tier: TierDef) => {
       if (!offerings?.availablePackages) return null;
-      const targetId = period === 'monthly' ? tier.monthlyProductId : tier.yearlyProductId;
-      return offerings.availablePackages.find(
-        (p: any) => p.identifier === targetId || p.product?.identifier === targetId
-      );
+      return findPackage(offerings.availablePackages, tier, period);
     },
     [offerings, period]
   );
@@ -134,21 +211,52 @@ export default function PaywallScreen() {
           );
           return;
         }
-        const pkg = getPackageForTier(tier);
+
+        // Step 1: prova con le offerte già caricate
+        let pkg = getPackageForTier(tier);
+        let currentOfferings = offerings;
+
+        // Step 2: se il package non e' stato trovato, forza un re-fetch delle
+        // offerings (puo' succedere nel sandbox Apple se il caricamento iniziale
+        // e' fallito o se l'utente ha aperto la paywall prima che RC sia pronto).
         if (!pkg) {
+          console.log('[Paywall] Package non trovato al primo tentativo, re-fetch offerings...');
+          try {
+            currentOfferings = await fetchOfferings();
+            setOfferings(currentOfferings);
+            if (currentOfferings?.availablePackages) {
+              pkg = findPackage(currentOfferings.availablePackages, tier, period);
+            }
+          } catch (refetchErr) {
+            console.error('[Paywall] re-fetch offerings fallito:', refetchErr);
+          }
+        }
+
+        // Step 3: se ancora niente, alert verboso con dati di debug (utile per
+        // screenshot del reviewer Apple).
+        if (!pkg) {
+          const targetId = period === 'monthly' ? tier.monthlyProductId : tier.yearlyProductId;
+          const available = currentOfferings?.availablePackages
+            ?.map((p: any) => p.product?.identifier || p.identifier)
+            .filter(Boolean)
+            .join('\n• ') || 'nessuna offerta ricevuta';
           Alert.alert(
             'Prodotto non disponibile',
-            'Questo piano non è al momento disponibile. Riprova più tardi.'
+            `Il piano "${tier.name}" non risulta disponibile per l'acquisto.\n\n` +
+              `ID cercato:\n• ${targetId}\n\n` +
+              `Offerte ricevute da RevenueCat:\n• ${available}\n\n` +
+              `Prova a ripristinare gli acquisti o riavvia l'app.`
           );
           return;
         }
+
         const result = await purchasePackage(pkg);
         if (result.success) {
           await refresh();
           Alert.alert('🎉 Abbonamento attivo!', `Benvenuto nel piano ${tier.name}.`);
           router.back();
-        } else if (result.error !== 'cancelled') {
-          Alert.alert('Errore', result.error || 'Acquisto fallito');
+        } else if (result.error && result.error !== 'cancelled') {
+          Alert.alert('Errore acquisto', result.error);
         }
         return;
       }
