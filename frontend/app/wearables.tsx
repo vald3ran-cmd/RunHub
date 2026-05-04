@@ -41,23 +41,7 @@ export default function WearablesScreen() {
     loadData().finally(() => setLoading(false));
   }, []));
 
-  const onSync = async () => {
-    if (!isWearablesAvailable()) {
-      Alert.alert(
-        'Sincronizzazione wearable',
-        'La sincronizzazione con Apple Health / Google Health Connect funziona solo in build nativa (EAS). In Expo Go non è disponibile.',
-      );
-      return;
-    }
-    // Su iPad HealthKit ha funzionalità limitate; informa l'utente prima di tentare
-    if (Platform.OS === 'ios' && (Platform as any).isPad) {
-      Alert.alert(
-        'Apple Health su iPad',
-        'Apple Health è progettata per iPhone. Su iPad la sincronizzazione potrebbe non avere dati disponibili. Per la migliore esperienza usa l\'app su iPhone.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+  const performSync = async () => {
     setSyncing(true);
     try {
       const conn = await connectWearable();
@@ -91,6 +75,42 @@ export default function WearablesScreen() {
     } finally {
       setSyncing(false);
     }
+  };
+
+  const onSync = async () => {
+    if (!isWearablesAvailable()) {
+      Alert.alert(
+        'Sincronizzazione wearable',
+        'La sincronizzazione con Apple Health / Google Health Connect funziona solo in build nativa (EAS). In Expo Go non è disponibile.',
+      );
+      return;
+    }
+    // Su iPad HealthKit ha funzionalità limitate; informa l'utente prima di tentare
+    if (Platform.OS === 'ios' && (Platform as any).isPad) {
+      Alert.alert(
+        'Apple Health su iPad',
+        'Apple Health è progettata per iPhone. Su iPad la sincronizzazione potrebbe non avere dati disponibili. Per la migliore esperienza usa l\'app su iPhone.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // PRE-PERMISSION DIALOG (Apple Review 2.5.1): spiega chiaramente all'utente
+    // quali dati HealthKit verranno letti/scritti PRIMA del permission prompt nativo.
+    if (Platform.OS === 'ios') {
+      Alert.alert(
+        'Connessione ad Apple Health',
+        'RunHub leggerà da Apple Health:\n• Passi giornalieri\n• Distanza percorsa\n• Frequenza cardiaca\n• Calorie bruciate\n\nE scriverà in Apple Health:\n• I tuoi allenamenti completati\n\nPotrai modificare i permessi in qualsiasi momento da Impostazioni > Privacy e sicurezza > Salute > RunHub.',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          { text: 'Continua', onPress: () => performSync() },
+        ]
+      );
+      return;
+    }
+
+    // Android Health Connect → procedi direttamente (Health Connect ha già il proprio dialog)
+    await performSync();
   };
 
   const onRefresh = async () => {

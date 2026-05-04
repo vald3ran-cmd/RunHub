@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, RefreshControl, Image
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, RefreshControl, Image, Platform
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -86,6 +86,43 @@ export default function Home() {
             <StatCard label="TEMPO" value={fmtDuration(progress?.monthly.duration_seconds ?? 0)} sub="Totale mese" icon="time" />
           </View>
         </View>
+
+        {/* Apple Health / Health Connect — visibilità prominente per Apple Review 2.5.1 */}
+        {Platform.OS !== 'web' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>INTEGRAZIONI SALUTE</Text>
+            <TouchableOpacity
+              testID="health-card-button"
+              style={styles.healthCard}
+              onPress={() => router.push('/wearables')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.healthIconWrap}>
+                <Ionicons
+                  name="heart"
+                  size={26}
+                  color="#FF2D55"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.healthTitle}>
+                  {Platform.OS === 'ios' ? 'Apple Health' : 'Google Health Connect'}
+                </Text>
+                <Text style={styles.healthSubtitle}>
+                  {Platform.OS === 'ios'
+                    ? 'Sincronizza passi, frequenza cardiaca e calorie con Apple Health. Salva automaticamente i tuoi allenamenti.'
+                    : 'Collega Health Connect per sincronizzare passi, battito e calorie.'}
+                </Text>
+                <View style={styles.healthCtaRow}>
+                  <Text style={styles.healthCtaText}>
+                    {Platform.OS === 'ios' ? 'Connetti Apple Health' : 'Connetti Health Connect'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={14} color="#FF2D55" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* CTAs */}
         <View style={styles.section}>
@@ -197,4 +234,33 @@ const styles = StyleSheet.create({
   premiumCard: { borderColor: colors.primary },
   ctaLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
   ctaTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 4 },
+
+  // Apple Health card — visibilità prominente per Apple Review 2.5.1
+  healthCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: '#FF2D55',
+    gap: spacing.md,
+  },
+  healthIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,45,85,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  healthTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
+  healthSubtitle: { color: colors.textSecondary, fontSize: 13, marginTop: 4, lineHeight: 18 },
+  healthCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  healthCtaText: { color: '#FF2D55', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
 });
