@@ -10,6 +10,9 @@ import { isAdMobAvailable } from '../src/adMobConfig';
 import { initNotifications, registerForPushNotifications } from '../src/notifications';
 import { initRevenueCat, identifyRevenueCatUser, logoutRevenueCat } from '../src/revenuecat';
 
+// 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
+console.log('🏁 [LAYOUT] _layout.tsx caricato');
+
 function RootNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
@@ -48,7 +51,18 @@ function RootNav() {
 
   // Initialize RevenueCat SDK (no-op on web)
   useEffect(() => {
-    initRevenueCat().catch(() => {});
+    // 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
+    console.log('🏁 [LAYOUT] useEffect initRevenueCat triggered');
+    initRevenueCat()
+      .then(() => {
+        console.log('✅ [LAYOUT] initRevenueCat resolved');
+      })
+      .catch((err) => {
+        console.error('❌ [LAYOUT] initRevenueCat fallita:', err);
+        try {
+          console.error('❌ [LAYOUT] Errore stringified:', JSON.stringify(err));
+        } catch {}
+      });
   }, []);
 
   // Register for push notifications AFTER user logs in
@@ -60,10 +74,23 @@ function RootNav() {
 
   // Identify user in RevenueCat after login / logout
   useEffect(() => {
+    // 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
+    console.log('🏁 [LAYOUT] useEffect identify, user_id:', user?.user_id || 'NESSUNO');
     if (user?.user_id) {
-      identifyRevenueCatUser(user.user_id).catch(() => {});
+      identifyRevenueCatUser(user.user_id)
+        .then(() => console.log('✅ [LAYOUT] identifyRevenueCatUser resolved'))
+        .catch((err) => {
+          console.error('❌ [LAYOUT] identifyRevenueCatUser fallita:', err);
+          try {
+            console.error('❌ [LAYOUT] Errore stringified:', JSON.stringify(err));
+          } catch {}
+        });
     } else {
-      logoutRevenueCat().catch(() => {});
+      logoutRevenueCat()
+        .then(() => console.log('✅ [LAYOUT] logoutRevenueCat resolved'))
+        .catch((err) => {
+          console.error('❌ [LAYOUT] logoutRevenueCat fallita:', err);
+        });
     }
   }, [user?.user_id]);
 
