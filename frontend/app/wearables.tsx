@@ -27,6 +27,9 @@ export default function WearablesScreen() {
   const [syncing, setSyncing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Detect iPad correttamente (Platform.isPad NON esiste in React Native — serve expo-device)
+  const isIpad = Platform.OS === 'ios' && Device.deviceType === Device.DeviceType.TABLET;
+
   const loadData = async () => {
     try {
       const [t, h] = await Promise.all([
@@ -67,7 +70,6 @@ export default function WearablesScreen() {
       await loadData();
       Alert.alert('Sincronizzato!', 'I dati di oggi sono stati aggiornati.');
     } catch (e: any) {
-      // Errore generico → messaggio user-friendly, niente stack trace
       console.warn('[Wearables] sync error', e);
       Alert.alert(
         'Sincronizzazione non disponibile',
@@ -86,25 +88,19 @@ export default function WearablesScreen() {
       );
       return;
     }
-    // Su iPad HealthKit non ha dati: Apple Health esiste solo su iPhone.
-    // FIX: Platform.isPad NON ESISTE in React Native → usiamo expo-device che
-    // legge UIDevice.current.userInterfaceIdiom in modo affidabile.
-    // Senza questo check, su iPad si chiamava HealthKit e si otteneva un errore
-    // server, che il reviewer Apple ha registrato come bug (Guideline 2.1(a)).
-    const isIpad = Platform.OS === 'ios' && Device.deviceType === Device.DeviceType.TABLET;
+
+    // Su iPad HealthKit è progettato per iPhone — informa l'utente e non procede
     if (isIpad) {
       Alert.alert(
-        'Apple Health su iPad',
-        'Apple Health è progettata per iPhone. Su iPad non è disponibile la sincronizzazione. Per usare questa funzione, accedi a RunHub dal tuo iPhone.',
+        'Apple Health non disponibile su iPad',
+        'La sincronizzazione con Apple Health è progettata per iPhone. Per usare questa funzione, accedi a RunHub dal tuo iPhone.',
         [{ text: 'OK' }]
       );
       return;
     }
 
-    // PRE-PERMISSION DIALOG (Apple Review 2.5.1 + 5.1.1): spiega chiaramente all'utente
-    // quali dati HealthKit verranno letti/scritti PRIMA del permission prompt nativo.
-    // NB: NESSUN bottone "Annulla" — Apple richiede che l'utente proceda sempre al
-    // permission request dopo il messaggio (Guideline 5.1.1(iv) - Privacy).
+    // Pre-permission info: nessun bottone "Annulla" (Apple Guideline 5.1.1).
+    // Se l'utente vuole rifiutare, può farlo nella finestra nativa di iOS che apparirà.
     if (Platform.OS === 'ios') {
       Alert.alert(
         'Connessione ad Apple Health',
@@ -165,9 +161,21 @@ export default function WearablesScreen() {
           </View>
         ) : null}
 
+        {isIpad ? (
+          <View style={styles.warnBox}>
+            <Ionicons name="information-circle" size={22} color={colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.warnTitle}>Apple Health è disponibile solo su iPhone</Text>
+              <Text style={styles.warnText}>
+                Apri RunHub da iPhone per sincronizzare i dati con Apple Health.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         <TouchableOpacity
           testID="sync-wearable-btn"
-          style={[styles.syncBtn, syncing && { opacity: 0.6 }]}
+          style={[styles.syncBtn, (syncing || isIpad) && { opacity: 0.6 }]}
           onPress={onSync}
           disabled={syncing}
         >
@@ -254,6 +262,6 @@ const styles = StyleSheet.create({
   histDate: { color: colors.textPrimary, fontSize: 12, fontWeight: '700', textTransform: 'capitalize', width: 90 },
   histStat: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
   emptyText: { color: colors.textMuted, fontSize: 13, padding: spacing.md, textAlign: 'center' },
-  infoBox: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, marginTop: spacing.xl, borderWidth: 1, borderColor: colors.border },
+  infoBox: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surface, marginTop: spacing.xl, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
   infoText: { color: colors.textSecondary, fontSize: 12, flex: 1, lineHeight: 18 },
 });
