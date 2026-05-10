@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Device from 'expo-device';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
 import { isWearablesAvailable, connectWearable, fetchWearableStats } from '../src/wearables';
@@ -85,11 +86,16 @@ export default function WearablesScreen() {
       );
       return;
     }
-    // Su iPad HealthKit ha funzionalità limitate; informa l'utente prima di tentare
-    if (Platform.OS === 'ios' && (Platform as any).isPad) {
+    // Su iPad HealthKit non ha dati: Apple Health esiste solo su iPhone.
+    // FIX: Platform.isPad NON ESISTE in React Native → usiamo expo-device che
+    // legge UIDevice.current.userInterfaceIdiom in modo affidabile.
+    // Senza questo check, su iPad si chiamava HealthKit e si otteneva un errore
+    // server, che il reviewer Apple ha registrato come bug (Guideline 2.1(a)).
+    const isIpad = Platform.OS === 'ios' && Device.deviceType === Device.DeviceType.TABLET;
+    if (isIpad) {
       Alert.alert(
         'Apple Health su iPad',
-        'Apple Health è progettata per iPhone. Su iPad la sincronizzazione potrebbe non avere dati disponibili. Per la migliore esperienza usa l\'app su iPhone.',
+        'Apple Health è progettata per iPhone. Su iPad non è disponibile la sincronizzazione. Per usare questa funzione, accedi a RunHub dal tuo iPhone.',
         [{ text: 'OK' }]
       );
       return;
