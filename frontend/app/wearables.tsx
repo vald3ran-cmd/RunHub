@@ -95,14 +95,15 @@ export default function WearablesScreen() {
       return;
     }
 
-    // PRE-PERMISSION DIALOG (Apple Review 2.5.1): spiega chiaramente all'utente
+    // PRE-PERMISSION DIALOG (Apple Review 2.5.1 + 5.1.1): spiega chiaramente all'utente
     // quali dati HealthKit verranno letti/scritti PRIMA del permission prompt nativo.
+    // NB: NESSUN bottone "Annulla" — Apple richiede che l'utente proceda sempre al
+    // permission request dopo il messaggio (Guideline 5.1.1(iv) - Privacy).
     if (Platform.OS === 'ios') {
       Alert.alert(
         'Connessione ad Apple Health',
-        'RunHub leggerà da Apple Health:\n• Passi giornalieri\n• Distanza percorsa\n• Frequenza cardiaca\n• Calorie bruciate\n\nE scriverà in Apple Health:\n• I tuoi allenamenti completati\n\nPotrai modificare i permessi in qualsiasi momento da Impostazioni > Privacy e sicurezza > Salute > RunHub.',
+        'RunHub leggerà da Apple Health passi, distanza, frequenza cardiaca e calorie, e scriverà i tuoi allenamenti completati.\n\nTra poco apparirà la finestra di sistema di Apple per concedere i permessi. Potrai sempre modificarli da Impostazioni > Privacy e sicurezza > Salute > RunHub.',
         [
-          { text: 'Annulla', style: 'cancel' },
           { text: 'Continua', onPress: () => performSync() },
         ]
       );
