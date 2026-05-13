@@ -22,6 +22,23 @@ console.log('🔑 [RC ENV] Platform:', Platform.OS);
 
 let _initialized = false;
 
+// 🔍 DIAGNOSTICA on-screen — tracker globale dell'ultimo stato RC, esposto nell'Alert del paywall
+// (necessario perché in TestFlight i console.log sono strippati)
+export const rcDiagnostic = {
+  apiKeyLen: Platform.OS === 'ios' ? IOS_API_KEY.length : ANDROID_API_KEY.length,
+  apiKeyPrefix: (Platform.OS === 'ios' ? IOS_API_KEY : ANDROID_API_KEY).substring(0, 8) || 'EMPTY',
+  initCalled: false,
+  initSuccess: false,
+  initError: '',
+  lastFetchTs: '',
+  lastFetchError: '',
+  lastOfferingsAllKeys: [] as string[],
+  lastCurrentId: '',
+  lastCurrentPkgCount: 0,
+  lastPkgIds: [] as string[],
+  customerInfoEntitlements: [] as string[],
+};
+
 export const isRevenueCatConfigured = () => {
   return Boolean(Platform.OS === 'ios' ? IOS_API_KEY : ANDROID_API_KEY);
 };
@@ -31,6 +48,7 @@ export const isRevenueCatConfigured = () => {
  * Passa userId opzionale per identificare l'utente (fatto dopo il login).
  */
 export const initRevenueCat = async (userId?: string): Promise<void> => {
+  rcDiagnostic.initCalled = true;
   // 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
   console.log('🚀 [RC INIT] Chiamata, platform:', Platform.OS, 'userId:', userId, 'already_initialized:', _initialized);
 
@@ -45,6 +63,7 @@ export const initRevenueCat = async (userId?: string): Promise<void> => {
   console.log('🔑 [RC INIT] apiKey length:', apiKey.length, 'prefix:', apiKey.substring(0, 8) || 'EMPTY');
 
   if (!apiKey) {
+    rcDiagnostic.initError = 'API key mancante (env var vuota)';
     console.warn('❌ [RC INIT] API key mancante per', Platform.OS, '- skip init');
     return;
   }
@@ -56,8 +75,10 @@ export const initRevenueCat = async (userId?: string): Promise<void> => {
     console.log('⚙️ [RC INIT] Sto per chiamare Purchases.configure...');
     await Purchases.configure({ apiKey, appUserID: userId || null });
     _initialized = true;
+    rcDiagnostic.initSuccess = true;
     console.log('✅ [RC INIT] Successo, key prefix:', apiKey.substring(0, 8), 'userId:', userId);
-  } catch (err) {
+  } catch (err: any) {
+    rcDiagnostic.initError = String(err?.message || err);
     console.error('❌ [RC INIT] Errore:', err);
     try {
       console.error('❌ [RC INIT] Errore stringified:', JSON.stringify(err));
@@ -105,14 +126,22 @@ export const logoutRevenueCat = async (): Promise<void> => {
  */
 export const fetchOfferings = async (): Promise<PurchasesOffering | null> => {
   console.log('📦 [RC OFFERINGS] Chiamata, configured:', isRevenueCatConfigured(), 'initialized:', _initialized);
+  rcDiagnostic.lastFetchTs = new Date().toISOString();
+  rcDiagnostic.lastFetchError = '';
   if (!isRevenueCatConfigured()) {
+    rcDiagnostic.lastFetchError = 'RC non configurato (api key vuota)';
     console.warn('❌ [RC OFFERINGS] RevenueCat non configurato');
     return null;
   }
   try {
     const offerings = await Purchases.getOfferings();
+    const allKeys = Object.keys(offerings.all || {});
+    rcDiagnostic.lastOfferingsAllKeys = allKeys;
+    rcDiagnostic.lastCurrentId = offerings.current?.identifier || '';
+    rcDiagnostic.lastCurrentPkgCount = offerings.current?.availablePackages?.length || 0;
+    rcDiagnostic.lastPkgIds = (offerings.current?.availablePackages || []).map((p: any) => p?.product?.identifier || p?.identifier).filter(Boolean);
     console.log('📦 [RC OFFERINGS] Risposta ricevuta:');
-    console.log('📦 [RC OFFERINGS] - all keys:', Object.keys(offerings.all || {}));
+    console.log('📦 [RC OFFERINGS] - all keys:', allKeys);
     console.log('📦 [RC OFFERINGS] - current identifier:', offerings.current?.identifier || 'NESSUNA CURRENT');
     console.log('📦 [RC OFFERINGS] - current packages:', offerings.current?.availablePackages?.length || 0);
     if (offerings.current?.availablePackages) {
@@ -121,7 +150,8 @@ export const fetchOfferings = async (): Promise<PurchasesOffering | null> => {
       });
     }
     return offerings.current;
-  } catch (err) {
+  } catch (err: any) {
+    rcDiagnostic.lastFetchError = String(err?.message || err) + ' | code:' + String(err?.code || 'n/a') + ' | underlying:' + String(err?.underlyingErrorMessage || 'n/a');
     console.error('❌ [RC OFFERINGS] fetchOfferings error:', err);
     try {
       console.error('❌ [RC OFFERINGS] Errore stringified:', JSON.stringify(err));

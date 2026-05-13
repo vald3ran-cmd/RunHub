@@ -20,6 +20,7 @@ import {
   purchasePackage,
   restorePurchases,
   isRevenueCatConfigured,
+  rcDiagnostic,
 } from '../src/revenuecat';
 import { useAuth } from '../src/auth';
 
@@ -240,12 +241,26 @@ export default function PaywallScreen() {
             ?.map((p: any) => p.product?.identifier || p.identifier)
             .filter(Boolean)
             .join('\n• ') || 'nessuna offerta ricevuta';
+          // 🔍 DEBUG: dump completo dello stato RC perché in TestFlight i console.log sono strippati
+          const d = rcDiagnostic;
+          const debugInfo =
+            `\n\n— DEBUG RC —\n` +
+            `apiKey: ${d.apiKeyPrefix} (len=${d.apiKeyLen})\n` +
+            `initCalled: ${d.initCalled}\n` +
+            `initSuccess: ${d.initSuccess}\n` +
+            `initError: ${d.initError || 'none'}\n` +
+            `lastFetchTs: ${d.lastFetchTs}\n` +
+            `lastFetchError: ${d.lastFetchError || 'none'}\n` +
+            `allOfferings: [${d.lastOfferingsAllKeys.join(', ') || 'EMPTY'}]\n` +
+            `currentId: ${d.lastCurrentId || 'NONE'}\n` +
+            `currentPkgCount: ${d.lastCurrentPkgCount}\n` +
+            `pkgIds: [${d.lastPkgIds.join(', ') || 'EMPTY'}]`;
           Alert.alert(
             'Prodotto non disponibile',
             `Il piano "${tier.name}" non risulta disponibile per l'acquisto.\n\n` +
               `ID cercato:\n• ${targetId}\n\n` +
-              `Offerte ricevute da RevenueCat:\n• ${available}\n\n` +
-              `Prova a ripristinare gli acquisti o riavvia l'app.`
+              `Offerte ricevute da RevenueCat:\n• ${available}` +
+              debugInfo
           );
           return;
         }
