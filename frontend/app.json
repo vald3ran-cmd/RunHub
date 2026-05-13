@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "runhub",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
