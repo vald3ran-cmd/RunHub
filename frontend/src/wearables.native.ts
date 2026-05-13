@@ -20,11 +20,18 @@ function loadIOS() {
   if (_appleHealth) return _appleHealth;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    _appleHealth = require('react-native-health').default || require('react-native-health');
+    const mod = require('react-native-health');
+    _appleHealth = mod.default || mod;
+    if (!_appleHealth || !_appleHealth.Constants || !_appleHealth.initHealthKit) {
+      // Modulo trovato ma incompleto/non-linkato — propaga errore esplicito
+      throw new Error(
+        `react-native-health caricato ma incompleto: hasDefault=${!!mod.default} hasConstants=${!!_appleHealth?.Constants} hasInit=${!!_appleHealth?.initHealthKit}. Probabilmente il modulo nativo non è linkato (rebuild EAS necessaria).`
+      );
+    }
     return _appleHealth;
-  } catch (e) {
-    console.warn('[Wearables] react-native-health unavailable', e);
-    return null;
+  } catch (e: any) {
+    // Rilancia con info diagnostica per vedere on-screen in TestFlight
+    throw new Error(`[loadIOS] ${e?.message || e}`);
   }
 }
 
@@ -46,9 +53,9 @@ export function isWearablesAvailable(): boolean {
 }
 
 // ---- iOS Apple HealthKit ----
-async function connectAppleHealth(): Promise<boolean> {
-  const AppleHealthKit = loadIOS();
-  if (!AppleHealthKit) return false;
+async function connectAppleHealth(): Promise<{ ok: boolean; reason?: string }> {
+  const AppleHealthKit = loadIOS(); // può lanciare con info diagnostica
+  if (!AppleHealthKit) return { ok: false, reason: 'module_not_available' };
   const permissions = {
     permissions: {
       read: [
@@ -60,15 +67,27 @@ async function connectAppleHealth(): Promise<boolean> {
       write: [AppleHealthKit.Constants.Permissions.Workout],
     },
   };
-  return new Promise((resolve) => {
-    AppleHealthKit.initHealthKit(permissions, (err: any) => {
-      if (err) {
-        console.warn('[HealthKit] init failed', err);
-        resolve(false);
-        return;
-      }
-      resolve(true);
-    });
+  return new Promise((resolve, reject) => {
+    try {
+      AppleHealthKit.initHealthKit(permissions, (err: any) => {
+        if (err) {
+          // L'errore di init può essere "permission denied" (legittimo) o un errore vero
+          const msg = String(err?.message || err || '');
+          // Se è un permesso negato → ok=false ma non rilanciamo
+          if (msg.toLowerCase().includes('denied') || msg.toLowerCase().includes('not author')) {
+            resolve({ ok: false, reason: 'denied' });
+            return;
+          }
+          // Altrimenti propaga per vedere on-screen
+          reject(new Error(`[initHealthKit] ${msg || JSON.stringify(err)}`));
+          return;
+        }
+        resolve({ ok: true });
+      });
+    } catch (syncErr: any) {
+      // initHealthKit a volte fallisce sincronamente se non linkato
+      reject(new Error(`[initHealthKit sync] ${syncErr?.message || syncErr}`));
+    }
   });
 }
 
@@ -78,14 +97,34 @@ async function fetchAppleHealthStats(): Promise<WearableStats | null> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const options = { startDate: today.toISOString() };
-  const run = (fn: string, opts: any) => new Promise<any>((res) => {
-    AppleHealthKit[fn](opts, (err: any, data: any) => res(err ? null : data));
+  const run = (fn: string, opts: any) => new Promise<any>((res, rej) => {
+    try {
+      if (typeof AppleHealthKit[fn] !== 'function') {
+        rej(new Error(`[HealthKit] funzione ${fn} non disponibile`));
+        return;
+      }
+      AppleHealthKit[fn](opts, (err: any, data: any) => {
+        if (err) {
+          // Errore "no data" non è critico, restituiamo null
+          const msg = String(err?.message || err || '');
+          if (msg.toLowerCase().includes('no data') || msg.toLowerCase().includes('empty')) {
+            res(null);
+            return;
+          }
+          rej(new Error(`[${fn}] ${msg}`));
+          return;
+        }
+        res(data);
+      });
+    } catch (syncErr: any) {
+      rej(new Error(`[${fn} sync] ${syncErr?.message || syncErr}`));
+    }
   });
   const [steps, dist, hr, cal] = await Promise.all([
-    run('getStepCount', options),
-    run('getDistanceWalkingRunning', { ...options, unit: 'meter' }),
-    run('getHeartRateSamples', { ...options, limit: 10 }),
-    run('getActiveEnergyBurned', options),
+    run('getStepCount', options).catch(() => null),
+    run('getDistanceWalkingRunning', { ...options, unit: 'meter' }).catch(() => null),
+    run('getHeartRateSamples', { ...options, limit: 10 }).catch(() => null),
+    run('getActiveEnergyBurned', options).catch(() => null),
   ]);
   const hrValues: number[] = Array.isArray(hr) ? hr.map((s: any) => s.value).filter(Number.isFinite) : [];
   return {
@@ -154,20 +193,20 @@ async function fetchHealthConnectStats(): Promise<WearableStats | null> {
 }
 
 // ---- Public API ----
-export async function connectWearable(): Promise<{ ok: boolean; platform: string }> {
+export async function connectWearable(): Promise<{ ok: boolean; platform: string; reason?: string }> {
   if (!available) {
     Alert.alert('Non disponibile', 'I wearables funzionano solo in build nativa (non in Expo Go).');
-    return { ok: false, platform: Platform.OS };
+    return { ok: false, platform: Platform.OS, reason: 'expo_go_or_web' };
   }
   if (Platform.OS === 'ios') {
-    const ok = await connectAppleHealth();
-    return { ok, platform: 'apple_health' };
+    const res = await connectAppleHealth();
+    return { ok: res.ok, platform: 'apple_health', reason: res.reason };
   }
   if (Platform.OS === 'android') {
     const ok = await connectHealthConnect();
     return { ok, platform: 'health_connect' };
   }
-  return { ok: false, platform: 'unsupported' };
+  return { ok: false, platform: 'unsupported', reason: 'platform_unsupported' };
 }
 
 export async function fetchWearableStats(): Promise<WearableStats | null> {

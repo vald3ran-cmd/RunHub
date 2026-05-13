@@ -47,17 +47,23 @@ export default function WearablesScreen() {
 
   const performSync = async () => {
     setSyncing(true);
+    // DEBUG: traccia ogni step per capire dove fallisce in TestFlight (console.log è strippato)
+    let step = 'start';
     try {
+      step = 'connectWearable';
       const conn = await connectWearable();
+      step = `connectWearable→${JSON.stringify(conn)}`;
       if (!conn.ok) {
         Alert.alert(
           'Permesso non concesso',
-          'Per sincronizzare Apple Health concedi il permesso nelle Impostazioni > Privacy > Salute. Puoi anche continuare a usare l\'app senza Apple Health.'
+          `Per sincronizzare Apple Health concedi il permesso nelle Impostazioni > Privacy > Salute.\n\n[DEBUG] platform=${conn.platform} reason=${(conn as any).reason || 'denied/cancel'}`
         );
         setSyncing(false);
         return;
       }
+      step = 'fetchWearableStats';
       const stats = await fetchWearableStats();
+      step = `fetchWearableStats→${stats ? 'ok' : 'null'}`;
       if (!stats) {
         Alert.alert(
           'Nessun dato disponibile',
@@ -66,14 +72,20 @@ export default function WearablesScreen() {
         setSyncing(false);
         return;
       }
+      step = 'api.post /wearables/sync';
       await api.post('/wearables/sync', { ...stats, platform: conn.platform });
+      step = 'loadData';
       await loadData();
       Alert.alert('Sincronizzato!', 'I dati di oggi sono stati aggiornati.');
     } catch (e: any) {
-      console.warn('[Wearables] sync error', e);
+      // Esponi l'errore reale on-screen perché in TestFlight i console.log sono strippati
+      const msg = String(e?.message || e || 'unknown');
+      const stack = String(e?.stack || '').substring(0, 400);
+      const name = String(e?.name || 'Error');
       Alert.alert(
-        'Sincronizzazione non disponibile',
-        'Non è stato possibile collegarsi ad Apple Health al momento. Riprova più tardi o usa l\'app senza sync.'
+        'DEBUG · Sync fallito',
+        `Step: ${step}\nError: ${name}: ${msg}\n\nStack:\n${stack}`,
+        [{ text: 'OK' }]
       );
     } finally {
       setSyncing(false);
