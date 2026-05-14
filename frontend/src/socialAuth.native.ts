@@ -99,15 +99,22 @@ export async function signInWithGoogle(): Promise<{ token: string; user: any } |
  * Trigger native Apple Sign In, obtain identity token, send to backend.
  */
 export async function signInWithApple(): Promise<{ token: string; user: any } | null> {
+  // 🔍 DIAGNOSTICA on-screen — necessaria perché in TestFlight i console.log sono strippati
+  // e Apple Reviewer mostra "error message" senza darci dettagli.
+  let step = 'start';
+  let diag = '';
+  const addDiag = (s: string) => { diag += s + '\n'; };
+
   const mod = loadApple();
   if (!mod) {
     Alert.alert('Non disponibile', 'Il login con Apple funziona solo su iOS in build nativa.');
     return null;
   }
   // Pre-flight: verify the entitlement is actually present at runtime.
-  // If usesAppleSignIn is missing from app.json, isAvailableAsync() returns false.
+  step = 'isAvailableAsync';
   try {
     const available = await mod.isAvailableAsync();
+    addDiag(`isAvailable=${available}`);
     if (!available) {
       Alert.alert(
         'Apple Sign-In non disponibile',
@@ -115,39 +122,76 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
       );
       return null;
     }
-  } catch (e) {
+  } catch (e: any) {
+    addDiag(`isAvailable threw: ${e?.message || e}`);
     console.warn('[SocialAuth] Apple isAvailableAsync threw:', e);
   }
+
+  // Pre-warm backend (Render free tier sleeps after 15min → cold start ~30s)
+  // This runs in parallel with Apple sheet so doesn't add user-visible latency.
+  step = 'prewarm';
+  api.get('/health', { timeout: 5000 }).catch(() => {
+    addDiag('prewarm: failed (will retry inside auth call)');
+  });
+
   try {
+    step = 'signInAsync';
     const credential = await mod.signInAsync({
       requestedScopes: [
         mod.AppleAuthenticationScope.FULL_NAME,
         mod.AppleAuthenticationScope.EMAIL,
       ],
     });
+    addDiag(`credential.user=${credential?.user ? 'SET' : 'NULL'}`);
+    addDiag(`identityToken=${credential?.identityToken ? `len=${credential.identityToken.length}` : 'NULL'}`);
+    addDiag(`email=${credential?.email || 'NULL'}`);
+    addDiag(`fullName=${credential?.fullName ? 'SET' : 'NULL'}`);
+
     if (!credential?.identityToken) {
       throw new Error('Apple non ha restituito un identity token. Riprova.');
     }
     const fullName = credential.fullName;
     const name = [fullName?.givenName, fullName?.familyName].filter(Boolean).join(' ') || undefined;
-    try {
-      const { data: resp } = await api.post('/auth/apple', {
-        identity_token: credential.identityToken,
-        user_id: credential.user,
-        email: credential.email,
-        name,
-      });
-      return resp;
-    } catch (apiErr: any) {
-      const detail = apiErr?.response?.data?.detail;
-      const status = apiErr?.response?.status;
-      console.error('[SocialAuth] Apple backend rejected token', { status, detail });
-      Alert.alert(
-        'Accesso Apple fallito',
-        typeof detail === 'string' ? detail : 'Server non disponibile, riprova tra qualche secondo'
-      );
-      return null;
+
+    // Backend call with extended timeout + 1 retry to handle Render cold start
+    step = 'POST /auth/apple';
+    let lastErr: any = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        addDiag(`api attempt ${attempt}/2 (timeout=90s)`);
+        const { data: resp } = await api.post('/auth/apple', {
+          identity_token: credential.identityToken,
+          user_id: credential.user,
+          email: credential.email,
+          name,
+        }, { timeout: 90000 });
+        addDiag(`api success on attempt ${attempt}`);
+        return resp;
+      } catch (apiErr: any) {
+        lastErr = apiErr;
+        const status = apiErr?.response?.status;
+        const isTimeout = apiErr?.code === 'ECONNABORTED' || /timeout/i.test(apiErr?.message || '');
+        const is5xx = status >= 500 && status < 600;
+        addDiag(`attempt ${attempt} failed: status=${status || 'n/a'} timeout=${isTimeout} msg=${String(apiErr?.message || apiErr).substring(0, 80)}`);
+        // Retry only on timeout or 5xx (cold start scenarios)
+        if (attempt === 1 && (isTimeout || is5xx)) {
+          // Try to wake up backend before retry
+          try { await api.get('/health', { timeout: 15000 }); } catch {}
+          continue;
+        }
+        break;
+      }
     }
+    // Final failure — surface a diagnostic alert
+    const detail = lastErr?.response?.data?.detail;
+    const status = lastErr?.response?.status;
+    console.error('[SocialAuth] Apple backend rejected token', { status, detail });
+    Alert.alert(
+      'Accesso Apple fallito',
+      (typeof detail === 'string' ? detail : 'Server non raggiungibile. Riprova tra 30 secondi.') +
+        `\n\n— DEBUG —\nStep: ${step}\nStatus: ${status || 'n/a'}\n` + diag
+    );
+    return null;
   } catch (e: any) {
     // User cancelled — silent
     if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') return null;
@@ -163,7 +207,10 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
     } else if (code === 'ERR_REQUEST_INVALID_RESPONSE') {
       message = 'Risposta Apple non valida. Riprova tra poco.';
     }
-    Alert.alert('Accesso Apple fallito', message);
+    Alert.alert(
+      'Accesso Apple fallito',
+      message + `\n\n— DEBUG —\nStep: ${step}\nCode: ${code || 'n/a'}\n` + diag
+    );
     return null;
   }
 }

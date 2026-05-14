@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
   Platform, ImageBackground, ActivityIndicator, ScrollView, Image
@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
 import { SocialAuthButtons } from '../../src/SocialAuthButtons';
+import { api } from '../../src/api';
 
 export default function Login() {
   const { login } = useAuth();
@@ -16,6 +17,14 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  // Pre-warm backend on login screen mount (Render free tier sleeps after 15min)
+  // Apple Reviewer rejected previous build because Sign-In timed out on cold start.
+  useEffect(() => {
+    api.get('/health', { timeout: 5000 }).catch(() => {
+      // Ignore — this is just a warmup ping, real auth call has its own retry+timeout
+    });
+  }, []);
 
   const onSubmit = async () => {
     setError('');

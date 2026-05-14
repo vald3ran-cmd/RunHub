@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator, ScrollView, Image,
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
 import { SocialAuthButtons } from '../../src/SocialAuthButtons';
+import { api } from '../../src/api';
 
 // Versioni dei documenti legali attualmente pubblicati (incrementare quando cambiano)
 const TERMS_VERSION = '2026-04-21';
@@ -45,6 +46,11 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  // Pre-warm backend on register screen mount (Render free tier cold start fix)
+  useEffect(() => {
+    api.get('/health', { timeout: 5000 }).catch(() => {});
+  }, []);
 
   const age = calcAge(dobDay, dobMonth, dobYear);
   const ageValid = age !== null && age >= MIN_AGE_YEARS;
