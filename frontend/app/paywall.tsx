@@ -363,14 +363,12 @@ export default function PaywallScreen() {
         {TIERS.map((tier) => {
           const fallbackPrice = period === 'monthly' ? tier.monthlyPrice : tier.yearlyPrice;
           const pkg = getPackageForTier(tier);
-          // Prezzo localizzato da RevenueCat (es. "4,99 €", "$4.99", "£3.99")
-          // Fallback al prezzo hardcoded (€) se l'offering non è ancora caricata.
-          const priceDisplay = pkg?.product?.priceString || `€${fallbackPrice.toFixed(2)}`;
-          const priceNumeric = pkg?.product?.price ?? fallbackPrice;
-          const pricePerMonth = period === 'yearly' ? (priceNumeric / 12).toFixed(2) : null;
-          const currencySymbol = pkg?.product?.currencyCode
-            ? (priceDisplay.match(/^[^\d\s]+|[^\d\s,.]+$/)?.[0] || '€')
-            : '€';
+          // Usiamo SEMPRE i prezzi hardcoded in € (formato italiano "4,99 €") come display primario.
+          // priceString di RevenueCat può essere disallineato (cache RC, sync StoreKit lento, store di test).
+          // Apple addebiterà comunque il prezzo reale configurato su ASC al momento del checkout.
+          const priceDisplay = `${fallbackPrice.toFixed(2).replace('.', ',')} €`;
+          const pricePerMonth = period === 'yearly' ? (fallbackPrice / 12).toFixed(2).replace('.', ',') : null;
+          const currencySymbol = '€';
           const isCurrent = currentTier === tier.key;
           const isLoadingThis = loading === tier.key;
 
