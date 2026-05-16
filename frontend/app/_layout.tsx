@@ -9,6 +9,7 @@ import { initializeAdMob } from '../src/adMobReal';
 import { isAdMobAvailable } from '../src/adMobConfig';
 import { initNotifications, registerForPushNotifications } from '../src/notifications';
 import { initRevenueCat, identifyRevenueCatUser, logoutRevenueCat } from '../src/revenuecat';
+import { initCrashReporting, setUser as setCrashUser, setAttribute as setCrashAttribute, addBreadcrumb } from '../src/crashReporting';
 
 // 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
 console.log('🏁 [LAYOUT] _layout.tsx caricato');
@@ -17,6 +18,11 @@ function RootNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Initialize Crash Reporting (Firebase Crashlytics) — deve essere il PRIMO useEffect per catturare crash di startup
+  useEffect(() => {
+    initCrashReporting().catch(() => {});
+  }, []);
 
   // iOS App Tracking Transparency - MUST be requested at boot, regardless of AdMob status.
   // Apple Review (Guideline 2.1) flagged us when this prompt did not appear.
@@ -77,6 +83,10 @@ function RootNav() {
     // 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
     console.log('🏁 [LAYOUT] useEffect identify, user_id:', user?.user_id || 'NESSUNO');
     if (user?.user_id) {
+      // Associa l'user_id ai crash report (NON usare email per GDPR)
+      setCrashUser(user.user_id).catch(() => {});
+      setCrashAttribute('tier', user.tier || 'free').catch(() => {});
+      addBreadcrumb(`User logged in · tier=${user.tier || 'free'}`, 'auth');
       identifyRevenueCatUser(user.user_id)
         .then(() => console.log('✅ [LAYOUT] identifyRevenueCatUser resolved'))
         .catch((err) => {
@@ -86,6 +96,8 @@ function RootNav() {
           } catch {}
         });
     } else {
+      setCrashUser(null).catch(() => {});
+      addBreadcrumb('User logged out', 'auth');
       logoutRevenueCat()
         .then(() => console.log('✅ [LAYOUT] logoutRevenueCat resolved'))
         .catch((err) => {
