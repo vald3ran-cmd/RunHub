@@ -454,11 +454,27 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Activity type field in /workouts/complete"
-  stuck_tasks:
-    - "Activity type field in /workouts/complete"
+    - "Dashboard + Personal Bests endpoints"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend:
+  - task: "Dashboard + Personal Bests endpoints (/api/stats/dashboard, /api/stats/personal-bests)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "35/35 assertions PASS via /app/backend_dashboard_pb_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. (A) Auth check: GET /stats/dashboard senza token -> 401 OK; GET /stats/personal-bests senza token -> 401 OK. (B) Login admin@runhub.com/admin123 -> 200. (C) GET /stats/dashboard con token admin -> 200; payload contiene esattamente 3 chiavi top-level: days_7, weeks_12, totals. days_7 e' lista di esattamente 7 entries (verificato anche con sessioni esistenti) ognuna con campi {date(YYYY-MM-DD), weekday(es 'Mon'), distance_km, duration_seconds, count}. weeks_12 e' lista (array di {week, distance_km, count} formato '%G-W%V'). totals e' oggetto con {distance_km, duration_seconds, count} (lifetime aggregate). (D) POST /workouts/complete con activity_type='walk' distance_km=2.5 duration=1500 pace=10.0 -> 200 con session_id ws_*. (E) GET /stats/personal-bests dopo walk -> 200, contiene chiavi run/walk/bike; pb.walk non null, pb.walk.longest_distance.value_km >= 2.5 confermato (24.79 actually, presenti walk precedenti). (F) POST /workouts/complete con activity_type='run' distance_km=5.0 duration=1800 pace=6.0 -> 200. (G) GET /stats/personal-bests dopo run -> pb.run.longest_distance.value_km >= 5.0 (in realta' 19.97 perche' admin ha gia' altre sessioni); pb.run.best_pace non null, pace_min_per_km <= 6.0. (H) POST /workouts/complete short run distance_km=0.05 duration=30 pace=2.0 -> 200 (salvato correttamente in DB). (I) CRITICAL TEST 8 — GET /stats/personal-bests dopo short run: pb.run.best_pace.pace_min_per_km != 2.0 (verificato: il filtro distance_km >= 1km esclude correttamente il 50m sprint con pace=2.0); pace risultante <= 6.0; pb.run.best_pace.distance_km >= 1 confermato. ✅ PACE FILTER WORKS CORRECTLY. (J) Regression: GET /plans -> 200 OK; GET /stats/progress -> 200 con keys [daily, weekly, monthly, goals]; POST /workouts/complete SENZA activity_type -> 200 con activity_type='run' di default (campo Pydantic Optional default 'run' funzionante). Endpoints pronti per integrazione frontend. NOTA: Le sessioni di test create durante il run (1 walk, 1 run 5K, 1 run super short, 1 run default) rimangono nel DB dell'admin — non e' previsto un endpoint per cancellare singole sessioni e admin non puo' auto-cancellarsi. Cio' non impatta i test futuri perche' le query filtrano per soglie minime (>=1km, >=2.5km)."
+
+agent_communication:
+  - agent: "testing"
+    message: "✅ Testati i 2 nuovi endpoint /api/stats/dashboard e /api/stats/personal-bests + regression. 35/35 assertions PASS via /app/backend_dashboard_pb_test.py. (1) Auth: entrambi gli endpoint restituiscono 401 senza token. (2) /stats/dashboard: ritorna sempre days_7 con esattamente 7 entries (incluso zeri se nessuna sessione), weeks_12 array, totals oggetto con distance_km/duration_seconds/count. (3) /stats/personal-bests: ritorna chiavi run/walk/bike, ognuna null o oggetto con longest_distance/longest_duration/best_pace. (4) ✅ CRITICAL TEST 8 PASSATO: dopo aver inserito una sessione 'short run' (distance=0.05km, pace=2.0), il best_pace del run RESTA il 5K con pace 6.0 — il filtro `distance >= 1km` su best_pace e' implementato correttamente in pb_for() linea 1702. (5) Regression: POST /auth/login admin, GET /plans, GET /stats/progress, POST /workouts/complete (con e senza activity_type) tutti 200 OK. Default activity_type='run' funziona. Nessun bug rilevato. Endpoints pronti per produzione e integrazione frontend."
 
   - task: "Apple Sign-In endpoint /api/auth/apple - improved error logging and audience handling"
     implemented: true
@@ -528,3 +544,37 @@ agent_communication:
     message: "UI REVAMP COMPLETO: passaggio da dark a light theme RUNNA-style. Aggiunte attività Camminata e Bici come modi standalone (selettore in /tabs/run con cambio colore dinamico). Backend: aggiunto campo activity_type opzionale a CompleteWorkoutRequest (default 'run'). Frontend: nuovo design system in theme.ts con palette light + shadows + typography presets + activityMeta. 11 brand icons custom in SVG + lucide-react-native installato. Tutte le 5 tab refactored. Test manuale via screenshot mostra tutte le schermate funzionanti. FIXED: react-native-reanimated era stato bumped a 4.1.7 da yarn add lucide -> riportato a 3.19.5 (locked, compat react-native-health). FIXED: rimosso 'e()' orfano a fine server.py che blocca backend startup. RICHIESTA: testing backend per nuovo campo activity_type (3 scenari) + regression GET /workouts/history."
   - agent: "testing"
     message: "❌ CRITICAL BUG su POST /api/workouts/complete con activity_type. Tutti i 4 scenari di POST falliscono con 500 Internal Server Error (walk, bike, run, no-activity_type). Verificato in /var/log/supervisor/backend.err.log: AttributeError: 'CompleteWorkoutRequest' object has no attribute 'activity_type'. ROOT CAUSE: il main agent ha aggiornato SOLO il codice dell'endpoint (server.py line 1527 usa data.activity_type) ma NON ha aggiunto il campo al modello Pydantic CompleteWorkoutRequest (server.py lines 482-490) che contiene solo: workout_id, plan_id, title, duration_seconds, distance_km, avg_pace_min_per_km, calories, locations. Pydantic v2 droppa silenziosamente il campo extra dal request body e accedere all'attributo inesistente solleva AttributeError -> 500. FIX one-liner: aggiungere `activity_type: Optional[str] = 'run'` (o `= None`) dentro class CompleteWorkoutRequest dopo la riga `locations: List[SessionLocation] = []` (line 490). DOPO IL FIX, riapplicare i 4 test POST + i 3 GET /workouts/{session_id} di verifica persistenza. ALTRI RISULTATI: ✅ Admin login OK (200). ✅ GET /workouts/history 200 con 8 sessioni legacy SENZA activity_type field, nessun 500 (regression OK, continuera' a funzionare anche dopo il fix). ✅ GET /api/plans 200 (ritorna dict con 3 chiavi, non array). ✅ GET /api/stats/progress 200 con keys ['daily','weekly','monthly','goals']. ✅ POST /auth/login admin 200. NESSUNA test session salvata nel DB durante questo run (tutti i POST hanno restituito 500); la cleanup non e' necessaria. Il fix e' single-line, no retest needed prima dell'applicazione."
+
+# ─────────────────────────────────────────────────────────────
+# Sprint 2 — Premium Polish (Share Card, Dashboard, PB badges, Animated, Haptic)
+# ─────────────────────────────────────────────────────────────
+
+backend:
+  - task: "Stats Dashboard + Personal Bests endpoints"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Aggiunti 2 nuovi endpoint REST in /app/backend/server.py: (1) GET /api/stats/dashboard - returns last 7 days bar chart data, last 12 weeks trend, and lifetime totals (distance/duration/count). Free tier (require auth ma no tier). Output: { days_7: [{date, weekday, distance_km, duration_seconds, count}], weeks_12: [{week, distance_km, count}], totals: {distance_km, duration_seconds, count} }. (2) GET /api/stats/personal-bests - returns PBs for run/walk/bike calculating longest_distance, longest_duration, best_pace (only sessions >= 1km for pace). Free tier. Output: { run: {...}|null, walk: {...}|null, bike: {...}|null }. Test verificato manualmente: con utente con 4 sessioni (3 run + 1 walk), totals=18.8km, 4 sessioni, dashboard.days_7 mostra dati correttamente, PB per CORSA mostra 6.5km/35m/6.25', PB per CAMMINATA mostra 2.3km/30m/13.04', BICI null. Necessita retest formale via deep_testing_backend_v2."
+
+frontend:
+  - task: "Sprint 2 Premium Polish (Share Card + Dashboard + PB + Animations + Haptic)"
+    implemented: true
+    working: true
+    file: "frontend/app/dashboard.tsx, frontend/app/workout/[id].tsx, frontend/src/MiniCharts.tsx, frontend/src/uiPolish.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Sprint 2 completo: (1) Nuovo file /app/frontend/src/uiPolish.tsx con AnimatedCounter (count-up smooth), Skeleton (shimmer pulse loading), e haptics helper (light/medium/success/warning). (2) Nuovo file /app/frontend/src/MiniCharts.tsx con Sparkline SVG (linea con area fill gradient), BarChart (bar chart con barra massima evidenziata), StatBlock helper. (3) Nuova screen /app/frontend/app/dashboard.tsx — Dashboard completa con: 3 stat totals (km totali/ore totali/sessioni) animati con AnimatedCounter, Bar chart ultimi 7 giorni con weekday labels, Sparkline 12 settimane trend, Personal Best cards per Run/Walk/Bike con longest distance/duration/best pace. Light theme premium con shadow soft. Empty states per PB non ancora raggiunti. (4) Workout Summary RIDISEGNATA in /app/frontend/app/workout/[id].tsx come Strava-style share card: dark hero card con bandeau attività colorato, hero metric 96px font, NUOVO RECORD banner coral se PB matched, stats grid (Durata/Passo/Kcal), date footer, decorative blobs. Uso react-native-view-shot per cattura immagine + expo-sharing per condivisione (con fallback Share API testuale). (5) Home aggiornata con AnimatedCounter su stats + nuovo entry 'Dashboard e Personal Best' in lista Esplora. (6) Tab Run con haptic feedback su cambio modalità + start. (7) Installato lucide-react-native@1.16.0, react-native-view-shot@4.0.3, expo-sharing@14.0.8, @expo-google-fonts/inter@0.4.2. (8) Allineate versioni con Expo SDK 54 doctor (view-shot 4.0.3, sharing 14.0.8). Test manuale: Dashboard con 4 sessioni (3 run + 1 walk) mostra 18.8 km totali, 2.0 ore, 4 sessioni, bar chart popolato con domenica in coral, PB cards mostrate correttamente per CORSA (6.5km/35m/6.25') e CAMMINATA (2.3km/30m/13.04'). Workout summary mostra share card Strava-style con badge CAMMINATA verde, hero '2.30 KM', NUOVO RECORD · Distanza Massima banner coral, stats grid (30:00 durata, 13:02 passo, 110 kcal), data 17 maggio 2026. Pulsanti 'Condividi card' (coral con shadow) e 'Solo testo' funzionanti."
+
+agent_communication:
+  - agent: "main"
+    message: "SPRINT 2 PREMIUM POLISH COMPLETO: Workout Summary stile Strava share card (con auto-detection Personal Best + animated banner), Dashboard analytics (bar chart 7gg + sparkline 12 settimane + lifetime totals animati + PB cards per Run/Walk/Bike), AnimatedCounter su tutte le stats, Haptic feedback su tap principali, Skeleton loaders per loading state. NEW BACKEND ENDPOINTS che necessitano test: GET /api/stats/dashboard (free) e GET /api/stats/personal-bests (free). Test manuale via web preview OK. Richiesto testing formale dei 2 nuovi endpoint backend."

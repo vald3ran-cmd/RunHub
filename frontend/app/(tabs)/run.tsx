@@ -24,6 +24,7 @@ export default function RunTab() {
   const meta = activityMeta[mode];
 
   const startActivity = () => {
+    haptics.medium();
     const titleMap: Record<Mode, string> = {
       run: 'Corsa libera',
       walk: 'Camminata libera',
@@ -61,7 +62,7 @@ export default function RunTab() {
                 key={a.type}
                 testID={`mode-${a.type}`}
                 activeOpacity={0.85}
-                onPress={() => setMode(a.type)}
+                onPress={() => { haptics.light(); setMode(a.type); }}
                 style={[
                   styles.modeCard,
                   active && { borderColor: m.color, backgroundColor: m.colorMuted, ...shadows.md },

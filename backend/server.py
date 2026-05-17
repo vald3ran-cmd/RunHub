@@ -1624,6 +1624,108 @@ async def stats_weekly(user: dict = Depends(require_tier("performance"))):
     return [{"week": r["_id"], "distance_km": round(r["distance"] or 0, 2),
              "duration_seconds": int(r["duration"] or 0), "count": int(r["count"] or 0)} for r in res]
 
+
+# ---------- Dashboard (FREE for all tiers - last 7 days + last 12 weeks) ----------
+@api_router.get("/stats/dashboard")
+async def stats_dashboard(user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc)
+    # 7 days bars
+    start_7d = (now - timedelta(days=6)).replace(hour=0, minute=0, second=0, microsecond=0)
+    days_pipe = [
+        {"$match": {"user_id": user["user_id"], "completed_at": {"$gte": start_7d}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$completed_at"}},
+            "distance": {"$sum": "$distance_km"},
+            "duration": {"$sum": "$duration_seconds"},
+            "count": {"$sum": 1},
+        }},
+    ]
+    days_res = await db.workout_sessions.aggregate(days_pipe).to_list(50)
+    days_map = {r["_id"]: r for r in days_res}
+    days = []
+    for i in range(7):
+        d = (start_7d + timedelta(days=i))
+        key = d.strftime("%Y-%m-%d")
+        r = days_map.get(key, {})
+        days.append({
+            "date": key,
+            "weekday": d.strftime("%a"),
+            "distance_km": round(r.get("distance", 0) or 0, 2),
+            "duration_seconds": int(r.get("duration", 0) or 0),
+            "count": int(r.get("count", 0) or 0),
+        })
+
+    # 12 weeks trend (free)
+    start_12w = now - timedelta(weeks=12)
+    weeks_pipe = [
+        {"$match": {"user_id": user["user_id"], "completed_at": {"$gte": start_12w}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%G-W%V", "date": "$completed_at"}},
+            "distance": {"$sum": "$distance_km"},
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    weeks_res = await db.workout_sessions.aggregate(weeks_pipe).to_list(20)
+    weeks = [{"week": r["_id"], "distance_km": round(r["distance"] or 0, 2), "count": int(r["count"] or 0)} for r in weeks_res]
+
+    # Lifetime totals
+    total_pipe = [
+        {"$match": {"user_id": user["user_id"]}},
+        {"$group": {"_id": None, "distance": {"$sum": "$distance_km"}, "duration": {"$sum": "$duration_seconds"}, "count": {"$sum": 1}}},
+    ]
+    total_res = await db.workout_sessions.aggregate(total_pipe).to_list(1)
+    totals = {
+        "distance_km": round((total_res[0]["distance"] if total_res else 0) or 0, 2),
+        "duration_seconds": int((total_res[0]["duration"] if total_res else 0) or 0),
+        "count": int((total_res[0]["count"] if total_res else 0) or 0),
+    }
+
+    return {"days_7": days, "weeks_12": weeks, "totals": totals}
+
+
+# ---------- Personal Bests (FREE — calcolati on-the-fly) ----------
+@api_router.get("/stats/personal-bests")
+async def personal_bests(user: dict = Depends(get_current_user)):
+    """Personal best per Corsa, Camminata, Bici: distanza max, durata max, pace migliore."""
+    sessions = await db.workout_sessions.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).to_list(10000)
+
+    def pb_for(act_type: str):
+        items = [s for s in sessions if (s.get("activity_type") or "run") == act_type]
+        if not items:
+            return None
+        longest = max(items, key=lambda s: s.get("distance_km") or 0)
+        longest_dur = max(items, key=lambda s: s.get("duration_seconds") or 0)
+        # best pace: only consider sessions >= 1km (avoid 50m sprint)
+        valid_pace = [s for s in items if (s.get("distance_km") or 0) >= 1 and (s.get("avg_pace_min_per_km") or 0) > 0]
+        best_pace = min(valid_pace, key=lambda s: s.get("avg_pace_min_per_km") or 999) if valid_pace else None
+        return {
+            "longest_distance": {
+                "value_km": round(longest.get("distance_km") or 0, 2),
+                "session_id": longest.get("session_id"),
+                "date": (longest.get("completed_at").isoformat() if longest.get("completed_at") else None),
+            } if longest.get("distance_km") else None,
+            "longest_duration": {
+                "value_seconds": int(longest_dur.get("duration_seconds") or 0),
+                "session_id": longest_dur.get("session_id"),
+                "date": (longest_dur.get("completed_at").isoformat() if longest_dur.get("completed_at") else None),
+            } if longest_dur.get("duration_seconds") else None,
+            "best_pace": {
+                "pace_min_per_km": round(best_pace.get("avg_pace_min_per_km") or 0, 2),
+                "session_id": best_pace.get("session_id"),
+                "distance_km": round(best_pace.get("distance_km") or 0, 2),
+                "date": (best_pace.get("completed_at").isoformat() if best_pace.get("completed_at") else None),
+            } if best_pace else None,
+        }
+
+    return {
+        "run": pb_for("run"),
+        "walk": pb_for("walk"),
+        "bike": pb_for("bike"),
+    }
+
 # ----------------- Race predictor (Performance+, Riegel formula) -----------------
 class RacePredictRequest(BaseModel):
     recent_distance_km: float

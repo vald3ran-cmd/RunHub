@@ -12,8 +12,9 @@ import { AdBanner } from '../../src/Ads';
 import {
   BoltIcon, SparklesIcon, TrophyIcon, FlameIcon,
 } from '../../src/icons/BrandIcons';
+import { AnimatedCounter } from '../../src/uiPolish';
 import {
-  ChevronRight, Heart, Users, Activity, Clock,
+  ChevronRight, Heart, Users, Activity, Clock, BarChart3,
 } from 'lucide-react-native';
 
 type Progress = {
@@ -181,6 +182,13 @@ export default function Home() {
             onPress={() => router.push('/(tabs)/plans')}
           />
           <ExploreItem
+            testID="cta-dashboard-button"
+            icon={<BarChart3 size={20} color={colors.primary} strokeWidth={2.2} />}
+            eyebrow="Statistiche"
+            title="Dashboard e Personal Best"
+            onPress={() => router.push('/dashboard')}
+          />
+          <ExploreItem
             testID="cta-ai-button"
             icon={<SparklesIcon size={20} color={colors.primary} />}
             eyebrow="AI Coach · Performance"
@@ -232,11 +240,17 @@ function GoalRing({
 }
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  // Try to parse a numeric value out of the string for animation, fallback to text
+  const numMatch = value.match(/^(\d+(?:\.\d+)?)$/);
   return (
     <View style={styles.statCard}>
       <View style={styles.statIconWrap}>{icon}</View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statValue}>{value}</Text>
+        {numMatch ? (
+          <AnimatedCounter value={parseFloat(numMatch[1])} decimals={numMatch[1].includes('.') ? 1 : 0} style={styles.statValue} />
+        ) : (
+          <Text style={styles.statValue}>{value}</Text>
+        )}
         <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
       </View>
     </View>
