@@ -483,6 +483,7 @@ class CompleteWorkoutRequest(BaseModel):
     workout_id: Optional[str] = None
     plan_id: Optional[str] = None
     title: str = "Free Run"
+    activity_type: Optional[str] = "run"  # 'run' | 'walk' | 'bike'
     duration_seconds: int
     distance_km: float
     avg_pace_min_per_km: Optional[float] = None
