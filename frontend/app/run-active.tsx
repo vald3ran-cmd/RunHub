@@ -9,7 +9,7 @@ import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
-import { colors, spacing, radius, stepTypeColors, stepTypeLabels } from '../src/theme';
+import { colors, spacing, radius, stepTypeColors, stepTypeLabels, activityMeta, ActivityType } from '../src/theme';
 import { RouteMap } from '../src/RouteMap';
 import { InterstitialAd, useShouldShowAds } from '../src/Ads';
 import { interstitialManager } from '../src/adMobReal';
@@ -20,11 +20,16 @@ type Step = {
 };
 
 export default function RunActive() {
-  const params = useLocalSearchParams<{ title?: string; workout_id?: string; plan_id?: string; steps?: string }>();
+  const params = useLocalSearchParams<{ title?: string; workout_id?: string; plan_id?: string; steps?: string; activity_type?: string }>();
   const router = useRouter();
   const title = params.title || 'Run Libero';
   const steps: Step[] = params.steps ? JSON.parse(String(params.steps)) : [];
   const hasSteps = steps.length > 0;
+  const activityType: ActivityType =
+    (params.activity_type === 'walk' || params.activity_type === 'bike' || params.activity_type === 'run')
+      ? params.activity_type as ActivityType
+      : 'run';
+  const activity = activityMeta[activityType];
 
   const [elapsed, setElapsed] = useState(0);
   const [distance, setDistance] = useState(0);
@@ -278,10 +283,11 @@ export default function RunActive() {
         title,
         workout_id: params.workout_id,
         plan_id: params.plan_id,
+        activity_type: activityType,
         duration_seconds: elapsed,
         distance_km: Number(distance.toFixed(3)),
         avg_pace_min_per_km: pace,
-        calories: Math.round(distance * 65),
+        calories: Math.round(distance * activity.kcalPerKm),
         locations: coords,
       });
       if (data.newly_awarded_badges && data.newly_awarded_badges.length > 0) {

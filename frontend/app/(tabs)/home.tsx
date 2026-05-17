@@ -1,15 +1,20 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, RefreshControl, Image, Platform
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image, Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/api';
 import { useAuth } from '../../src/auth';
-import { colors, spacing, radius } from '../../src/theme';
+import { colors, spacing, radius, shadows, typography } from '../../src/theme';
 import { ProgressRing } from '../../src/ProgressRing';
 import { AdBanner } from '../../src/Ads';
+import {
+  BoltIcon, SparklesIcon, TrophyIcon, FlameIcon,
+} from '../../src/icons/BrandIcons';
+import {
+  ChevronRight, Heart, Users, Activity, Clock,
+} from 'lucide-react-native';
 
 type Progress = {
   daily: { distance_km: number; duration_seconds: number; count: number };
@@ -41,121 +46,161 @@ export default function Home() {
   const weeklyPct = progress ? progress.weekly.distance_km / Math.max(progress.goals.weekly_km, 0.1) : 0;
   const monthlyPct = progress ? progress.monthly.distance_km / Math.max(progress.goals.monthly_km, 0.1) : 0;
 
+  const userName = (user?.name?.split(' ')[0] || 'Runner');
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {/* Header */}
-        <ImageBackground
-          source={{ uri: 'https://images.unsplash.com/photo-1765914448187-ee93dd13e1e6?w=1200' }}
-          style={styles.hero}
-        >
-          <View style={styles.heroOverlay} />
-          <View style={styles.heroContent}>
-            <View style={styles.heroTopRow}>
-              <Image source={require('../../assets/images/logo-transparent.png')} style={styles.heroLogo} resizeMode="contain" />
-              <Text style={styles.greeting}>CIAO{"\n"}{user?.name?.toUpperCase() ?? 'RUNNER'}</Text>
-            </View>
-            <Text style={styles.heroTitle}>PRONTO A{"\n"}CORRERE?</Text>
+        {/* Top bar — Logo + Saluto */}
+        <View style={styles.topBar}>
+          <Image
+            source={require('../../assets/images/logo-transparent.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.helloLabel}>Ciao</Text>
+            <Text style={styles.helloName} numberOfLines={1}>{userName} 👋</Text>
+          </View>
+        </View>
+
+        {/* Hero — "Pronto a correre?" */}
+        <View style={styles.heroCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroEyebrow}>OGGI</Text>
+            <Text style={styles.heroTitle}>Pronto a{'\n'}correre?</Text>
             <TouchableOpacity
               testID="hero-start-run-button"
-              style={styles.heroButton} onPress={() => router.push('/(tabs)/run')}
+              activeOpacity={0.85}
+              style={styles.heroCta}
+              onPress={() => router.push('/(tabs)/run')}
             >
-              <Ionicons name="flash" size={18} color="#fff" />
-              <Text style={styles.heroButtonText}>INIZIA UN RUN</Text>
+              <BoltIcon size={16} color="#fff" />
+              <Text style={styles.heroCtaText}>Inizia ora</Text>
             </TouchableOpacity>
           </View>
-        </ImageBackground>
-
-        {/* Goals grid */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>I TUOI TRAGUARDI</Text>
-          <View style={styles.ringsRow}>
-            <GoalRing label="OGGI" done={progress?.daily.distance_km ?? 0} goal={progress?.goals.daily_km ?? 0} pct={dailyPct} />
-            <GoalRing label="SETTIMANA" done={progress?.weekly.distance_km ?? 0} goal={progress?.goals.weekly_km ?? 0} pct={weeklyPct} color={colors.success} />
-            <GoalRing label="MESE" done={progress?.monthly.distance_km ?? 0} goal={progress?.goals.monthly_km ?? 0} pct={monthlyPct} color={colors.warning} />
+          <View style={styles.heroVisual}>
+            <View style={styles.heroBlob} />
+            <View style={styles.heroBlob2} />
+            <Image
+              source={require('../../assets/images/logo-transparent.png')}
+              style={styles.heroLogo}
+              resizeMode="contain"
+            />
           </View>
+        </View>
+
+        {/* Traguardi — 3 ring */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>I tuoi traguardi</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+            <Text style={styles.sectionAction}>Modifica</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.ringsRow}>
+          <GoalRing
+            label="Oggi"
+            done={progress?.daily.distance_km ?? 0}
+            goal={progress?.goals.daily_km ?? 0}
+            pct={dailyPct}
+            color={colors.primary}
+          />
+          <GoalRing
+            label="Settimana"
+            done={progress?.weekly.distance_km ?? 0}
+            goal={progress?.goals.weekly_km ?? 0}
+            pct={weeklyPct}
+            color={colors.success}
+          />
+          <GoalRing
+            label="Mese"
+            done={progress?.monthly.distance_km ?? 0}
+            goal={progress?.goals.monthly_km ?? 0}
+            pct={monthlyPct}
+            color={colors.warning}
+          />
         </View>
 
         {/* Quick stats */}
-        <View style={styles.section}>
-          <View style={styles.statsGrid}>
-            <StatCard label="CORSE" value={`${progress?.monthly.count ?? 0}`} sub="Questo mese" icon="trophy" />
-            <StatCard label="TEMPO" value={fmtDuration(progress?.monthly.duration_seconds ?? 0)} sub="Totale mese" icon="time" />
-          </View>
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon={<TrophyIcon size={22} color={colors.primary} />}
+            label="Corse questo mese"
+            value={`${progress?.monthly.count ?? 0}`}
+          />
+          <StatCard
+            icon={<Clock size={22} color={colors.primary} strokeWidth={2.2} />}
+            label="Tempo totale"
+            value={fmtDuration(progress?.monthly.duration_seconds ?? 0)}
+          />
         </View>
 
-        {/* Apple Health / Health Connect — visibilità prominente per Apple Review 2.5.1 */}
+        {/* Apple Health */}
         {Platform.OS !== 'web' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>INTEGRAZIONI SALUTE</Text>
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: spacing.lg, marginHorizontal: spacing.lg }]}>
+              Integrazioni salute
+            </Text>
             <TouchableOpacity
               testID="health-card-button"
               style={styles.healthCard}
               onPress={() => router.push('/wearables')}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
               <View style={styles.healthIconWrap}>
-                <Ionicons
-                  name="heart"
-                  size={26}
-                  color="#FF2D55"
-                />
+                <Heart size={22} color="#FF2D55" strokeWidth={2.2} fill="#FF2D55" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.healthTitle}>
                   {Platform.OS === 'ios' ? 'Apple Health' : 'Google Health Connect'}
                 </Text>
                 <Text style={styles.healthSubtitle}>
-                  {Platform.OS === 'ios'
-                    ? 'Sincronizza passi, frequenza cardiaca e calorie con Apple Health. Salva automaticamente i tuoi allenamenti.'
-                    : 'Collega Health Connect per sincronizzare passi, battito e calorie.'}
+                  Sincronizza passi, frequenza cardiaca e calorie.
                 </Text>
-                <View style={styles.healthCtaRow}>
-                  <Text style={styles.healthCtaText}>
-                    {Platform.OS === 'ios' ? 'Connetti Apple Health' : 'Connetti Health Connect'}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={14} color="#FF2D55" />
-                </View>
               </View>
+              <ChevronRight size={20} color={colors.textMuted} />
             </TouchableOpacity>
-          </View>
+          </>
         )}
 
-        {/* CTAs */}
-        <View style={styles.section}>
-          <TouchableOpacity
+        {/* Hub: Piani / AI / Social */}
+        <Text style={[styles.sectionTitle, { marginTop: spacing.lg, marginHorizontal: spacing.lg }]}>
+          Esplora
+        </Text>
+
+        <View style={styles.exploreList}>
+          <ExploreItem
             testID="cta-plans-button"
-            style={styles.ctaCard} onPress={() => router.push('/(tabs)/plans')}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.ctaLabel}>PIANI DI ALLENAMENTO</Text>
-              <Text style={styles.ctaTitle}>Trova il tuo programma</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
+            icon={<Activity size={20} color={colors.primary} strokeWidth={2.2} />}
+            eyebrow="Piani"
+            title="Trova il tuo programma"
+            onPress={() => router.push('/(tabs)/plans')}
+          />
+          <ExploreItem
             testID="cta-ai-button"
-            style={[styles.ctaCard, styles.premiumCard]} onPress={() => router.push('/ai-generate')}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.ctaLabel, { color: colors.primary }]}>AI COACH · PERFORMANCE</Text>
-              <Text style={styles.ctaTitle}>Genera un piano su misura</Text>
-            </View>
-            <Ionicons name="sparkles" size={22} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
+            icon={<SparklesIcon size={20} color={colors.primary} />}
+            eyebrow="AI Coach · Performance"
+            title="Genera un piano su misura"
+            onPress={() => router.push('/ai-generate')}
+            highlight
+          />
+          <ExploreItem
             testID="cta-social-button"
-            style={styles.ctaCard} onPress={() => router.push('/social')}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.ctaLabel}>COMMUNITY</Text>
-              <Text style={styles.ctaTitle}>Amici, feed e classifiche</Text>
-            </View>
-            <Ionicons name="people" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
+            icon={<Users size={20} color={colors.primary} strokeWidth={2.2} />}
+            eyebrow="Community"
+            title="Amici, feed e classifiche"
+            onPress={() => router.push('/social')}
+          />
+          <ExploreItem
+            icon={<FlameIcon size={20} color={colors.primary} />}
+            eyebrow="Achievement"
+            title="I tuoi badge"
+            onPress={() => router.push('/badges')}
+          />
         </View>
 
         <AdBanner />
@@ -164,26 +209,64 @@ export default function Home() {
   );
 }
 
-function GoalRing({ label, done, goal, pct, color }: { label: string; done: number; goal: number; pct: number; color?: string }) {
+// ─────────────────────────────────────────────────────────────
+function GoalRing({
+  label, done, goal, pct, color,
+}: { label: string; done: number; goal: number; pct: number; color: string }) {
   return (
     <View style={styles.ringCard}>
-      <ProgressRing progress={pct} size={100} strokeWidth={10} color={color ?? colors.primary}>
+      <ProgressRing progress={pct} size={92} strokeWidth={9} color={color}>
         <Text style={styles.ringValue}>{done.toFixed(1)}</Text>
         <Text style={styles.ringUnit}>/ {goal} km</Text>
       </ProgressRing>
-      <Text style={styles.ringLabel}>{label}</Text>
+      <Text
+        style={styles.ringLabel}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
 
-function StatCard({ label, value, sub, icon }: { label: string; value: string; sub: string; icon: any }) {
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <View style={styles.statCard}>
-      <Ionicons name={icon} size={22} color={colors.primary} />
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statSub}>{sub}</Text>
+      <View style={styles.statIconWrap}>{icon}</View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+      </View>
     </View>
+  );
+}
+
+function ExploreItem({
+  icon, eyebrow, title, onPress, highlight, testID,
+}: {
+  icon: React.ReactNode; eyebrow: string; title: string;
+  onPress: () => void; highlight?: boolean; testID?: string;
+}) {
+  return (
+    <TouchableOpacity
+      testID={testID}
+      style={[styles.exploreItem, highlight && styles.exploreItemHighlight]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[styles.exploreIcon, highlight && { backgroundColor: colors.primaryMuted }]}>
+        {icon}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.exploreEyebrow, highlight && { color: colors.primary }]}>
+          {eyebrow}
+        </Text>
+        <Text style={styles.exploreTitle}>{title}</Text>
+      </View>
+      <ChevronRight size={20} color={colors.textMuted} />
+    </TouchableOpacity>
   );
 }
 
@@ -195,72 +278,184 @@ function fmtDuration(s: number) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  hero: { height: 260, justifyContent: 'flex-end' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(9,9,11,0.65)' },
-  heroContent: { padding: spacing.lg },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
-  heroLogo: { width: 52, height: 52 },
-  greeting: { color: colors.textSecondary, fontSize: 12, fontWeight: '800', letterSpacing: 2 },
-  heroTitle: { color: colors.textPrimary, fontSize: 40, fontWeight: '900', letterSpacing: -1, marginVertical: spacing.sm },
-  heroButton: {
-    backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center',
-    alignSelf: 'flex-start', paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderRadius: radius.pill, gap: spacing.sm, marginTop: spacing.sm,
-  },
-  heroButtonText: { color: '#fff', fontWeight: '800', letterSpacing: 2 },
-  section: { padding: spacing.lg, paddingTop: spacing.lg },
-  sectionTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '800', letterSpacing: 2, marginBottom: spacing.md },
-  ringsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
-  ringCard: {
-    flex: 1, backgroundColor: colors.surface, padding: spacing.md,
-    borderRadius: radius.lg, alignItems: 'center', borderWidth: 1, borderColor: colors.border,
-  },
-  ringValue: { color: colors.textPrimary, fontSize: 22, fontWeight: '900' },
-  ringUnit: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
-  ringLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.sm },
-  statsGrid: { flexDirection: 'row', gap: spacing.md },
-  statCard: {
-    flex: 1, backgroundColor: colors.surface, padding: spacing.md,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-  },
-  statLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.sm },
-  statValue: { color: colors.textPrimary, fontSize: 28, fontWeight: '900', marginTop: 2 },
-  statSub: { color: colors.textSecondary, fontSize: 12 },
-  ctaCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, padding: spacing.lg, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md,
-  },
-  premiumCard: { borderColor: colors.primary },
-  ctaLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  ctaTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 4 },
 
-  // Apple Health card — visibilità prominente per Apple Review 2.5.1
+  // Top bar
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  logo: { width: 44, height: 44 },
+  helloLabel: { ...typography.small, color: colors.textSecondary },
+  helloName: { ...typography.h2, color: colors.textPrimary },
+
+  // Hero card
+  heroCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.textPrimary,
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    minHeight: 180,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  heroEyebrow: {
+    ...typography.eyebrow,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: spacing.sm,
+  },
+  heroTitle: {
+    color: colors.white,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.8,
+    lineHeight: 34,
+  },
+  heroCta: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderRadius: radius.pill,
+    gap: 6,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  heroCtaText: { color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 },
+  heroVisual: { width: 110, alignItems: 'center', justifyContent: 'center' },
+  heroLogo: { width: 88, height: 88, opacity: 0.95 },
+  heroBlob: {
+    position: 'absolute', right: -30, top: -10,
+    width: 130, height: 130, borderRadius: 65,
+    backgroundColor: 'rgba(255,107,107,0.18)',
+  },
+  heroBlob2: {
+    position: 'absolute', right: 10, bottom: -20,
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: 'rgba(255,107,107,0.10)',
+  },
+
+  // Section header
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  sectionTitle: { ...typography.h3, color: colors.textPrimary },
+  sectionAction: { ...typography.small, color: colors.primary, fontWeight: '700' },
+
+  // Rings
+  ringsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  ringCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    paddingHorizontal: 6,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  ringValue: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
+  ringUnit: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
+  ringLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+
+  // Stats grid
+  statsGrid: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    ...shadows.sm,
+  },
+  statIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  statValue: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
+  statLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+
+  // Health
   healthCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
+    padding: spacing.md,
     borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: '#FF2D55',
     gap: spacing.md,
+    ...shadows.sm,
   },
   healthIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,45,85,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  healthTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
-  healthSubtitle: { color: colors.textSecondary, fontSize: 13, marginTop: 4, lineHeight: 18 },
-  healthCtaRow: {
+  healthTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '800' },
+  healthSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+
+  // Explore list
+  exploreList: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  exploreItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    gap: spacing.md,
+    ...shadows.sm,
   },
-  healthCtaText: { color: '#FF2D55', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  exploreItemHighlight: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  exploreIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  exploreEyebrow: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  exploreTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 2,
+  },
 });

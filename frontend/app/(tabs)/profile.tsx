@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
-import { colors, spacing, radius } from '../../src/theme';
+import { colors, spacing, radius, shadows, typography } from '../../src/theme';
 
 export default function Profile() {
   const { user, logout, refresh } = useAuth();
@@ -284,40 +284,50 @@ function tierLabel(t: string) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   avatar: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: colors.primary,
+    width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary,
     alignSelf: 'center', justifyContent: 'center', alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  avatarText: { color: '#fff', fontSize: 36, fontWeight: '900' },
-  name: { color: colors.textPrimary, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: spacing.md },
-  email: { color: colors.textSecondary, textAlign: 'center', marginTop: 2 },
+  avatarText: { color: '#fff', fontSize: 38, fontWeight: '900' },
+  name: { color: colors.textPrimary, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: spacing.md, letterSpacing: -0.4 },
+  email: { color: colors.textSecondary, textAlign: 'center', marginTop: 4, fontSize: 13 },
   badgeRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.md },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   premiumCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.primary, padding: spacing.lg, borderRadius: radius.lg,
     marginTop: spacing.lg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
   premiumLabel: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 2, opacity: 0.9 },
-  premiumTitle: { color: '#fff', fontSize: 20, fontWeight: '900', marginTop: 4 },
+  premiumTitle: { color: '#fff', fontSize: 18, fontWeight: '900', marginTop: 4 },
   premiumSub: { color: '#fff', fontSize: 12, marginTop: 4, opacity: 0.9 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, marginTop: spacing.md,
+    backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.lg,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
-  rowText: { color: colors.textPrimary, flex: 1, fontSize: 15, fontWeight: '600' },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  rowText: { color: colors.textPrimary, flex: 1, fontSize: 14, fontWeight: '600' },
+  modalBg: { flex: 1, backgroundColor: 'rgba(15,17,21,0.5)', justifyContent: 'flex-end' },
   modalCard: {
-    backgroundColor: colors.background, padding: spacing.lg,
-    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    borderTopWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.lg,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
   },
-  modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900', letterSpacing: 1, marginBottom: spacing.md },
-  inputLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.sm, marginBottom: 4 },
-  input: { backgroundColor: colors.surface, color: colors.textPrimary, padding: spacing.md, borderRadius: radius.md, fontSize: 16 },
-  cancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: 'center' },
+  modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '900', letterSpacing: -0.3, marginBottom: spacing.md },
+  inputLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginTop: spacing.sm, marginBottom: 6 },
+  input: { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, padding: spacing.md, borderRadius: radius.md, fontSize: 16, fontWeight: '600' },
+  cancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, alignItems: 'center' },
   saveBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: 'center' },
-  cancelText: { color: colors.textPrimary, fontWeight: '800', letterSpacing: 1 },
-  saveText: { color: '#fff', fontWeight: '800', letterSpacing: 1 },
+  cancelText: { color: colors.textPrimary, fontWeight: '800', letterSpacing: 0.5 },
+  saveText: { color: '#fff', fontWeight: '800', letterSpacing: 0.5 },
 });

@@ -1524,6 +1524,7 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
         "workout_id": data.workout_id,
         "plan_id": data.plan_id,
         "title": data.title,
+        "activity_type": (data.activity_type or "run").lower(),
         "duration_seconds": data.duration_seconds,
         "distance_km": data.distance_km,
         "avg_pace_min_per_km": data.avg_pace_min_per_km,
