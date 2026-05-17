@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../src/auth';
 import { colors } from '../src/theme';
 import { initializeAdMob } from '../src/adMobReal';
 import { isAdMobAvailable } from '../src/adMobConfig';
+import { initConsentFlow } from '../src/ConsentManager';
 import { initNotifications, registerForPushNotifications } from '../src/notifications';
 import { initRevenueCat, identifyRevenueCatUser, logoutRevenueCat } from '../src/revenuecat';
 import { initCrashReporting, setUser as setCrashUser, setAttribute as setCrashAttribute, addBreadcrumb } from '../src/crashReporting';
@@ -43,11 +44,33 @@ function RootNav() {
     })();
   }, []);
 
-  // Initialize AdMob (only on native dev/prod builds, skipped in Expo Go)
+  // Initialize UMP Consent Flow + AdMob (GDPR-compliant)
+  // 1) Mostra form di consenso GDPR (UMP) → 2) Solo se canRequestAds=true → inizializza Mobile Ads SDK
+  // Senza UMP, in EU il fill rate AdMob crolla al ~7%.
   useEffect(() => {
-    if (isAdMobAvailable) {
-      initializeAdMob().catch(() => {});
-    }
+    if (!isAdMobAvailable) return;
+    (async () => {
+      try {
+        // 1) Gather consent (mostra il form solo se utente EEA/UK e necessario)
+        const snapshot = await initConsentFlow(
+          __DEV__
+            ? { debugAsEea: true } // Forza geografia EEA in dev/TestFlight per testare flow
+            : undefined,
+        );
+        console.log('[CONSENT] snapshot:', snapshot.status, 'canRequestAds=', snapshot.canRequestAds);
+
+        // 2) Inizializza Mobile Ads SDK SOLO se UMP dice ok
+        if (snapshot.canRequestAds) {
+          await initializeAdMob();
+        } else {
+          console.log('[CONSENT] Ads non autorizzati - utente ha rifiutato o consenso non ancora completato');
+        }
+      } catch (e) {
+        console.warn('[CONSENT] flow error, fallback init AdMob:', e);
+        // Fallback: meglio inizializzare per non perdere monetizzazione fuori EU
+        initializeAdMob().catch(() => {});
+      }
+    })();
   }, []);
 
   // Initialize notifications handler

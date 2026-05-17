@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
 import { colors, spacing, radius, shadows, typography } from '../../src/theme';
+import { showPrivacyOptionsForm } from '../../src/ConsentManager';
+import { isAdMobAvailable } from '../../src/adMobConfig';
 
 export default function Profile() {
   const { user, logout, refresh } = useAuth();
@@ -217,6 +219,28 @@ export default function Profile() {
           <Text style={styles.rowText}>Privacy Policy</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
+
+        {isAdMobAvailable ? (
+          <TouchableOpacity
+            testID="privacy-options-button"
+            style={styles.row}
+            onPress={async () => {
+              try {
+                await showPrivacyOptionsForm();
+                Alert.alert('Preferenze aggiornate', 'Le tue scelte sono state salvate.');
+              } catch (e: any) {
+                Alert.alert(
+                  'Non disponibile',
+                  'Le preferenze privacy per la pubblicità non sono disponibili su questo dispositivo.',
+                );
+              }
+            }}
+          >
+            <Ionicons name="options" size={20} color={colors.primary} />
+            <Text style={styles.rowText}>Preferenze privacy ads (GDPR)</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
 
         <TouchableOpacity
           testID="logout-button"
