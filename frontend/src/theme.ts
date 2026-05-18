@@ -45,9 +45,16 @@ export const colors = {
 };
 
 export const fonts = {
-  heading: 'System',
-  body: 'System',
+  heading: 'Inter_900Black',
+  headingBold: 'Inter_800ExtraBold',
+  bold: 'Inter_700Bold',
+  medium: 'Inter_500Medium',
+  regular: 'Inter_400Regular',
+  body: 'Inter_400Regular',
 };
+
+// Typography presets — usano Inter per look premium "RUNNA"
+const FF = fonts;
 
 export const spacing = {
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48,
@@ -85,19 +92,19 @@ export const shadows = {
 // Typography presets
 export const typography = {
   // Display (eyecatcher)
-  displayLg: { fontSize: 36, fontWeight: '900' as const, letterSpacing: -1 },
-  displayMd: { fontSize: 28, fontWeight: '900' as const, letterSpacing: -0.6 },
+  displayLg: { fontSize: 36, fontFamily: FF.heading, letterSpacing: -1 },
+  displayMd: { fontSize: 28, fontFamily: FF.heading, letterSpacing: -0.6 },
   // Heading
-  h1: { fontSize: 24, fontWeight: '800' as const, letterSpacing: -0.4 },
-  h2: { fontSize: 20, fontWeight: '800' as const, letterSpacing: -0.2 },
-  h3: { fontSize: 17, fontWeight: '700' as const },
+  h1: { fontSize: 24, fontFamily: FF.headingBold, letterSpacing: -0.4 },
+  h2: { fontSize: 20, fontFamily: FF.headingBold, letterSpacing: -0.2 },
+  h3: { fontSize: 17, fontFamily: FF.bold },
   // Body
-  body: { fontSize: 15, fontWeight: '500' as const },
-  bodyStrong: { fontSize: 15, fontWeight: '700' as const },
-  small: { fontSize: 13, fontWeight: '500' as const },
+  body: { fontSize: 15, fontFamily: FF.medium },
+  bodyStrong: { fontSize: 15, fontFamily: FF.bold },
+  small: { fontSize: 13, fontFamily: FF.medium },
   // Eyebrow / caps label
-  eyebrow: { fontSize: 11, fontWeight: '800' as const, letterSpacing: 1.5 },
-  micro: { fontSize: 10, fontWeight: '700' as const, letterSpacing: 1 },
+  eyebrow: { fontSize: 11, fontFamily: FF.headingBold, letterSpacing: 1.5 },
+  micro: { fontSize: 10, fontFamily: FF.bold, letterSpacing: 1 },
 };
 
 // ─────────────────────────────────────────────────────────────

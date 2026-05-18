@@ -11,6 +11,14 @@ import { initConsentFlow } from '../src/ConsentManager';
 import { initNotifications, registerForPushNotifications } from '../src/notifications';
 import { initRevenueCat, identifyRevenueCatUser, logoutRevenueCat } from '../src/revenuecat';
 import { initCrashReporting, setUser as setCrashUser, setAttribute as setCrashAttribute, addBreadcrumb } from '../src/crashReporting';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+} from '@expo-google-fonts/inter';
 
 // 🔍 DIAGNOSTICA — RIMUOVERE DOPO IL FIX
 console.log('🏁 [LAYOUT] _layout.tsx caricato');
@@ -189,10 +197,19 @@ function RootNav() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Inter_900Black,
+  });
+
+  // Render dell'app anche se font non pronti (fallback al system font, evita schermo bianco infinito)
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <RootNav />
       </AuthProvider>
     </SafeAreaProvider>

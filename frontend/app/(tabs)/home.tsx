@@ -9,6 +9,7 @@ import { useAuth } from '../../src/auth';
 import { colors, spacing, radius, shadows, typography } from '../../src/theme';
 import { ProgressRing } from '../../src/ProgressRing';
 import { AdBanner } from '../../src/Ads';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   BoltIcon, SparklesIcon, TrophyIcon, FlameIcon,
 } from '../../src/icons/BrandIcons';
@@ -71,7 +72,13 @@ export default function Home() {
 
         {/* Hero — "Pronto a correre?" */}
         <View style={styles.heroCard}>
-          <View style={{ flex: 1 }}>
+          <LinearGradient
+            colors={['#1A1D24', '#0F1115']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={{ flex: 1, zIndex: 2 }}>
             <Text style={styles.heroEyebrow}>OGGI</Text>
             <Text style={styles.heroTitle}>Pronto a{'\n'}correre?</Text>
             <TouchableOpacity
@@ -315,6 +322,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     minHeight: 180,
     overflow: 'hidden',
+    position: 'relative',
     ...shadows.md,
   },
   heroEyebrow: {
