@@ -100,37 +100,51 @@ export function Skeleton({
 }
 
 // ─────────────────────────────────────────────────────────────
-// 3) Haptic helper — wraps expo-haptics safely
+// 3) Haptic helper — wraps expo-haptics safely (bulletproof)
 // ─────────────────────────────────────────────────────────────
+let _hapticsModule: any = null;
+let _hapticsTried = false;
+
+function getHaptics(): any | null {
+  if (_hapticsTried) return _hapticsModule;
+  _hapticsTried = true;
+  if (Platform.OS === 'web') return null;
+  try {
+    const mod = require('expo-haptics');
+    if (mod && typeof mod.impactAsync === 'function') {
+      _hapticsModule = mod;
+    }
+  } catch {}
+  return _hapticsModule;
+}
+
+async function safeImpact(style: 'Light' | 'Medium' | 'Heavy') {
+  const H = getHaptics();
+  if (!H) return;
+  try {
+    const styleEnum = H.ImpactFeedbackStyle?.[style];
+    if (styleEnum != null && typeof H.impactAsync === 'function') {
+      await H.impactAsync(styleEnum);
+    }
+  } catch {}
+}
+
+async function safeNotify(type: 'Success' | 'Warning' | 'Error') {
+  const H = getHaptics();
+  if (!H) return;
+  try {
+    const typeEnum = H.NotificationFeedbackType?.[type];
+    if (typeEnum != null && typeof H.notificationAsync === 'function') {
+      await H.notificationAsync(typeEnum);
+    }
+  } catch {}
+}
+
 export const haptics = {
-  light: async () => {
-    if (Platform.OS === 'web') return;
-    try {
-      const H = require('expo-haptics');
-      await H.impactAsync(H.ImpactFeedbackStyle.Light);
-    } catch {}
-  },
-  medium: async () => {
-    if (Platform.OS === 'web') return;
-    try {
-      const H = require('expo-haptics');
-      await H.impactAsync(H.ImpactFeedbackStyle.Medium);
-    } catch {}
-  },
-  success: async () => {
-    if (Platform.OS === 'web') return;
-    try {
-      const H = require('expo-haptics');
-      await H.notificationAsync(H.NotificationFeedbackType.Success);
-    } catch {}
-  },
-  warning: async () => {
-    if (Platform.OS === 'web') return;
-    try {
-      const H = require('expo-haptics');
-      await H.notificationAsync(H.NotificationFeedbackType.Warning);
-    } catch {}
-  },
+  light: () => { void safeImpact('Light'); },
+  medium: () => { void safeImpact('Medium'); },
+  success: () => { void safeNotify('Success'); },
+  warning: () => { void safeNotify('Warning'); },
 };
 
 // ─────────────────────────────────────────────────────────────
