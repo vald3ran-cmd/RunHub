@@ -91,7 +91,12 @@ export default function AIGenerate() {
                 style={[styles.pill, level === l.key && styles.pillActive]}
                 onPress={() => setLevel(l.key)}
               >
-                <Text style={[styles.pillText, level === l.key && styles.pillTextActive]}>{l.label}</Text>
+                <Text
+                  style={[styles.pillText, level === l.key && styles.pillTextActive]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >{l.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -169,9 +174,9 @@ const styles = StyleSheet.create({
   warnText: { color: colors.textPrimary, flex: 1, fontSize: 12 },
   label: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.lg, marginBottom: spacing.sm },
   pillRow: { flexDirection: 'row', gap: spacing.sm },
-  pill: { flex: 1, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  pill: { flex: 1, paddingVertical: spacing.md, paddingHorizontal: 4, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  pillText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  pillText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   pillTextActive: { color: '#fff' },
   input: { backgroundColor: colors.surface, color: colors.textPrimary, padding: spacing.md, borderRadius: radius.md, fontSize: 16, borderWidth: 1, borderColor: colors.border },
   gridRow: { flexDirection: 'row', gap: spacing.sm },
