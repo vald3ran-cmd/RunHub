@@ -5,15 +5,14 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType } from '../../src/theme';
-import { RunIcon, WalkIcon, BikeIcon, BoltIcon } from '../../src/icons/BrandIcons';
-import { MapPin, Bug, ChevronRight } from 'lucide-react-native';
+import { MapPin, Bug, ChevronRight, Zap, Footprints, Bike, Activity } from 'lucide-react-native';
 
 type Mode = ActivityType;
 
 const ACTIVITIES: { type: Mode; title: string; subtitle: string; Icon: any }[] = [
-  { type: 'run',  title: 'Corsa',     subtitle: 'Traccia distanza, tempo e passo con GPS',          Icon: RunIcon },
-  { type: 'walk', title: 'Camminata', subtitle: 'Conta passi, calorie e distanza in modo dolce',    Icon: WalkIcon },
-  { type: 'bike', title: 'Bici',      subtitle: 'Monitora velocità media e dislivello del percorso', Icon: BikeIcon },
+  { type: 'run',  title: 'Corsa',     subtitle: 'Traccia distanza, tempo e passo con GPS',          Icon: Activity },
+  { type: 'walk', title: 'Camminata', subtitle: 'Conta passi, calorie e distanza in modo dolce',    Icon: Footprints },
+  { type: 'bike', title: 'Bici',      subtitle: 'Monitora velocità media e dislivello del percorso', Icon: Bike },
 ];
 
 export default function RunTab() {
@@ -103,7 +102,7 @@ export default function RunTab() {
           onPress={startActivity}
           activeOpacity={0.9}
         >
-          <BoltIcon size={20} color="#fff" />
+          <Zap size={20} color="#fff" strokeWidth={2.4} fill="#fff" />
           <Text style={styles.startBtnText}>AVVIA {meta.label}</Text>
         </TouchableOpacity>
 
