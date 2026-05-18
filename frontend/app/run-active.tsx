@@ -348,85 +348,113 @@ export default function RunActive() {
 
   const currentStep = hasSteps && stepIndex < steps.length ? steps[stepIndex] : null;
   const pace = distance > 0 ? (elapsed / 60) / distance : 0;
+  const paceStr = pace > 0 ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}` : '—:—';
+  const stepColor = currentStep ? (stepTypeColors[currentStep.type] || activity.color) : activity.color;
+  // Hero metric: durata se Free Run, distanza se workout strutturato
+  const heroValue = hasSteps && currentStep
+    ? formatTime(Math.max(currentStep.duration_seconds - stepElapsed, 0))
+    : distance.toFixed(2);
+  const heroUnit = hasSteps && currentStep ? 'rimanenti' : 'KM';
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-        <View style={styles.headerRow}>
+    <View style={styles.safe}>
+      {/* Top bar — flottante */}
+      <SafeAreaView edges={['top']} style={styles.topBarWrap}>
+        <View style={styles.topBar}>
           <TouchableOpacity
             testID="exit-run-button"
-            style={styles.closeBtn} onPress={confirmExit}
+            style={styles.topBtn}
+            onPress={confirmExit}
+            activeOpacity={0.7}
           >
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
+            <Ionicons name="close" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.title} numberOfLines={1} testID="active-run-title">{title}</Text>
-          {hasSteps ? (
-            <TouchableOpacity
-              testID="audio-toggle"
-              style={styles.audioBtn}
-              onPress={() => { setAudioEnabled(a => !a); Speech.stop(); }}
-            >
-              <Ionicons
-                name={audioEnabled ? 'volume-high' : 'volume-mute'}
-                size={20} color={audioEnabled ? colors.primary : colors.textMuted}
-              />
-            </TouchableOpacity>
-          ) : null}
+          <Text style={styles.topTitle} numberOfLines={1} testID="active-run-title">{title}</Text>
+          <TouchableOpacity
+            testID="audio-toggle"
+            style={styles.topBtn}
+            onPress={() => { setAudioEnabled(a => !a); Speech.stop(); }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={audioEnabled ? 'volume-high' : 'volume-mute'}
+              size={20} color={audioEnabled ? stepColor : 'rgba(255,255,255,0.5)'}
+            />
+          </TouchableOpacity>
         </View>
+      </SafeAreaView>
 
+      {/* ─── HERO METRIC (in alto sopra la mappa) ─────────────────── */}
+      <View style={styles.heroSection}>
         {hasSteps && currentStep ? (
-          <View style={[styles.stepBox, { borderColor: stepTypeColors[currentStep.type] || colors.primary }]}>
-            <Text style={[styles.stepType, { color: stepTypeColors[currentStep.type] || colors.primary }]}>
-              {stepTypeLabels[currentStep.type] || currentStep.type.toUpperCase()}
-            </Text>
-            <Text style={styles.stepDesc}>{currentStep.description}</Text>
-            <View style={styles.stepMeta}>
-              <Text style={styles.stepRem}>
-                {formatTime(Math.max(currentStep.duration_seconds - stepElapsed, 0))}
-              </Text>
-              <Text style={styles.stepNum}>STEP {stepIndex + 1} / {steps.length}</Text>
-            </View>
-          </View>
-        ) : hasSteps ? (
-          <View style={[styles.stepBox, { borderColor: colors.success }]}>
-            <Text style={[styles.stepType, { color: colors.success }]}>COMPLETATO</Text>
-            <Text style={styles.stepDesc}>Hai finito tutti gli step. Termina per salvare.</Text>
+          <Text style={[styles.stepBadge, { color: stepColor }]}>
+            {(stepTypeLabels[currentStep.type] || currentStep.type).toUpperCase()}
+            {currentStep.target_pace ? `  ·  ${currentStep.target_pace}` : ''}
+          </Text>
+        ) : (
+          <Text style={[styles.stepBadge, { color: stepColor }]}>
+            {activity.label} {isPaused ? '· IN PAUSA' : '· LIVE'}
+          </Text>
+        )}
+        <View style={styles.heroRow}>
+          <Text style={[styles.heroValue, { color: '#fff' }]}>{heroValue}</Text>
+          <Text style={styles.heroUnit}>{heroUnit}</Text>
+        </View>
+        {hasSteps && currentStep ? (
+          <Text style={styles.stepDescInline} numberOfLines={1}>{currentStep.description}</Text>
+        ) : null}
+
+        {/* Progress bar segmenti */}
+        {hasSteps && steps.length > 0 ? (
+          <View style={styles.progressTrack}>
+            {steps.map((s, i) => {
+              const isPast = i < stepIndex;
+              const isCurrent = i === stepIndex;
+              const ratio = isCurrent ? Math.min(stepElapsed / s.duration_seconds, 1) : isPast ? 1 : 0;
+              return (
+                <View key={i} style={styles.progressSeg}>
+                  <View style={[styles.progressFill, {
+                    width: `${ratio * 100}%`,
+                    backgroundColor: stepColor,
+                  }]} />
+                </View>
+              );
+            })}
           </View>
         ) : null}
 
-        <View style={styles.mainTime}>
-          <Text style={styles.mainTimeValue} testID="active-elapsed">{formatTime(elapsed)}</Text>
-          <Text style={styles.mainTimeLabel}>DURATA</Text>
+        {/* Stats grid 2x3 — stile RUNNA */}
+        <View style={styles.statsGrid}>
+          <StatItem value={distance.toFixed(2)} label="DISTANZA · KM" />
+          <StatItem value={formatTime(elapsed)} label="TEMPO" />
+          <StatItem value={paceStr} label={activityType === 'bike' ? 'KM/H MEDI' : 'PASSO · /KM'} />
         </View>
+      </View>
 
-        <View style={styles.metricsRow}>
-          <Metric label="KM" value={distance.toFixed(2)} />
-          <Metric label="PASSO" value={pace > 0 ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}` : '--:--'} />
-          <Metric label="KCAL" value={String(Math.round(distance * 65))} />
-        </View>
-
+      {/* ─── MAPPA — occupa il resto dello schermo ─────────────────── */}
+      <View style={styles.mapBox}>
         {coords.length >= 1 ? (
-          <View style={{ marginTop: spacing.lg }}>
-            <RouteMap coords={coords} height={240} />
-            <View style={styles.gpsStatusOverlay}>
-              <View style={[styles.gpsDot, { backgroundColor: colors.success }]} />
-              <Text style={styles.gpsStatusText}>GPS ATTIVO · {coords.length} PUNTI</Text>
+          <>
+            <RouteMap coords={coords} height={undefined as any} fullHeight />
+            <View style={styles.gpsBadge}>
+              <View style={[styles.gpsDot, { backgroundColor: '#34D399' }]} />
+              <Text style={styles.gpsBadgeText}>GPS · {coords.length}</Text>
             </View>
-          </View>
+          </>
         ) : (
           <View style={styles.mapPlaceholder}>
             <View style={styles.gpsStatusRow}>
               <View style={[styles.gpsDot, {
                 backgroundColor: hasLocationPermission === true
-                  ? colors.warning
-                  : hasLocationPermission === false ? colors.primary : colors.textMuted
+                  ? '#FBBF24'
+                  : hasLocationPermission === false ? '#FF6B6B' : 'rgba(255,255,255,0.4)'
               }]} />
               <Text style={styles.gpsStatusText}>
                 {hasLocationPermission === true
-                  ? 'GPS ATTIVO — IN ATTESA SEGNALE'
+                  ? 'IN ATTESA SEGNALE GPS...'
                   : hasLocationPermission === false
                   ? 'GPS NON ATTIVO'
-                  : 'IN ATTESA DEL GPS...'}
+                  : 'INIZIALIZZAZIONE GPS...'}
               </Text>
             </View>
             {gpsError ? <Text style={styles.placeholderText}>{gpsError}</Text> : null}
@@ -438,24 +466,43 @@ export default function RunActive() {
             ) : null}
           </View>
         )}
+      </View>
 
+      {/* ─── Bottom controls flottanti ─────────────────────────────── */}
+      <SafeAreaView edges={['bottom']} style={styles.controlsWrap}>
         <View style={styles.controls}>
           <TouchableOpacity
             testID="pause-button"
-            style={styles.pauseBtn} onPress={() => setIsPaused(p => !p)}
+            style={styles.pauseBtn}
+            onPress={() => setIsPaused(p => !p)}
+            activeOpacity={0.85}
           >
-            <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color={colors.textPrimary} />
+            <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color="#0F1115" />
+            <Text style={styles.pauseLabel}>{isPaused ? 'RIPRENDI' : 'PAUSA'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="stop-button"
-            style={styles.stopBtn} onPress={confirmStop}
+            style={styles.stopBtn}
+            onPress={confirmStop}
+            activeOpacity={0.85}
           >
-            <Ionicons name="stop" size={32} color="#fff" />
+            <Ionicons name="stop" size={22} color="#fff" />
+            <Text style={styles.stopLabel}>TERMINA</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </SafeAreaView>
+
       <InterstitialAd visible={showAd} onClose={onAdClose} skipAfter={5} />
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function StatItem({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.statItem}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -511,67 +558,107 @@ function RoutePreview({ coords }: { coords: { lat: number; lng: number }[] }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  closeBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface,
+  safe: { flex: 1, backgroundColor: '#0F1115' },
+
+  // Top bar flottante (sopra mappa)
+  topBarWrap: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.sm,
+  },
+  topBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border,
   },
-  audioBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border,
+  topTitle: { color: '#fff', fontSize: 15, fontWeight: '800', flex: 1, letterSpacing: -0.2 },
+
+  // Hero section (sopra mappa)
+  heroSection: {
+    paddingTop: 80,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: '#0F1115',
   },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: '800', flex: 1 },
-  stepBox: {
-    padding: spacing.md, borderRadius: radius.lg, borderWidth: 2,
-    backgroundColor: colors.surface, marginTop: spacing.md,
+  stepBadge: { fontSize: 11, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
+  heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  heroValue: {
+    color: '#fff', fontSize: 64, fontWeight: '900', letterSpacing: -3,
+    fontVariant: ['tabular-nums'],
   },
-  stepType: { fontSize: 12, fontWeight: '900', letterSpacing: 2 },
-  stepDesc: { color: colors.textPrimary, fontSize: 18, fontWeight: '700', marginTop: 4 },
-  stepMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm, alignItems: 'center' },
-  stepRem: { color: colors.textPrimary, fontSize: 28, fontWeight: '900' },
-  stepNum: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 2 },
-  mainTime: { alignItems: 'center', marginTop: spacing.xl },
-  mainTimeValue: { color: colors.textPrimary, fontSize: 72, fontWeight: '900', letterSpacing: -2, fontVariant: ['tabular-nums'] },
-  mainTimeLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 3 },
-  metricsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  metricBox: {
-    flex: 1, backgroundColor: colors.surface, padding: spacing.md,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, alignItems: 'center',
+  heroUnit: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  stepDescInline: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '500', marginTop: 2 },
+
+  // Progress segments
+  progressTrack: { flexDirection: 'row', gap: 3, marginTop: spacing.md },
+  progressSeg: {
+    flex: 1, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden',
   },
-  metricVal: { color: colors.textPrimary, fontSize: 24, fontWeight: '900' },
-  metricLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 2 },
+  progressFill: { height: '100%', borderRadius: 2 },
+
+  // Stats grid 1x3
+  statsGrid: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginTop: spacing.lg, paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)',
+  },
+  statItem: { flex: 1 },
+  statValue: {
+    color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5,
+    fontVariant: ['tabular-nums'],
+  },
+  statLabel: {
+    color: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: '800',
+    letterSpacing: 1.5, marginTop: 4,
+  },
+
+  // Map
+  mapBox: { flex: 1, position: 'relative', backgroundColor: '#1A1D24' },
+  gpsBadge: {
+    position: 'absolute', top: 12, right: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(15,17,21,0.85)',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
+  },
+  gpsBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   mapPlaceholder: {
-    marginTop: spacing.lg, padding: spacing.lg, borderRadius: radius.lg,
-    backgroundColor: colors.surface, alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    padding: spacing.xl, gap: spacing.md,
   },
   gpsStatusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  gpsDot: { width: 10, height: 10, borderRadius: 5 },
-  gpsStatusText: { color: colors.textPrimary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  placeholderText: { color: colors.textSecondary, fontSize: 12, textAlign: 'center' },
-  retryBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, marginTop: spacing.sm },
-  retryText: { color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: 1 },
-  gpsStatusOverlay: {
-    position: 'absolute', top: spacing.sm, left: spacing.sm,
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 6,
+  gpsDot: { width: 8, height: 8, borderRadius: 4 },
+  gpsStatusText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  placeholderText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, textAlign: 'center' },
+  retryBtn: {
+    flexDirection: 'row', gap: 6, alignItems: 'center',
+    backgroundColor: '#FF6B6B', paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radius.pill,
   },
-  routeBox: {
-    marginTop: spacing.lg, padding: spacing.sm, backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+  retryText: { color: '#fff', fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+
+  // Bottom controls flottanti
+  controlsWrap: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingBottom: 0, backgroundColor: 'transparent',
   },
-  routeLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 2, padding: spacing.sm },
-  controls: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, marginTop: spacing.xl },
+  controls: {
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md,
+  },
   pauseBtn: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: colors.surface,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border,
+    flex: 2, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
+  pauseLabel: { color: '#0F1115', fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
   stopBtn: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1, height: 60, borderRadius: 30, backgroundColor: '#FF6B6B',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
+  stopLabel: { color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
+
+  // Legacy compat
+  metricBox: { flex: 1, backgroundColor: 'transparent', padding: spacing.md, alignItems: 'center' },
+  metricVal: { color: '#fff', fontSize: 24, fontWeight: '900' },
+  metricLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 2 },
 });

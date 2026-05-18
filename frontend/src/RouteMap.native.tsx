@@ -4,12 +4,12 @@ import MapView, { Marker, Polyline as MapPolyline } from 'react-native-maps';
 import { colors, radius } from './theme';
 
 type Coord = { lat: number; lng: number; timestamp?: number };
-type Props = { coords: Coord[]; height?: number; showsUser?: boolean };
+type Props = { coords: Coord[]; height?: number; showsUser?: boolean; fullHeight?: boolean };
 
 // Native (iOS/Android) with real map tiles via Apple Maps / Google Maps
-export function RouteMap({ coords, height = 220, showsUser = true }: Props) {
+export function RouteMap({ coords, height = 220, showsUser = true, fullHeight = false }: Props) {
   if (coords.length === 0) {
-    return <View style={[styles.empty, { height }]} />;
+    return <View style={fullHeight ? styles.fill : [styles.empty, { height }]} />;
   }
   const last = coords[coords.length - 1];
   const lats = coords.map(c => c.lat);
@@ -20,7 +20,7 @@ export function RouteMap({ coords, height = 220, showsUser = true }: Props) {
   const lngDelta = Math.max(lngMax - lngMin, 0.005) * 1.4;
 
   return (
-    <View style={[styles.wrap, { height }]}>
+    <View style={fullHeight ? styles.fill : [styles.wrap, { height }]}>
       <MapView
         style={StyleSheet.absoluteFill}
         initialRegion={{
@@ -69,4 +69,5 @@ export function RouteMap({ coords, height = 220, showsUser = true }: Props) {
 const styles = StyleSheet.create({
   wrap: { borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   empty: { borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  fill: { flex: 1, overflow: 'hidden' },
 });

@@ -4,12 +4,12 @@ import Svg, { Polyline } from 'react-native-svg';
 import { colors, radius } from './theme';
 
 type Coord = { lat: number; lng: number; timestamp?: number };
-type Props = { coords: Coord[]; height?: number; showsUser?: boolean };
+type Props = { coords: Coord[]; height?: number; showsUser?: boolean; fullHeight?: boolean };
 
 // Web-only fallback: SVG polyline, no react-native-maps import
-export function RouteMap({ coords, height = 220 }: Props) {
+export function RouteMap({ coords, height = 220, fullHeight = false }: Props) {
   if (coords.length < 2) {
-    return <View style={[styles.empty, { height }]} />;
+    return <View style={fullHeight ? { flex: 1 } : [styles.empty, { height }]} />;
   }
   const lats = coords.map(c => c.lat);
   const lngs = coords.map(c => c.lng);
