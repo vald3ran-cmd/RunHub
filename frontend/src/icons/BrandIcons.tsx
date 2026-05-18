@@ -51,20 +51,20 @@ export const RunIcon = ({ size = 22, color = '#FFFFFF', strokeWidth = 2 }: IconP
     <Path
       d="M5 20 L8.5 14 L11.5 16 L14 13 L17 15 L19 12"
       stroke={color}
-      strokeWidth={strokeWidth + 0.4}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <Path
       d="M11.5 16 L13 21"
       stroke={color}
-      strokeWidth={strokeWidth + 0.4}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
     />
     <Path
       d="M14 13 L11 9 L8 10"
       stroke={color}
-      strokeWidth={strokeWidth + 0.4}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -78,14 +78,14 @@ export const WalkIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: Icon
     <Path
       d="M9 22 L11 15 L13 13 L15 17 L17 22"
       stroke={color}
-      strokeWidth={strokeWidth + 0.2}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <Path
       d="M11 15 L8 11 L10 8 L13 13 L16 11"
       stroke={color}
-      strokeWidth={strokeWidth + 0.2}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
