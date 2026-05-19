@@ -87,9 +87,10 @@ export function BarChart({
           const x = 10 + i * (barW + 6);
           const h = max > 0 ? (v / max) * (chartH - 4) : 0;
           const y = chartH - h;
-          const isMax = v === max && v > 0;
+          const hasValue = v > 0;
           return (
             <React.Fragment key={i}>
+              {/* track */}
               <Rect
                 x={x}
                 y={0}
@@ -97,17 +98,19 @@ export function BarChart({
                 height={chartH}
                 rx={6}
                 fill={colors.surfaceSecondary}
-                opacity={0.5}
+                opacity={0.7}
               />
-              <Rect
-                x={x}
-                y={y}
-                width={barW}
-                height={h}
-                rx={6}
-                fill={isMax ? color : colors.textMuted}
-                opacity={isMax ? 1 : 0.6}
-              />
+              {/* bar */}
+              {hasValue ? (
+                <Rect
+                  x={x}
+                  y={y}
+                  width={barW}
+                  height={h}
+                  rx={6}
+                  fill={color}
+                />
+              ) : null}
             </React.Fragment>
           );
         })}
