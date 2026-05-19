@@ -9,7 +9,7 @@ import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
-import { colors, spacing, radius, stepTypeColors, stepTypeLabels, activityMeta, ActivityType } from '../src/theme';
+import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, activityMeta, ActivityType } from '../src/theme';
 import { RouteMap } from '../src/RouteMap';
 import { InterstitialAd, useShouldShowAds } from '../src/Ads';
 import { interstitialManager } from '../src/adMobReal';
@@ -43,6 +43,7 @@ export default function RunActive() {
   const [permState, setPermState] = useState<string>('unknown');
   const [showAd, setShowAd] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const pendingPbRef = useRef<any>(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const lastStepAnnouncedRef = useRef<number>(-1);
   const showAds = useShouldShowAds();
@@ -294,15 +295,61 @@ export default function RunActive() {
         const names = data.newly_awarded_badges.join(', ');
         Alert.alert('🏆 Nuovo Achievement!', `Hai sbloccato: ${names}`, [{ text: 'Fantastico!' }]);
       }
+      // Determine destination: if Personal Best -> /new-record, else workout summary
+      const newPb = data?.new_pb;
+      const buildNewRecordParams = () => {
+        if (!newPb) return null;
+        let value = String(newPb.value);
+        let unit = newPb.unit || '';
+        if (newPb.type === 'longest_duration') {
+          // seconds -> "1h25" or "42m"
+          const s = Number(newPb.value) || 0;
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          value = h > 0 ? `${h}:${String(m).padStart(2, '0')}` : `${m}`;
+          unit = h > 0 ? 'h' : 'min';
+        } else if (newPb.type === 'best_pace') {
+          const p = Number(newPb.value) || 0;
+          const min = Math.floor(p);
+          const sec = Math.floor((p - min) * 60);
+          value = `${min}:${String(sec).padStart(2, '0')}`;
+        }
+        const titleMap: Record<string, string> = {
+          'best_pace': 'Nuovo Passo Record',
+          'longest_distance': 'Distanza Record',
+          'longest_duration': 'Tempo Record',
+        };
+        const labelMap: Record<string, string> = {
+          'best_pace': 'Miglior passo medio',
+          'longest_distance': 'Più lungo di sempre',
+          'longest_duration': 'Più a lungo di sempre',
+        };
+        return {
+          title: titleMap[newPb.type] || 'Nuovo Record',
+          label: labelMap[newPb.type] || 'Personal Best',
+          value,
+          unit,
+          session_id: data.session_id,
+        };
+      };
+      const pbParams = buildNewRecordParams();
+
       if (showAds) {
         // Free tier → show interstitial before navigating
         setPendingSessionId(data.session_id);
+        // Stash PB params on instance ref so we can route after ad close
+        pendingPbRef.current = pbParams;
         if (isAdMobAvailable) {
           // Real AdMob interstitial (native builds only)
           const shown = await interstitialManager.show();
           if (shown) {
-            router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+            if (pbParams) {
+              router.replace({ pathname: '/new-record', params: pbParams });
+            } else {
+              router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+            }
             setPendingSessionId(null);
+            pendingPbRef.current = null;
           } else {
             // Fall back to placeholder modal if AdMob failed to load
             setShowAd(true);
@@ -311,7 +358,11 @@ export default function RunActive() {
           setShowAd(true);
         }
       } else {
-        router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+        if (pbParams) {
+          router.replace({ pathname: '/new-record', params: pbParams });
+        } else {
+          router.replace({ pathname: '/workout/[id]', params: { id: data.session_id } });
+        }
       }
     } catch (e: any) {
       Alert.alert('Errore', 'Salvataggio fallito');
@@ -319,7 +370,12 @@ export default function RunActive() {
   };
 
   const onAdClose = () => {
-    if (pendingSessionId) {
+    const pb = pendingPbRef.current;
+    if (pb) {
+      router.replace({ pathname: '/new-record', params: pb });
+      pendingPbRef.current = null;
+      setPendingSessionId(null);
+    } else if (pendingSessionId) {
       // Navigate FIRST, then close the modal to avoid black flash during transition
       router.replace({ pathname: '/workout/[id]', params: { id: pendingSessionId } });
       setPendingSessionId(null);
@@ -558,7 +614,7 @@ function RoutePreview({ coords }: { coords: { lat: number; lng: number }[] }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0F1115' },
+  safe: { flex: 1, backgroundColor: '#000000' },
 
   // Top bar flottante (sopra mappa)
   topBarWrap: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
@@ -568,26 +624,39 @@ const styles = StyleSheet.create({
   },
   topBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
     justifyContent: 'center', alignItems: 'center',
   },
-  topTitle: { color: '#fff', fontSize: 15, fontWeight: '800', flex: 1, letterSpacing: -0.2 },
+  topTitle: {
+    color: '#fff', fontSize: 15, flex: 1, letterSpacing: -0.2,
+    fontFamily: fonts.bold,
+  },
 
   // Hero section (sopra mappa)
   heroSection: {
     paddingTop: 80,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    backgroundColor: '#0F1115',
+    backgroundColor: '#000000',
   },
-  stepBadge: { fontSize: 11, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
+  stepBadge: {
+    fontSize: 11, letterSpacing: 1.8, marginBottom: 4,
+    fontFamily: fonts.headingBold,
+  },
   heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   heroValue: {
-    color: '#fff', fontSize: 64, fontWeight: '900', letterSpacing: -3,
+    color: '#fff', fontSize: 68, letterSpacing: -3,
+    fontFamily: fonts.heading,
     fontVariant: ['tabular-nums'],
   },
-  heroUnit: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '800', letterSpacing: 1 },
-  stepDescInline: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '500', marginTop: 2 },
+  heroUnit: {
+    color: 'rgba(255,255,255,0.5)', fontSize: 16, letterSpacing: 1,
+    fontFamily: fonts.headingBold,
+  },
+  stepDescInline: {
+    color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2,
+    fontFamily: fonts.medium,
+  },
 
   // Progress segments
   progressTrack: { flexDirection: 'row', gap: 3, marginTop: spacing.md },
@@ -605,37 +674,58 @@ const styles = StyleSheet.create({
   },
   statItem: { flex: 1 },
   statValue: {
-    color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5,
+    color: '#fff', fontSize: 24, letterSpacing: -0.5,
+    fontFamily: fonts.heading,
     fontVariant: ['tabular-nums'],
   },
   statLabel: {
-    color: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: '800',
+    color: 'rgba(255,255,255,0.45)', fontSize: 9,
     letterSpacing: 1.5, marginTop: 4,
+    fontFamily: fonts.headingBold,
   },
 
   // Map
-  mapBox: { flex: 1, position: 'relative', backgroundColor: '#1A1D24' },
+  mapBox: { flex: 1, position: 'relative', backgroundColor: '#0A0A0A' },
   gpsBadge: {
     position: 'absolute', top: 12, right: 12,
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(15,17,21,0.85)',
+    backgroundColor: 'rgba(0,0,0,0.78)',
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  gpsBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  gpsBadgeText: {
+    color: '#fff', fontSize: 10, letterSpacing: 1,
+    fontFamily: fonts.headingBold,
+  },
   mapPlaceholder: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     padding: spacing.xl, gap: spacing.md,
   },
   gpsStatusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   gpsDot: { width: 8, height: 8, borderRadius: 4 },
-  gpsStatusText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  placeholderText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, textAlign: 'center' },
+  gpsStatusText: {
+    color: '#fff', fontSize: 11, letterSpacing: 1.2,
+    fontFamily: fonts.headingBold,
+  },
+  placeholderText: {
+    color: 'rgba(255,255,255,0.6)', fontSize: 12, textAlign: 'center',
+    fontFamily: fonts.medium,
+  },
   retryBtn: {
     flexDirection: 'row', gap: 6, alignItems: 'center',
-    backgroundColor: '#FF6B6B', paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radius.pill,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  retryText: { color: '#fff', fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+  retryText: {
+    color: '#fff', fontSize: 12, letterSpacing: 1,
+    fontFamily: fonts.headingBold,
+  },
 
   // Bottom controls flottanti
   controlsWrap: {
@@ -649,16 +739,43 @@ const styles = StyleSheet.create({
   pauseBtn: {
     flex: 2, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  pauseLabel: { color: '#0F1115', fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
+  pauseLabel: {
+    color: '#000', fontSize: 14, letterSpacing: 1.5,
+    fontFamily: fonts.headingBold,
+  },
   stopBtn: {
-    flex: 1, height: 60, borderRadius: 30, backgroundColor: '#FF6B6B',
+    flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.primary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  stopLabel: { color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
+  stopLabel: {
+    color: '#fff', fontSize: 13, letterSpacing: 1.5,
+    fontFamily: fonts.headingBold,
+  },
 
   // Legacy compat
   metricBox: { flex: 1, backgroundColor: 'transparent', padding: spacing.md, alignItems: 'center' },
-  metricVal: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  metricLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 2 },
+  metricVal: { color: '#fff', fontSize: 24, fontFamily: fonts.heading },
+  metricLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, letterSpacing: 2, marginTop: 2, fontFamily: fonts.headingBold },
+
+  // Route preview legacy
+  routeBox: {
+    marginTop: spacing.md, padding: spacing.sm,
+    borderRadius: radius.lg, backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  routeLabel: {
+    color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: 1.5,
+    fontFamily: fonts.headingBold,
+    marginTop: 4,
+  },
 });

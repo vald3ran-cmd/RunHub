@@ -1519,13 +1519,14 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
 @api_router.post("/workouts/complete")
 async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(get_current_user)):
     session_id = f"ws_{uuid.uuid4().hex[:12]}"
+    activity = (data.activity_type or "run").lower()
     doc = {
         "session_id": session_id,
         "user_id": user["user_id"],
         "workout_id": data.workout_id,
         "plan_id": data.plan_id,
         "title": data.title,
-        "activity_type": (data.activity_type or "run").lower(),
+        "activity_type": activity,
         "duration_seconds": data.duration_seconds,
         "distance_km": data.distance_km,
         "avg_pace_min_per_km": data.avg_pace_min_per_km,
@@ -1533,6 +1534,38 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
         "locations": [l.dict() for l in data.locations],
         "completed_at": datetime.now(timezone.utc),
     }
+    # ── Detect Personal Best BEFORE inserting (compare against previous sessions)
+    try:
+        previous = await db.workout_sessions.find(
+            {"user_id": user["user_id"], "activity_type": activity},
+            {"_id": 0, "distance_km": 1, "duration_seconds": 1, "avg_pace_min_per_km": 1},
+        ).to_list(2000)
+        new_pb = None
+        if previous:  # need at least 1 previous session to claim a PB
+            distance = data.distance_km or 0
+            duration = data.duration_seconds or 0
+            pace = data.avg_pace_min_per_km
+            max_dist = max((s.get("distance_km") or 0 for s in previous), default=0)
+            max_dur = max((s.get("duration_seconds") or 0 for s in previous), default=0)
+            # Best pace only over distances ≥ 1km
+            pace_pool = [s.get("avg_pace_min_per_km") for s in previous
+                         if (s.get("distance_km") or 0) >= 1.0 and s.get("avg_pace_min_per_km")]
+            best_pace = min(pace_pool) if pace_pool else None
+            # Priority: pace > distance > duration (more impressive)
+            if distance >= 1.0 and pace is not None and pace > 0 and (best_pace is None or pace < best_pace):
+                new_pb = {"type": "best_pace", "label": "Miglior passo medio",
+                          "value": round(pace, 2), "unit": "min/km", "activity": activity}
+            elif distance > max_dist and distance > 0:
+                new_pb = {"type": "longest_distance", "label": "Distanza record",
+                          "value": round(distance, 2), "unit": "km", "activity": activity}
+            elif duration > max_dur and duration > 0:
+                new_pb = {"type": "longest_duration", "label": "Durata record",
+                          "value": duration, "unit": "s", "activity": activity}
+        doc["new_pb"] = new_pb
+    except Exception as e:
+        logger.error(f"PB detection error: {e}")
+        doc["new_pb"] = None
+
     await db.workout_sessions.insert_one(doc)
     doc.pop("_id", None)
     # Award badges
