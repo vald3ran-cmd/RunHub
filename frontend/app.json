@@ -127,7 +127,14 @@
           "package": "com.runhub.app"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox",
+          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoidmFsZGVyYW4iLCJhIjoiY21wY2wybW5yMDJ3NTJyczZidzZjcTVlaSJ9.n3om9YajH4JUa-CJxcV6Eg"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
