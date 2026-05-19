@@ -118,9 +118,11 @@ export default function Home() {
         <View style={styles.greeting}>
           <View style={styles.greetingRow}>
             <Text style={styles.greetingHello}>Ciao {userName}!</Text>
-            <View style={styles.greetingBoltWrap}>
-              <BoltIcon size={18} color="#FFFFFF" />
-            </View>
+            <Image
+              source={require('../../assets/images/logo-transparent.png')}
+              style={styles.greetingLogo}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.greetingSubtitle}>Pronto a dare il massimo oggi?</Text>
         </View>
@@ -404,8 +406,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   greetingLogo: {
-    width: 34,
-    height: 34,
+    width: 60,
+    height: 44,
+    marginLeft: 4,
   },
   greetingBoltWrap: {
     width: 32,
