@@ -578,3 +578,37 @@ frontend:
 agent_communication:
   - agent: "main"
     message: "SPRINT 2 PREMIUM POLISH COMPLETO: Workout Summary stile Strava share card (con auto-detection Personal Best + animated banner), Dashboard analytics (bar chart 7gg + sparkline 12 settimane + lifetime totals animati + PB cards per Run/Walk/Bike), AnimatedCounter su tutte le stats, Haptic feedback su tap principali, Skeleton loaders per loading state. NEW BACKEND ENDPOINTS che necessitano test: GET /api/stats/dashboard (free) e GET /api/stats/personal-bests (free). Test manuale via web preview OK. Richiesto testing formale dei 2 nuovi endpoint backend."
+
+
+# ─────────────────────────────────────────────────────────────
+# Avatar endpoints + workouts/complete new_pb field
+# ─────────────────────────────────────────────────────────────
+
+backend:
+  - task: "Avatar endpoints (PUT/DELETE /api/users/me/avatar) + avatar_base64 in /auth/me"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "17/17 assertions PASS via /app/backend_avatar_pb_test.py contro http://localhost:8001/api. (1) Auth: PUT /users/me/avatar senza token -> 401; DELETE /users/me/avatar senza token -> 401. (2) Validazione input: PUT con image_base64='' -> 400 detail='image_base64 mancante'; PUT con whitespace '   ' -> 400 (lo strip rende stringa vuota). (3) Payload size limit: PUT con image_base64 di 2,500,024 caratteri (data: URI + 'A'*2,500,001) -> 413 detail='Immagine troppo grande (max ~1.5MB). Riprova con una foto più piccola.'. (4) GET /auth/me PRIMA del set -> avatar_base64 = None (key presente nel response, valore null per testfree user che non ha mai settato). (5) PUT valid 'data:image/jpeg;base64,Z*800' -> 200 con body {ok:true, avatar_base64:<stessa stringa>}. (6) GET /auth/me DOPO il set -> avatar_base64 == stringa salvata (verified byte-by-byte). (7) DELETE /users/me/avatar -> 200 {ok:true}. (8) GET /auth/me DOPO delete -> avatar_base64 = None (chiave $unset correttamente). (9) PUT raw base64 (senza prefix 'data:image/') -> 200 (endpoint accetta sia data URI che raw base64 come da spec). Tested account: testfree@runhub.com (free tier)."
+  - task: "/api/workouts/complete includes new_pb field in response"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "16/16 assertions PASS via /app/backend_avatar_pb_test.py. Creato fresh user pb_runner_<ts>@runhub.com per stato PB clean. (1) Sanity: GET /workouts/history per fresh user -> [] (empty). (2) 1st workout (5km, 30min, pace 6.0) -> 200 con new_pb=null (no previous sessions to beat, ramo `if previous:` non entra). (3) 2nd workout (8km LONGER, 60min, pace 7.5 SLOWER) -> 200 con new_pb={type:'longest_distance', label:'Distanza record', value:8.0, unit:'km', activity:'run'}. Verificato che 'longest_distance' viene scelto perchè la pace (7.5) è peggiore della best previous (6.0), quindi non scatta 'best_pace' (priority pace>distance>duration), e distance (8.0)>max_dist(5.0). (4) 3rd workout (3km SHORTER, 10min, pace 8.0 SLOWER) -> 200 con new_pb=null (distance < max 8.0, duration < max 3600, pace peggiore di best 6.0, nessun PB). (5) Bonus: GET /stats/personal-bests dopo i 3 workout -> run.longest_distance.value_km == 8.0 con session_id corretto. Tutte le priority rules (pace > distance > duration) e i filtri (distance >= 1.0 per best_pace) verificati. Regression: GET /plans admin -> 200; GET /auth/me admin -> 200 role=admin. Cleanup: DELETE /admin/users/{fresh_uid} via admin -> 200. Funzionalità new_pb completamente operativa."
+
+agent_communication:
+  - agent: "testing"
+    message: "✅ Testati i 2 set di endpoint richiesti (avatar + new_pb in workouts/complete) — 35/35 assertions PASS via /app/backend_avatar_pb_test.py. (A) AVATAR: PUT/DELETE /api/users/me/avatar e flag avatar_base64 in /api/auth/me funzionano perfettamente. Auth required, 400 per empty/whitespace, 413 per payload >2.5M caratteri, persist+retrieve+delete verificati end-to-end, accetta sia data URI sia raw base64. (B) NEW_PB: l'endpoint POST /api/workouts/complete include sempre la chiave 'new_pb' nel response. Test su fresh user: 1st workout -> null (no previous), 2nd workout con distance maggiore e pace peggiore -> {type:'longest_distance', value:8.0, unit:'km', activity:'run'}, 3rd workout shorter+slower -> null. Le priority rules (pace>distance>duration) e i filtri (distance>=1.0 per best_pace) sono implementati correttamente. (C) Regression: /plans e /auth/me admin OK. Nessun bug rilevato. Pronti per integrazione frontend."
+

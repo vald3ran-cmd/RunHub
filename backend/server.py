@@ -436,6 +436,7 @@ class UserOut(BaseModel):
     tier: str = "free"
     tier_expires_at: Optional[datetime] = None
     is_premium: bool = False  # deprecated, kept for backward compat
+    avatar_base64: Optional[str] = None
     created_at: datetime
 
 class WorkoutStep(BaseModel):
@@ -606,6 +607,40 @@ async def me(user: dict = Depends(get_current_user)):
     has_consent = bool(consent.get("accepted_terms") and consent.get("accepted_privacy") and consent.get("accepted_at"))
     user["needs_profile_completion"] = not (has_dob and has_consent)
     return user
+
+
+# ─────────────────────────────────────────────────────────────
+# Avatar / Profile photo
+# ─────────────────────────────────────────────────────────────
+class AvatarIn(BaseModel):
+    image_base64: str  # data URI or raw base64; ≤ 2MB enforced server-side
+
+
+@api_router.put("/users/me/avatar")
+async def set_avatar(data: AvatarIn, user: dict = Depends(get_current_user)):
+    """Save the user's avatar as base64. Frontend should already crop & resize
+    to ~512px square before upload (limits payload to <300KB typical)."""
+    img = (data.image_base64 or "").strip()
+    if not img:
+        raise HTTPException(status_code=400, detail="image_base64 mancante")
+    # Reject obviously too-large payloads (>2 MB base64 ≈ 1.5MB raw)
+    if len(img) > 2_500_000:
+        raise HTTPException(status_code=413, detail="Immagine troppo grande (max ~1.5MB). Riprova con una foto più piccola.")
+    # Accept either "data:image/...;base64,XXX" or raw base64
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"avatar_base64": img, "avatar_updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"ok": True, "avatar_base64": img}
+
+
+@api_router.delete("/users/me/avatar")
+async def delete_avatar(user: dict = Depends(get_current_user)):
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$unset": {"avatar_base64": "", "avatar_updated_at": ""}},
+    )
+    return {"ok": True}
 
 
 @api_router.post("/auth/complete-profile")

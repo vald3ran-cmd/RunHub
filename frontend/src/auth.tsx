@@ -12,6 +12,7 @@ type User = {
   onboarding_completed?: boolean;
   role?: string;
   needs_profile_completion?: boolean;
+  avatar_base64?: string | null;
 };
 
 type RegisterConsent = {

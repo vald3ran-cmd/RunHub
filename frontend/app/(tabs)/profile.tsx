@@ -1,19 +1,21 @@
 import { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking,
+  Image, ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Star, CreditCard, Trophy, Flag, Watch, Users, Map as MapIcon,
   Rocket, UserCircle, FileText, ShieldCheck, Settings, LogOut,
-  Timer, Sparkles, ChevronRight, ExternalLink,
+  Timer, Sparkles, ChevronRight, ExternalLink, Camera,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
 import { colors, spacing, radius, fonts } from '../../src/theme';
 import { showPrivacyOptionsForm } from '../../src/ConsentManager';
 import { isAdMobAvailable } from '../../src/adMobConfig';
+import { chooseAndUploadAvatar } from '../../src/avatar';
 
 export default function Profile() {
   const { user, logout, refresh } = useAuth();
@@ -21,6 +23,18 @@ export default function Profile() {
   const [goals, setGoals] = useState({ daily_km: '3', weekly_km: '15', monthly_km: '60' });
   const [showGoals, setShowGoals] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  const handleEditAvatar = () => {
+    chooseAndUploadAvatar({
+      hasExisting: !!user?.avatar_base64,
+      onProgress: (state) => setAvatarBusy(state === 'picking' || state === 'uploading'),
+      onDone: async () => {
+        setAvatarBusy(false);
+        await refresh();
+      },
+    });
+  };
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -57,9 +71,28 @@ export default function Profile() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {/* Avatar + name */}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() ?? 'R'}</Text>
-        </View>
+        <TouchableOpacity
+          testID="edit-avatar-button"
+          activeOpacity={0.85}
+          onPress={handleEditAvatar}
+          style={styles.avatarTouch}
+        >
+          {user?.avatar_base64 ? (
+            <Image source={{ uri: user.avatar_base64 }} style={styles.avatarImg} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() ?? 'R'}</Text>
+            </View>
+          )}
+          {/* Camera badge overlay */}
+          <View style={styles.avatarCameraBadge}>
+            {avatarBusy ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Camera size={14} color="#fff" strokeWidth={2.4} />
+            )}
+          </View>
+        </TouchableOpacity>
         <Text style={styles.name} testID="profile-name">{user?.name ?? 'Runner'}</Text>
         <Text style={styles.email}>{user?.email}</Text>
 
@@ -343,14 +376,40 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
   // Header / avatar
+  avatarTouch: {
+    alignSelf: 'center',
+    position: 'relative',
+  },
   avatar: {
     width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary,
-    alignSelf: 'center', justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
     shadowRadius: 18,
     elevation: 8,
+  },
+  avatarImg: {
+    width: 96, height: 96, borderRadius: 48,
+    borderWidth: 3,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    elevation: 8,
+    backgroundColor: colors.surface,
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
   },
   avatarText: {
     color: '#fff',
