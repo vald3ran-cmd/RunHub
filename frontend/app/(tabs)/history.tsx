@@ -5,7 +5,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../src/api';
-import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType } from '../../src/theme';
+import { colors, spacing, radius, fonts, activityMeta, ActivityType } from '../../src/theme';
 import { RunIcon, WalkIcon, BikeIcon } from '../../src/icons/BrandIcons';
 import { Footprints, ChevronRight } from 'lucide-react-native';
 
@@ -37,15 +37,18 @@ export default function History() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>STORICO</Text>
-        <Text style={styles.h1}>Le tue attività</Text>
-        <Text style={styles.sub}>{items.length} {items.length === 1 ? 'sessione' : 'sessioni'} salvate</Text>
+        <Text style={styles.title}>Storico</Text>
+        <Text style={styles.subtitle}>
+          {items.length} {items.length === 1 ? 'sessione' : 'sessioni'} salvate
+        </Text>
       </View>
+
       <FlatList
         data={items}
         keyExtractor={(i) => i.session_id}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 140, paddingTop: spacing.sm }}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -107,32 +110,90 @@ function formatDur(s: number) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg },
-  eyebrow: { ...typography.eyebrow, color: colors.textSecondary, marginBottom: 6 },
-  h1: { ...typography.displayMd, color: colors.textPrimary },
-  sub: { color: colors.textSecondary, marginTop: 4, fontSize: 13 },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  title: {
+    color: colors.textPrimary,
+    fontSize: 28,
+    fontFamily: fonts.heading,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    marginTop: 4,
+    fontSize: 13,
+    fontFamily: fonts.medium,
+  },
+
+  // Item
   item: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.lg,
-    ...shadows.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   iconBox: {
     width: 44, height: 44, borderRadius: 22,
     justifyContent: 'center', alignItems: 'center',
   },
-  itemTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '800' },
-  itemMeta: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+  itemTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontFamily: fonts.bold,
+  },
+  itemMeta: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    marginTop: 2,
+  },
   itemStats: { alignItems: 'flex-end' },
-  statNum: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
-  statUnit: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
-  statSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
-  empty: { alignItems: 'center', paddingVertical: spacing.xxl * 1.5, gap: spacing.sm },
+  statNum: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontFamily: fonts.heading,
+  },
+  statUnit: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: fonts.bold,
+  },
+  statSub: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    marginTop: 2,
+  },
+
+  // Empty state
+  empty: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl * 1.5,
+    gap: spacing.sm,
+  },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  emptyText: { ...typography.h3, color: colors.textPrimary, marginTop: spacing.md },
-  emptySub: { color: colors.textSecondary, fontSize: 13 },
+  emptyText: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontFamily: fonts.bold,
+    marginTop: spacing.md,
+  },
+  emptySub: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontFamily: fonts.medium,
+  },
 });

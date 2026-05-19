@@ -4,10 +4,14 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Star, CreditCard, Trophy, Flag, Watch, Users, Map as MapIcon,
+  Rocket, UserCircle, FileText, ShieldCheck, Settings, LogOut,
+  Timer, Sparkles, ChevronRight, ExternalLink,
+} from 'lucide-react-native';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
-import { colors, spacing, radius, shadows, typography } from '../../src/theme';
+import { colors, spacing, radius, fonts } from '../../src/theme';
 import { showPrivacyOptionsForm } from '../../src/ConsentManager';
 import { isAdMobAvailable } from '../../src/adMobConfig';
 
@@ -46,9 +50,13 @@ export default function Profile() {
     } finally { setSaving(false); }
   };
 
+  const tier = user?.tier || (user?.is_premium ? 'performance' : 'free');
+  const isFree = tier === 'free';
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+        {/* Avatar + name */}
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() ?? 'R'}</Text>
         </View>
@@ -56,231 +64,233 @@ export default function Profile() {
         <Text style={styles.email}>{user?.email}</Text>
 
         <View style={styles.badgeRow}>
-          <View style={[styles.badge, { backgroundColor: tierColor(user?.tier || (user?.is_premium ? 'performance' : 'free')) }]}>
-            <Ionicons name="star" size={12} color="#fff" />
-            <Text style={styles.badgeText}>{tierLabel(user?.tier || (user?.is_premium ? 'performance' : 'free'))}</Text>
+          <View style={[styles.badge, { backgroundColor: tierColor(tier) }]}>
+            <Star size={11} color="#fff" fill="#fff" />
+            <Text style={styles.badgeText}>{tierLabel(tier)}</Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: colors.surfaceSecondary }]}>
-            <Text style={styles.badgeText}>{(user?.level ?? 'beginner').toUpperCase()}</Text>
+          <View style={[styles.badge, styles.badgeNeutral]}>
+            <Text style={styles.badgeTextNeutral}>{(user?.level ?? 'beginner').toUpperCase()}</Text>
           </View>
         </View>
 
-        {(!user?.tier || user.tier === 'free') ? (
+        {/* Premium banner */}
+        {isFree ? (
           <TouchableOpacity
             testID="goto-premium-button"
-            style={styles.premiumCard} onPress={() => router.push('/premium')}
+            style={styles.premiumCard}
+            onPress={() => router.push('/premium')}
+            activeOpacity={0.9}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.premiumLabel}>SBLOCCA FUNZIONI PREMIUM</Text>
-              <Text style={styles.premiumTitle}>Passa a Starter, Performance o Elite</Text>
-              <Text style={styles.premiumSub}>AI Coach, piani avanzati, analisi complete</Text>
+            <View style={styles.premiumIcon}>
+              <Sparkles size={20} color="#fff" strokeWidth={2.4} />
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.premiumLabel}>SBLOCCA PREMIUM</Text>
+              <Text style={styles.premiumTitle}>AI Coach, piani avanzati, analisi complete</Text>
+            </View>
+            <ChevronRight size={22} color="#fff" strokeWidth={2.4} />
           </TouchableOpacity>
-        ) : (
+        ) : null}
+
+        {/* ── ACCOUNT ── */}
+        <SectionLabel text="ACCOUNT" />
+        <View style={styles.group}>
+          {!isFree ? (
+            <>
+              <Row
+                testID="manage-premium-button"
+                icon={<Star size={18} color={colors.primary} strokeWidth={2.4} />}
+                title="Cambia piano"
+                onPress={() => router.push('/premium')}
+              />
+              <Row
+                testID="billing-portal-button"
+                icon={<CreditCard size={18} color={colors.primary} strokeWidth={2.4} />}
+                title="Gestisci pagamento e fatture"
+                rightIcon={<ExternalLink size={16} color={colors.textMuted} strokeWidth={2.4} />}
+                onPress={async () => {
+                  try {
+                    const { data } = await api.post('/stripe/portal');
+                    if (data?.url) Linking.openURL(data.url);
+                  } catch (e: any) {
+                    Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile aprire il portale');
+                  }
+                }}
+              />
+            </>
+          ) : null}
+          <Row
+            testID="account-button"
+            icon={<UserCircle size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Account & Privacy"
+            onPress={() => router.push('/account')}
+          />
+          <Row
+            testID="paywall-button"
+            icon={<Rocket size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Abbonamenti & Piani"
+            onPress={() => router.push('/paywall')}
+          />
+        </View>
+
+        {/* ── ALLENAMENTO ── */}
+        <SectionLabel text="ALLENAMENTO" />
+        <View style={styles.group}>
+          <Row
+            testID="edit-goals-button"
+            icon={<Flag size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Modifica traguardi"
+            onPress={() => setShowGoals(true)}
+          />
+          <Row
+            testID="badges-button"
+            icon={<Trophy size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Achievement & Badge"
+            onPress={() => router.push('/badges')}
+          />
+          {(tier === 'performance' || tier === 'elite') ? (
+            <Row
+              testID="race-predictor-button"
+              icon={<Timer size={18} color={colors.primary} strokeWidth={2.4} />}
+              title="Proiezione tempi gara & VO2max"
+              onPress={() => router.push('/race-predictor')}
+            />
+          ) : null}
+          {tier === 'elite' ? (
+            <Row
+              testID="coach-dashboard-button"
+              icon={<Users size={18} color={colors.primary} strokeWidth={2.4} />}
+              title="Coach Dashboard"
+              onPress={() => router.push('/coach')}
+            />
+          ) : null}
+          <Row
+            testID="wearables-button"
+            icon={<Watch size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Wearables (Apple Health / Google Fit)"
+            onPress={() => router.push('/wearables')}
+          />
+        </View>
+
+        {/* ── COMMUNITY ── */}
+        <SectionLabel text="COMMUNITY" />
+        <View style={styles.group}>
+          <Row
+            testID="community-button"
+            icon={<Users size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Amici, feed e classifiche"
+            onPress={() => router.push('/social')}
+          />
+          <Row
+            testID="heatmap-button"
+            icon={<MapIcon size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="La mia mappa corse (heatmap)"
+            onPress={() => router.push('/heatmap')}
+          />
+        </View>
+
+        {/* ── ADMIN ── (visibile solo agli admin) */}
+        {user?.role === 'admin' ? (
           <>
-            <TouchableOpacity
-              testID="manage-premium-button"
-              style={styles.row} onPress={() => router.push('/premium')}
-            >
-              <Ionicons name="star" size={20} color={colors.primary} />
-              <Text style={styles.rowText}>Cambia piano</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID="billing-portal-button"
-              style={styles.row}
+            <SectionLabel text="ADMIN" />
+            <View style={styles.group}>
+              <TouchableOpacity
+                testID="admin-panel-button"
+                style={styles.rowAdmin}
+                onPress={() => router.push('/admin')}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.rowIcon, { backgroundColor: colors.primary }]}>
+                  <ShieldCheck size={18} color="#fff" strokeWidth={2.4} />
+                </View>
+                <Text style={[styles.rowText, { color: colors.primary }]}>Admin Panel</Text>
+                <ChevronRight size={18} color={colors.primary} strokeWidth={2.4} />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
+
+        {/* ── SUPPORTO ── */}
+        <SectionLabel text="SUPPORTO E LEGALE" />
+        <View style={styles.group}>
+          <Row
+            testID="terms-button"
+            icon={<FileText size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Termini di Servizio"
+            onPress={() => router.push('/terms')}
+          />
+          <Row
+            testID="privacy-button"
+            icon={<ShieldCheck size={18} color={colors.primary} strokeWidth={2.4} />}
+            title="Privacy Policy"
+            onPress={() => router.push('/privacy')}
+          />
+          {isAdMobAvailable ? (
+            <Row
+              testID="privacy-options-button"
+              icon={<Settings size={18} color={colors.primary} strokeWidth={2.4} />}
+              title="Preferenze privacy ads (GDPR)"
               onPress={async () => {
                 try {
-                  const { data } = await api.post('/stripe/portal');
-                  if (data?.url) Linking.openURL(data.url);
-                } catch (e: any) {
-                  Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile aprire il portale');
+                  await showPrivacyOptionsForm();
+                  Alert.alert('Preferenze aggiornate', 'Le tue scelte sono state salvate.');
+                } catch {
+                  Alert.alert(
+                    'Non disponibile',
+                    'Le preferenze privacy per la pubblicità non sono disponibili su questo dispositivo.',
+                  );
                 }
               }}
-            >
-              <Ionicons name="card" size={20} color={colors.primary} />
-              <Text style={styles.rowText}>Gestisci pagamento e fatture</Text>
-              <Ionicons name="open-outline" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          </>
-        )}
+            />
+          ) : null}
+        </View>
 
-        <TouchableOpacity
-          testID="badges-button"
-          style={styles.row} onPress={() => router.push('/badges')}
-        >
-          <Ionicons name="trophy" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Achievement & Badge</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="edit-goals-button"
-          style={styles.row} onPress={() => setShowGoals(true)}
-        >
-          <Ionicons name="flag" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Modifica traguardi</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        {user?.tier === 'performance' || user?.tier === 'elite' ? (
-          <TouchableOpacity
-            testID="race-predictor-button"
-            style={styles.row} onPress={() => router.push('/race-predictor')}
-          >
-            <Ionicons name="stopwatch" size={20} color={colors.primary} />
-            <Text style={styles.rowText}>Proiezione tempi gara & VO2max</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {user?.tier === 'elite' ? (
-          <TouchableOpacity
-            testID="coach-dashboard-button"
-            style={styles.row} onPress={() => router.push('/coach')}
-          >
-            <Ionicons name="people" size={20} color={colors.primary} />
-            <Text style={styles.rowText}>Coach Dashboard</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {user?.role === 'admin' ? (
-          <TouchableOpacity
-            testID="admin-panel-button"
-            style={[styles.row, { borderColor: colors.primary, borderWidth: 1 }]} onPress={() => router.push('/admin')}
-          >
-            <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
-            <Text style={[styles.rowText, { color: colors.primary }]}>Admin Panel</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        ) : null}
-
-        <TouchableOpacity
-          testID="community-button"
-          style={styles.row} onPress={() => router.push('/social')}
-        >
-          <Ionicons name="people" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Community (amici, feed, classifica)</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="heatmap-button"
-          style={styles.row} onPress={() => router.push('/heatmap')}
-        >
-          <Ionicons name="map" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>La mia mappa corse (heatmap)</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="wearables-button"
-          style={styles.row} onPress={() => router.push('/wearables')}
-        >
-          <Ionicons name="watch" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Wearables (Apple Health / Google Fit)</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="paywall-button"
-          style={styles.row} onPress={() => router.push('/paywall')}
-        >
-          <Ionicons name="rocket" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Abbonamenti & Piani</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="account-button"
-          style={styles.row} onPress={() => router.push('/account')}
-        >
-          <Ionicons name="person-circle" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Account & Privacy</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="terms-button"
-          style={styles.row} onPress={() => router.push('/terms')}
-        >
-          <Ionicons name="document-text" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Termini di Servizio</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="privacy-button"
-          style={styles.row} onPress={() => router.push('/privacy')}
-        >
-          <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Privacy Policy</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        {isAdMobAvailable ? (
-          <TouchableOpacity
-            testID="privacy-options-button"
-            style={styles.row}
-            onPress={async () => {
-              try {
-                await showPrivacyOptionsForm();
-                Alert.alert('Preferenze aggiornate', 'Le tue scelte sono state salvate.');
-              } catch (e: any) {
-                Alert.alert(
-                  'Non disponibile',
-                  'Le preferenze privacy per la pubblicità non sono disponibili su questo dispositivo.',
-                );
-              }
-            }}
-          >
-            <Ionicons name="options" size={20} color={colors.primary} />
-            <Text style={styles.rowText}>Preferenze privacy ads (GDPR)</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
+        {/* Logout */}
         <TouchableOpacity
           testID="logout-button"
-          style={styles.row} onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
+          style={styles.logoutBtn}
+          onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
+          activeOpacity={0.85}
         >
-          <Ionicons name="log-out" size={20} color={colors.primary} />
-          <Text style={styles.rowText}>Esci</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <LogOut size={18} color={colors.danger} strokeWidth={2.4} />
+          <Text style={styles.logoutText}>Esci</Text>
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Goals Modal */}
       <Modal visible={showGoals} transparent animationType="slide" onRequestClose={() => setShowGoals(false)}>
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>MODIFICA TRAGUARDI (KM)</Text>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Modifica traguardi (km)</Text>
             <Text style={styles.inputLabel}>GIORNALIERO</Text>
             <TextInput
               testID="goals-daily-input"
               style={styles.input} keyboardType="numeric"
               value={goals.daily_km} onChangeText={(v) => setGoals(g => ({ ...g, daily_km: v }))}
+              placeholderTextColor={colors.textMuted}
             />
             <Text style={styles.inputLabel}>SETTIMANALE</Text>
             <TextInput
               testID="goals-weekly-input"
               style={styles.input} keyboardType="numeric"
               value={goals.weekly_km} onChangeText={(v) => setGoals(g => ({ ...g, weekly_km: v }))}
+              placeholderTextColor={colors.textMuted}
             />
             <Text style={styles.inputLabel}>MENSILE</Text>
             <TextInput
               testID="goals-monthly-input"
               style={styles.input} keyboardType="numeric"
               value={goals.monthly_km} onChangeText={(v) => setGoals(g => ({ ...g, monthly_km: v }))}
+              placeholderTextColor={colors.textMuted}
             />
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoals(false)}>
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoals(false)} activeOpacity={0.85}>
                 <Text style={styles.cancelText}>ANNULLA</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="save-goals-button"
-                style={styles.saveBtn} onPress={saveGoals} disabled={saving}
+                style={styles.saveBtn} onPress={saveGoals} disabled={saving} activeOpacity={0.85}
               >
                 <Text style={styles.saveText}>{saving ? 'SALVO...' : 'SALVA'}</Text>
               </TouchableOpacity>
@@ -292,11 +302,34 @@ export default function Profile() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <View style={styles.sectionLabelWrap}>
+      <View style={styles.sectionLabelDot} />
+      <Text style={styles.sectionLabelText}>{text}</Text>
+    </View>
+  );
+}
+
+function Row({
+  icon, title, rightIcon, onPress, testID,
+}: { icon: React.ReactNode; title: string; rightIcon?: React.ReactNode; onPress: () => void; testID?: string }) {
+  return (
+    <TouchableOpacity testID={testID} style={styles.row} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.rowIcon}>{icon}</View>
+      <Text style={styles.rowText}>{title}</Text>
+      {rightIcon || <ChevronRight size={18} color={colors.textMuted} strokeWidth={2.4} />}
+    </TouchableOpacity>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 function tierColor(t: string) {
   if (t === 'elite') return '#F59E0B';
   if (t === 'performance') return colors.primary;
-  if (t === 'starter') return '#10B981';
-  return colors.textMuted;
+  if (t === 'starter') return '#22C55E';
+  return '#6B7280';
 }
 function tierLabel(t: string) {
   if (t === 'elite') return 'ELITE';
@@ -305,53 +338,254 @@ function tierLabel(t: string) {
   return 'FREE';
 }
 
+// ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+
+  // Header / avatar
   avatar: {
     width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary,
     alignSelf: 'center', justifyContent: 'center', alignItems: 'center',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 38,
+    fontFamily: fonts.heading,
+  },
+  name: {
+    color: colors.textPrimary,
+    fontSize: 24,
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    letterSpacing: -0.4,
+  },
+  email: {
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
+    fontSize: 13,
+    fontFamily: fonts.medium,
+  },
+
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: fonts.headingBold,
+    letterSpacing: 1,
+  },
+  badgeNeutral: {
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  badgeTextNeutral: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontFamily: fonts.headingBold,
+    letterSpacing: 1,
+  },
+
+  // Premium banner
+  premiumCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    marginTop: spacing.lg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
     shadowRadius: 16,
     elevation: 6,
   },
-  avatarText: { color: '#fff', fontSize: 38, fontWeight: '900' },
-  name: { color: colors.textPrimary, fontSize: 24, fontWeight: '900', textAlign: 'center', marginTop: spacing.md, letterSpacing: -0.4 },
-  email: { color: colors.textSecondary, textAlign: 'center', marginTop: 4, fontSize: 13 },
-  badgeRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.md },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  premiumCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.primary, padding: spacing.lg, borderRadius: radius.lg,
+  premiumIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  premiumLabel: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: fonts.headingBold,
+    letterSpacing: 1.5,
+    opacity: 0.9,
+  },
+  premiumTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    marginTop: 4,
+  },
+
+  // Section label
+  sectionLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
+    marginBottom: spacing.sm,
   },
-  premiumLabel: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 2, opacity: 0.9 },
-  premiumTitle: { color: '#fff', fontSize: 18, fontWeight: '900', marginTop: 4 },
-  premiumSub: { color: '#fff', fontSize: 12, marginTop: 4, opacity: 0.9 },
+  sectionLabelDot: {
+    width: 4, height: 14, borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+  sectionLabelText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontFamily: fonts.headingBold,
+    letterSpacing: 1.6,
+  },
+
+  // Row group
+  group: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.lg,
-    marginTop: spacing.sm,
-    ...shadows.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  rowText: { color: colors.textPrimary, flex: 1, fontSize: 14, fontWeight: '600' },
-  modalBg: { flex: 1, backgroundColor: 'rgba(15,17,21,0.5)', justifyContent: 'flex-end' },
+  rowAdmin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+  },
+  rowIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  rowText: {
+    color: colors.textPrimary,
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fonts.medium,
+  },
+
+  // Logout
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: spacing.xl,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.35)',
+  },
+  logoutText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.3,
+  },
+
+  // Modal goals
+  modalBg: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
   modalCard: {
-    backgroundColor: colors.surface, padding: spacing.lg,
-    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
+    borderTopWidth: 1,
+    borderColor: colors.border,
   },
-  modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '900', letterSpacing: -0.3, marginBottom: spacing.md },
-  inputLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginTop: spacing.sm, marginBottom: 6 },
-  input: { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, padding: spacing.md, borderRadius: radius.md, fontSize: 16, fontWeight: '600' },
-  cancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, alignItems: 'center' },
-  saveBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: 'center' },
-  cancelText: { color: colors.textPrimary, fontWeight: '800', letterSpacing: 0.5 },
-  saveText: { color: '#fff', fontWeight: '800', letterSpacing: 0.5 },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontFamily: fonts.heading,
+    letterSpacing: -0.3,
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontFamily: fonts.headingBold,
+    letterSpacing: 1.5,
+    marginTop: spacing.sm,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: colors.surfaceSecondary,
+    color: colors.textPrimary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveBtn: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  cancelText: {
+    color: colors.textPrimary,
+    fontFamily: fonts.headingBold,
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  saveText: {
+    color: '#fff',
+    fontFamily: fonts.headingBold,
+    fontSize: 12,
+    letterSpacing: 1,
+  },
 });
