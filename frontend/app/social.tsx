@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#fff' },
 
   boardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
-  boardRowMe: { borderColor: colors.primary, backgroundColor: 'rgba(255,59,48,0.08)' },
+  boardRowMe: { borderColor: colors.primary, backgroundColor: 'rgba(255,107,31,0.10)' },
   rankPill: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceSecondary, justifyContent: 'center', alignItems: 'center' },
   rankText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   boardValue: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
