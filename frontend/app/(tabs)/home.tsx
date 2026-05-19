@@ -115,7 +115,14 @@ export default function Home() {
       >
         {/* Greeting */}
         <View style={styles.greeting}>
-          <Text style={styles.greetingHello}>Ciao {userName}! <Text>👋</Text></Text>
+          <View style={styles.greetingRow}>
+            <Text style={styles.greetingHello}>Ciao {userName}!</Text>
+            <Image
+              source={require('../../assets/images/logo-transparent.png')}
+              style={styles.greetingLogo}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={styles.greetingSubtitle}>Pronto a dare il massimo oggi?</Text>
         </View>
 
@@ -391,6 +398,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  greetingLogo: {
+    width: 34,
+    height: 34,
   },
   greetingHello: {
     color: colors.textPrimary,
