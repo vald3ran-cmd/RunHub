@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import os
+import math
 import uuid
 import logging
 import asyncio
@@ -2949,6 +2950,206 @@ async def admin_seed_test_users(admin: dict = Depends(require_admin())):
 @api_router.get("/")
 async def root():
     return {"message": "RunHub API", "status": "ok"}
+
+
+# ─────────────────────────────────────────────────────────────
+# NEARBY RUNNERS — privacy-friendly heartbeat & discovery
+# ─────────────────────────────────────────────────────────────
+# Privacy:
+#  • Coordinates snapped to ~300m grid (no exact tracking)
+#  • TTL: locations older than 2h are filtered out + auto-deleted
+#  • Opt-in via users.nearby_visible (default: false)
+#  • Auto opt-in while a run is active (heartbeat with active=true)
+# ─────────────────────────────────────────────────────────────
+GRID_DEG = 0.003   # ≈ 333m latitude grid (lng varies with lat but ok for our radius use)
+NEARBY_TTL_HOURS = 2
+
+def snap_coord(v: float) -> float:
+    """Snap to ~300m grid for privacy."""
+    return round(v / GRID_DEG) * GRID_DEG
+
+def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Distance in km between two lat/lng points."""
+    from math import radians, sin, cos, asin, sqrt
+    R = 6371.0
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 2 * R * asin(sqrt(a))
+
+
+class NearbyHeartbeatIn(BaseModel):
+    lat: float
+    lng: float
+    active: Optional[bool] = False   # true if a run is in progress
+
+
+@api_router.post("/social/nearby/heartbeat")
+async def nearby_heartbeat(data: NearbyHeartbeatIn, user: dict = Depends(get_current_user)):
+    """Submit my current location (snapped to grid). Auto opt-in while active=true."""
+    now = datetime.now(timezone.utc)
+    visible = bool(user.get("nearby_visible", False)) or bool(data.active)
+    if not visible:
+        # User has opted-out and not actively running → do not store anything,
+        # just delete any leftover location
+        await db.nearby_locations.delete_one({"user_id": user["user_id"]})
+        return {"ok": True, "stored": False, "reason": "opted_out"}
+    snapped_lat = snap_coord(data.lat)
+    snapped_lng = snap_coord(data.lng)
+    await db.nearby_locations.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {
+            "user_id": user["user_id"],
+            "name": user.get("name", "Runner"),
+            "avatar_base64": user.get("avatar_base64"),
+            "tier": user.get("tier", "free"),
+            "level": user.get("level", "beginner"),
+            "lat": snapped_lat,
+            "lng": snapped_lng,
+            "active": bool(data.active),
+            "updated_at": now,
+        }},
+        upsert=True,
+    )
+    return {"ok": True, "stored": True}
+
+
+@api_router.get("/social/nearby/count")
+async def nearby_count(
+    lat: float, lng: float, radius_km: float = 10.0,
+    user: dict = Depends(get_current_user),
+):
+    """Count nearby runners — available to ALL tiers (teaser for the Home widget)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=NEARBY_TTL_HOURS)
+    # Auto-purge expired
+    await db.nearby_locations.delete_many({"updated_at": {"$lt": cutoff}})
+    # Bounding box prefilter for efficiency
+    lat_buf = radius_km / 111.0  # ~1deg lat = 111km
+    lng_buf = radius_km / (111.0 * max(0.1, abs(math.cos(math.radians(lat)))))
+    cand = await db.nearby_locations.find({
+        "user_id": {"$ne": user["user_id"]},
+        "lat": {"$gte": lat - lat_buf, "$lte": lat + lat_buf},
+        "lng": {"$gte": lng - lng_buf, "$lte": lng + lng_buf},
+    }).to_list(2000)
+    total = 0
+    active = 0
+    for c in cand:
+        if haversine_km(lat, lng, c["lat"], c["lng"]) <= radius_km:
+            total += 1
+            if c.get("active"):
+                active += 1
+    return {"total": total, "active": active, "radius_km": radius_km}
+
+
+@api_router.get("/social/nearby/runners")
+async def nearby_runners(
+    lat: float, lng: float, radius_km: float = 5.0,
+    user: dict = Depends(get_current_user),
+):
+    """List nearby runners with snapped positions. Starter+ ONLY."""
+    tier = (user.get("tier") or "free").lower()
+    if tier == "free":
+        raise HTTPException(status_code=403, detail="Funzione disponibile con abbonamento Starter o superiore")
+    radius_km = max(0.5, min(25.0, radius_km))
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=NEARBY_TTL_HOURS)
+    await db.nearby_locations.delete_many({"updated_at": {"$lt": cutoff}})
+    lat_buf = radius_km / 111.0
+    lng_buf = radius_km / (111.0 * max(0.1, abs(math.cos(math.radians(lat)))))
+    cand = await db.nearby_locations.find({
+        "user_id": {"$ne": user["user_id"]},
+        "lat": {"$gte": lat - lat_buf, "$lte": lat + lat_buf},
+        "lng": {"$gte": lng - lng_buf, "$lte": lng + lng_buf},
+    }).to_list(2000)
+    out = []
+    for c in cand:
+        d = haversine_km(lat, lng, c["lat"], c["lng"])
+        if d <= radius_km:
+            out.append({
+                "user_id": c["user_id"],
+                "name": c.get("name", "Runner"),
+                "avatar_base64": c.get("avatar_base64"),
+                "tier": c.get("tier", "free"),
+                "level": c.get("level", "beginner"),
+                "lat": c["lat"],
+                "lng": c["lng"],
+                "active": bool(c.get("active")),
+                "distance_km": round(d, 2),
+                "updated_at": c["updated_at"].isoformat() if isinstance(c.get("updated_at"), datetime) else None,
+            })
+    out.sort(key=lambda x: x["distance_km"])
+    return {"runners": out[:200], "radius_km": radius_km}
+
+
+@api_router.get("/social/nearby/runner/{target_user_id}")
+async def nearby_runner_detail(
+    target_user_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Public profile snippet of a nearby runner. Starter+ only."""
+    tier = (user.get("tier") or "free").lower()
+    if tier == "free":
+        raise HTTPException(status_code=403, detail="Funzione disponibile con abbonamento Starter o superiore")
+    target = await db.users.find_one({"user_id": target_user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Aggregate public stats
+    agg = await db.workout_sessions.aggregate([
+        {"$match": {"user_id": target_user_id}},
+        {"$group": {
+            "_id": None,
+            "total_distance_km": {"$sum": "$distance_km"},
+            "total_count": {"$sum": 1},
+        }},
+    ]).to_list(1)
+    totals = agg[0] if agg else {"total_distance_km": 0, "total_count": 0}
+    # Badges count
+    badges = await db.user_badges.count_documents({"user_id": target_user_id})
+    # Already friend?
+    me = user["user_id"]
+    friendship = await db.friendships.find_one({
+        "$or": [
+            {"user_a": me, "user_b": target_user_id, "status": "accepted"},
+            {"user_a": target_user_id, "user_b": me, "status": "accepted"},
+        ],
+    })
+    is_friend = bool(friendship)
+    # Pending request?
+    pending = await db.friend_requests.find_one({
+        "$or": [
+            {"from_user_id": me, "to_user_id": target_user_id, "status": "pending"},
+            {"from_user_id": target_user_id, "to_user_id": me, "status": "pending"},
+        ],
+    })
+    return {
+        "user_id": target["user_id"],
+        "name": target.get("name", "Runner"),
+        "avatar_base64": target.get("avatar_base64"),
+        "level": target.get("level", "beginner"),
+        "tier": target.get("tier", "free"),
+        "total_distance_km": round(totals.get("total_distance_km", 0) or 0, 1),
+        "total_workouts": totals.get("total_count", 0) or 0,
+        "badges_count": badges,
+        "is_friend": is_friend,
+        "request_pending": bool(pending),
+    }
+
+
+class NearbyVisibilityIn(BaseModel):
+    visible: bool
+
+
+@api_router.put("/users/me/nearby-visibility")
+async def set_nearby_visibility(data: NearbyVisibilityIn, user: dict = Depends(get_current_user)):
+    """Toggle: show me to other RunHubber nearby."""
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"nearby_visible": bool(data.visible)}},
+    )
+    if not data.visible:
+        # Immediately remove location from index
+        await db.nearby_locations.delete_one({"user_id": user["user_id"]})
+    return {"ok": True, "visible": bool(data.visible)}
+
 
 app.include_router(api_router)
 app.add_middleware(

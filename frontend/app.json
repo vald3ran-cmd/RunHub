@@ -28,6 +28,7 @@
         "NSHealthUpdateUsageDescription": "Salva le tue corse in Apple Health.",
         "NSCameraUsageDescription": "Scatta una foto profilo direttamente nell'app",
         "NSPhotoLibraryUsageDescription": "Scegli una foto profilo dalla tua galleria",
+        "NSLocationAlwaysUsageDescription": "Traccia il tuo percorso anche in background",
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"

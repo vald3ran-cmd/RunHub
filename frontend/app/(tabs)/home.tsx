@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image, Platform,
 } from 'react-native';
@@ -10,8 +10,9 @@ import { colors, spacing, radius, shadows, typography, fonts } from '../../src/t
 import { AdBanner } from '../../src/Ads';
 import { AnimatedCounter } from '../../src/uiPolish';
 import { BarChart } from '../../src/MiniCharts';
+import { fetchNearbyCount, pickHeadline, requestLocationPermission, getApproxLocation } from '../../src/nearby';
 import {
-  ChevronRight, Calendar, BarChart3, Sparkles, Users, Award, Heart,
+  ChevronRight, Calendar, BarChart3, Sparkles, Users, Award, Heart, MapPin,
 } from 'lucide-react-native';
 import { BoltIcon } from '../../src/icons/BrandIcons';
 
@@ -49,6 +50,8 @@ export default function Home() {
   const [nextWorkout, setNextWorkout] = useState<Workout | null>(null);
   const [weeklyBars, setWeeklyBars] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
   const [refreshing, setRefreshing] = useState(false);
+  const [nearby, setNearby] = useState<{ total: number; active: number } | null>(null);
+  const [nearbyHeadline, setNearbyHeadline] = useState<string>('');
   const router = useRouter();
 
   const load = async () => {
@@ -99,7 +102,17 @@ export default function Home() {
     } catch {}
   };
 
-  useFocusEffect(useCallback(() => { load(); }, []));
+  useFocusEffect(useCallback(() => { load(); loadNearby(); }, []));
+
+  const loadNearby = async () => {
+    try {
+      const c = await fetchNearbyCount(10);
+      if (c) {
+        setNearby({ total: c.total, active: c.active });
+        setNearbyHeadline(pickHeadline(c.total));
+      }
+    } catch {}
+  };
 
   const onRefresh = async () => {
     setRefreshing(true); await load(); setRefreshing(false);
@@ -151,6 +164,40 @@ export default function Home() {
             unitSmall
           />
         </View>
+
+        {/* ── NEARBY RUNHUBBER (widget per tutti) ── */}
+        <TouchableOpacity
+          testID="nearby-runners-widget"
+          style={styles.nearbyCard}
+          activeOpacity={0.88}
+          onPress={async () => {
+            // Chiedi permesso location se non concesso, poi naviga
+            const loc = await getApproxLocation();
+            if (!loc) await requestLocationPermission();
+            router.push('/nearby');
+          }}
+        >
+          <View style={styles.nearbyIconWrap}>
+            <MapPin size={22} color="#fff" strokeWidth={2.4} />
+            {nearby && nearby.active > 0 ? (
+              <View style={styles.nearbyLivePulse} />
+            ) : null}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.nearbyHeadline} numberOfLines={2}>
+              {nearbyHeadline || 'Scopri chi corre con RunHub vicino a te'}
+            </Text>
+            {nearby && nearby.active > 0 ? (
+              <View style={styles.nearbyLiveRow}>
+                <View style={styles.nearbyLiveDot} />
+                <Text style={styles.nearbyLiveText}>{nearby.active} in corsa adesso</Text>
+              </View>
+            ) : (
+              <Text style={styles.nearbySub}>Tocca per vedere chi e dove</Text>
+            )}
+          </View>
+          <ChevronRight size={22} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
+        </TouchableOpacity>
 
         {/* ── I TUOI PIANI ── */}
         <SectionLabel text="I TUOI PIANI" />
@@ -498,6 +545,65 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
     marginVertical: 4,
+  },
+
+  // Nearby widget (Home)
+  nearbyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.42,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  nearbyIconWrap: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+  },
+  nearbyLivePulse: {
+    position: 'absolute',
+    top: -2, right: -2,
+    width: 12, height: 12, borderRadius: 6,
+    backgroundColor: '#22C55E',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  nearbyHeadline: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    lineHeight: 18,
+  },
+  nearbySub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    marginTop: 3,
+  },
+  nearbyLiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  nearbyLiveDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: '#22C55E',
+  },
+  nearbyLiveText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: fonts.headingBold,
+    letterSpacing: 0.5,
   },
 
   // Plan card

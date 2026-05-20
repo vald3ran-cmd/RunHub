@@ -275,6 +275,23 @@ export default function RunActive() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── NEARBY: heartbeat ogni 60s mentre corro (auto opt-in)
+  useEffect(() => {
+    if (!running) return;
+    // Fire one immediately, then every 60s
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const { sendNearbyHeartbeat } = await import('../src/nearby');
+        await sendNearbyHeartbeat(true);
+      } catch {}
+    };
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [running]);
+
   const stop = async () => {
     subRef.current?.remove();
     setRunning(false);

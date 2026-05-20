@@ -454,10 +454,27 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Dashboard + Personal Bests endpoints"
+    - "Nearby Runners endpoints"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend:
+  - task: "Nearby Runners endpoints (heartbeat, count, runners, runner detail, visibility)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "66/66 assertions PASS via /app/backend_nearby_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. (1) Auth gating: tutti i 5 endpoint (POST /social/nearby/heartbeat, GET /social/nearby/count, GET /social/nearby/runners, GET /social/nearby/runner/{uid}, PUT /users/me/nearby-visibility) restituiscono 401 senza Authorization. (2) Opt-out default: nuovo utente registrato (nearby_visible=false default) + PUT /users/me/nearby-visibility {visible:false} -> 200; POST /heartbeat con {active:false} -> 200 con payload {ok:true, stored:false, reason:'opted_out'} (nessun doc inserito in db.nearby_locations). (3) PUT visibility=true poi /heartbeat active=false -> 200 stored=true; GET /count (admin) raggio 1km Rome -> total cresce da baseline (0) a 1, payload contiene {total, active, radius_km}. (4) Self-exclusion verificata: GET /count chiamato dal runner stesso -> total=baseline (l'utente non vede se stesso). (5) Far-away: GET /count Helsinki (>1000km da Rome) -> active=0. (6) Heartbeat con active=true: POST /heartbeat {lat,lng,active:true} -> stored=true; GET /runners come admin (elite) raggio 1km -> 200 con runners[] contenente l'helper user con tutti i campi richiesti {user_id, name, avatar_base64, tier, level, lat, lng, active=true, distance_km}. (7) Privacy grid snapping verificato: lat/lng nel response sono multipli esatti di GRID_DEG=0.003 (round(coord/0.003)*0.003); inviando coord con offset ~10m (sotto la grid), il valore snapped resta identico (41.892, 12.486). (8) FREE tier 403: testfree@runhub.com (tier=free) su GET /runners -> 403 con detail contiene 'Starter o superiore'; GET /runner/{uid} -> 403; GET /count -> 200 (corretto: open to all tiers come da spec). (9) /runner/{target_uid} happy path con admin elite -> 200 con tutti i campi {user_id, name, avatar_base64, level, tier, total_distance_km, total_workouts, badges_count, is_friend, request_pending}, is_friend=false, request_pending=false. GET /runner/nonexistent_xxx -> 404 'Utente non trovato'. (10) PUT visibility=false (2nd time) -> 200; il doc viene eliminato da db.nearby_locations (verificato: GET /count torna a baseline, GET /runners non lista più l'helper). (11) Validazione: GET /count senza lat/lng -> 422 Pydantic; POST /heartbeat senza lat -> 422. (12) Cleanup: helper runner eliminato via DELETE /admin/users/{uid}. Le credenziali admin@runhub.com/admin123 e testfree@runhub.com/test123 in /app/memory/test_credentials.md sono corrette e funzionanti (tier 'elite' e 'free' rispettivamente). TTL (auto-purge >2h) testato implicitamente: ogni chiamata a /count e /runners esegue delete_many({updated_at:{$lt: now-2h}}) prima della query — logica verificata nel codice (linee 3025 e 3055). Tutti i flussi richiesti dalla review request (5 scenari) passano. Nessun bug rilevato. Endpoints pronti per integrazione frontend."
+
+agent_communication:
+  - agent: "testing"
+    message: "✅ Testato i 5 endpoint Nearby Runners in /app/backend_nearby_test.py. 66/66 assertions PASS contro l'URL pubblico. Coverage completo: (1) Auth gating su tutti i 5 endpoint (401 senza token). (2) Default opt-out + active=false -> stored=false reason=opted_out (no doc in db.nearby_locations). (3) Visibility toggle on/off funziona: PUT true -> heartbeat stores; PUT false -> doc rimosso. (4) /count escluse il chiamante, accessibile a tutti i tier (free incluso). (5) /runners e /runner/{id} bloccano FREE con 403 'Funzione disponibile con abbonamento Starter o superiore'; ammin elite vede correttamente la lista con active=true. (6) Coord snapping verificato (~0.003 deg ≈ 333m): offset 10m → stessa cella, lat/lng nel response sono multipli esatti di 0.003. (7) /runner/{id} restituisce profilo pubblico con totals aggregati + is_friend + request_pending; 404 per uid inesistente. (8) Validazione 422 su missing params. Credenziali admin@runhub.com/admin123 e testfree@runhub.com/test123 confermate funzionanti. Nessun bug. Endpoint pronti per produzione e integrazione frontend."
 
 backend:
   - task: "Dashboard + Personal Bests endpoints (/api/stats/dashboard, /api/stats/personal-bests)"
