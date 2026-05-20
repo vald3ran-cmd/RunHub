@@ -33,50 +33,60 @@ function RootNav() {
     initCrashReporting().catch(() => {});
   }, []);
 
-  // iOS App Tracking Transparency - MUST be requested at boot, regardless of AdMob status.
-  // Apple Review (Guideline 2.1) flagged us when this prompt did not appear.
+  // ─────────────────────────────────────────────────────────────
+  // PRIVACY CONSENT FLOW — sequenziale, ordine corretto:
+  //   1) UMP / GDPR Consent Form (se utente EEA)
+  //   2) App Tracking Transparency (ATT, iOS)
+  //   3) Inizializzazione AdMob SDK (solo se UMP autorizza)
+  //
+  // ORDINE FONDAMENTALE per Apple Review Guideline 5.1.1(iv):
+  // se ATT viene mostrato PRIMA del prompt GDPR e l'utente sceglie
+  // "Ask App Not to Track", il prompt GDPR successivo sembra
+  // re-chiedere il tracking → rejection.
+  // Mostrando GDPR PRIMA di ATT, Apple non flagga (loro stessi lo dicono).
+  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (Platform.OS !== 'ios') return;
     (async () => {
-      try {
-        // Tiny delay to ensure UI is mounted before showing native prompt
-        await new Promise((r) => setTimeout(r, 800));
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const tt = require('expo-tracking-transparency');
-        if (typeof tt.requestTrackingPermissionsAsync === 'function') {
-          await tt.requestTrackingPermissionsAsync();
+      // 1) UMP/GDPR Consent (se utente EEA/UK)
+      let snapshot: any = null;
+      if (isAdMobAvailable) {
+        try {
+          snapshot = await initConsentFlow(
+            __DEV__ ? { debugAsEea: true } : undefined,
+          );
+          console.log('[CONSENT] UMP snapshot:', snapshot?.status, 'canRequestAds=', snapshot?.canRequestAds);
+        } catch (e) {
+          console.warn('[CONSENT] UMP flow error:', e);
         }
-      } catch (e) {
-        console.warn('[ATT] permission request failed:', e);
       }
-    })();
-  }, []);
 
-  // Initialize UMP Consent Flow + AdMob (GDPR-compliant)
-  // 1) Mostra form di consenso GDPR (UMP) → 2) Solo se canRequestAds=true → inizializza Mobile Ads SDK
-  // Senza UMP, in EU il fill rate AdMob crolla al ~7%.
-  useEffect(() => {
-    if (!isAdMobAvailable) return;
-    (async () => {
-      try {
-        // 1) Gather consent (mostra il form solo se utente EEA/UK e necessario)
-        const snapshot = await initConsentFlow(
-          __DEV__
-            ? { debugAsEea: true } // Forza geografia EEA in dev/TestFlight per testare flow
-            : undefined,
-        );
-        console.log('[CONSENT] snapshot:', snapshot.status, 'canRequestAds=', snapshot.canRequestAds);
-
-        // 2) Inizializza Mobile Ads SDK SOLO se UMP dice ok
-        if (snapshot.canRequestAds) {
-          await initializeAdMob();
-        } else {
-          console.log('[CONSENT] Ads non autorizzati - utente ha rifiutato o consenso non ancora completato');
+      // 2) iOS App Tracking Transparency — DOPO UMP, una sola volta
+      if (Platform.OS === 'ios') {
+        try {
+          // piccolo delay per dare tempo al precedente sheet UMP di chiudersi
+          await new Promise((r) => setTimeout(r, 400));
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const tt = require('expo-tracking-transparency');
+          if (typeof tt.requestTrackingPermissionsAsync === 'function') {
+            await tt.requestTrackingPermissionsAsync();
+          }
+        } catch (e) {
+          console.warn('[ATT] permission request failed:', e);
         }
-      } catch (e) {
-        console.warn('[CONSENT] flow error, fallback init AdMob:', e);
-        // Fallback: meglio inizializzare per non perdere monetizzazione fuori EU
-        initializeAdMob().catch(() => {});
+      }
+
+      // 3) AdMob SDK init - solo se UMP autorizza (o nessun UMP richiesto)
+      if (isAdMobAvailable) {
+        try {
+          if (!snapshot || snapshot.canRequestAds) {
+            await initializeAdMob();
+          } else {
+            console.log('[CONSENT] Ads non autorizzati - utente ha rifiutato consenso');
+          }
+        } catch (e) {
+          console.warn('[ADMOB] init error, fallback:', e);
+          initializeAdMob().catch(() => {});
+        }
       }
     })();
   }, []);
