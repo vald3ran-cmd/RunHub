@@ -1,0 +1,57 @@
+{
+  "common": {
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "loading": "Cargando...",
+    "share": "Compartir",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "ok": "OK",
+    "later": "Más tarde",
+    "yes": "Sí",
+    "no": "No",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "error": "Error",
+    "retry": "Reintentar"
+  },
+  "referral": {
+    "title": "Invita y Gana",
+    "subtitle": "Consigue 1 mes gratis de Performance por cada amigo que empiece a correr contigo",
+    "your_code": "Tu código",
+    "tap_to_copy": "Toca para copiar",
+    "share_cta": "Compartir invitación",
+    "stats_invited": "Invitados",
+    "stats_qualified": "Premiados",
+    "stats_rewards": "Meses ganados",
+    "friends_title": "Tus amigos",
+    "friends_empty": "Aún no has invitado a nadie. ¡Comparte tu código para empezar!",
+    "friend_pending": "Pendiente",
+    "friend_qualified": "Premiado \u2713",
+    "how_it_works": "Cómo funciona",
+    "how_step_1": "Comparte tu código con un amigo",
+    "how_step_2": "Tu amigo se registra y completa su primera carrera (mín 0.5 km)",
+    "how_step_3": "Recibes 30 días de Performance gratis",
+    "disclaimer": "La recompensa se activa tras la primera carrera GPS de tu amigo (mín 0.5 km). Código válido durante 30 días tras el registro del nuevo usuario. Máximo 12 meses acumulables.",
+    "bonus_until": "Bono activo hasta",
+    "modal_title": "Invita a un amigo",
+    "modal_subtitle": "Tú y tu amigo recibiréis 30 días de Performance gratis cuando él complete su primera carrera con RunHub.",
+    "modal_cta_invite": "Invita a un amigo",
+    "modal_cta_later": "Más tarde",
+    "share_message": "🏃 ¡Hola! Estoy usando RunHub para entrenar y me está cambiando los hábitos. Regístrate con mi código {{code}} y ambos tendremos 1 mes gratis de Performance. 🎁\n\n👉 {{link}}",
+    "card_title": "Invita a un amigo",
+    "card_subtitle": "Recibe 1 mes gratis de Performance",
+    "register_label": "Código de invitación (opcional)",
+    "register_placeholder": "Ej. RHABCD23",
+    "register_with": "Te unes con la invitación de {{name}}",
+    "redeem_success": "¡Código aplicado! Completa tu primera carrera para activar el bono."
+  },
+  "settings": {
+    "language": "Idioma",
+    "language_subtitle": "Elige el idioma de la app"
+  },
+  "profile": {
+    "community": "Comunidad"
+  }
+}

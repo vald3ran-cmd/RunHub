@@ -6,10 +6,13 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
 import { SocialAuthButtons } from '../../src/SocialAuthButtons';
 import { api } from '../../src/api';
+import { useT } from '../../src/i18n';
+import { lookupReferral } from '../../src/referral';
 
 // Versioni dei documenti legali attualmente pubblicati (incrementare quando cambiano)
 const TERMS_VERSION = '2026-04-21';
@@ -35,6 +38,7 @@ function calcAge(day: string, month: string, year: string): number | null {
 
 export default function Register() {
   const { register } = useAuth();
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -45,12 +49,36 @@ export default function Register() {
   const [acceptedAge, setAcceptedAge] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [referrerName, setReferrerName] = useState<string | null>(null);
   const router = useRouter();
 
   // Pre-warm backend on register screen mount (Render free tier cold start fix)
   useEffect(() => {
     api.get('/health', { timeout: 5000 }).catch(() => {});
+    // Load pending referral code from deep link, if any
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('runhub.pendingReferralCode');
+        if (stored) {
+          setReferralCode(stored.toUpperCase());
+          const r = await lookupReferral(stored);
+          if (r) setReferrerName(r.referrer_name);
+        }
+      } catch {}
+    })();
   }, []);
+
+  // Debounced referral code lookup
+  useEffect(() => {
+    const code = referralCode.trim().toUpperCase();
+    if (!code || code.length < 6) { setReferrerName(null); return; }
+    const handle = setTimeout(async () => {
+      const r = await lookupReferral(code);
+      setReferrerName(r ? r.referrer_name : null);
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [referralCode]);
 
   const age = calcAge(dobDay, dobMonth, dobYear);
   const ageValid = age !== null && age >= MIN_AGE_YEARS;
@@ -83,8 +111,11 @@ export default function Register() {
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
         },
-        dobIso
+        dobIso,
+        referralCode.trim().toUpperCase() || undefined
       );
+      // Clear pending referral from storage
+      try { await AsyncStorage.removeItem('runhub.pendingReferralCode'); } catch {}
       router.replace('/onboarding');
     } catch (e: any) {
       const d = e?.response?.data?.detail;
@@ -120,6 +151,26 @@ export default function Register() {
             style={styles.input} placeholder="Password (min 6 caratteri)" placeholderTextColor={colors.textMuted}
             value={password} onChangeText={setPassword} secureTextEntry
           />
+
+          {/* Referral code (optional) */}
+          <TextInput
+            testID="register-referral-input"
+            style={styles.input}
+            placeholder={t('referral.register_placeholder')}
+            placeholderTextColor={colors.textMuted}
+            value={referralCode}
+            onChangeText={(v) => setReferralCode(v.toUpperCase().slice(0, 12))}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
+          {referrerName ? (
+            <View style={styles.referrerHint}>
+              <Ionicons name="gift" size={14} color={colors.primary} />
+              <Text style={styles.referrerHintText}>
+                {t('referral.register_with', { name: referrerName })}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Data di nascita */}
           <Text style={styles.dobLabel}>Data di nascita</Text>
@@ -265,6 +316,25 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     marginBottom: spacing.sm,
     fontWeight: '600',
+  },
+  referrerHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,107,31,0.10)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,31,0.30)',
+  },
+  referrerHintText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
   consentRow: {
     flexDirection: 'row',

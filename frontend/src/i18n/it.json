@@ -1,0 +1,57 @@
+{
+  "common": {
+    "close": "Chiudi",
+    "cancel": "Annulla",
+    "save": "Salva",
+    "loading": "Caricamento...",
+    "share": "Condividi",
+    "copy": "Copia",
+    "copied": "Copiato!",
+    "ok": "OK",
+    "later": "Più tardi",
+    "yes": "Sì",
+    "no": "No",
+    "continue": "Continua",
+    "back": "Indietro",
+    "error": "Errore",
+    "retry": "Riprova"
+  },
+  "referral": {
+    "title": "Invita & Guadagna",
+    "subtitle": "Ricevi 1 mese Performance gratis per ogni amico che inizia a correre con te",
+    "your_code": "Il tuo codice",
+    "tap_to_copy": "Tocca per copiare",
+    "share_cta": "Condividi invito",
+    "stats_invited": "Invitati",
+    "stats_qualified": "Premiati",
+    "stats_rewards": "Mesi vinti",
+    "friends_title": "I tuoi amici",
+    "friends_empty": "Non hai ancora invitato amici. Condividi il tuo codice per iniziare!",
+    "friend_pending": "In attesa",
+    "friend_qualified": "Premiato \u2713",
+    "how_it_works": "Come funziona",
+    "how_step_1": "Condividi il tuo codice con un amico",
+    "how_step_2": "L'amico si iscrive e completa la prima corsa (min 0.5 km)",
+    "how_step_3": "Ricevi 30 giorni di Performance gratis",
+    "disclaimer": "Il premio scatta dopo la prima corsa GPS del tuo amico (min 0.5 km). Codice valido entro 30 giorni dalla registrazione del nuovo utente. Massimo 12 mesi accumulabili.",
+    "bonus_until": "Bonus attivo fino al",
+    "modal_title": "Invita un amico",
+    "modal_subtitle": "Tu e il tuo amico riceverete 30 giorni di Performance gratis quando lui completerà la prima corsa con RunHub.",
+    "modal_cta_invite": "Invita un amico",
+    "modal_cta_later": "Più tardi",
+    "share_message": "🏃 Ciao! Sto usando RunHub per allenarmi e mi sta cambiando le abitudini. Iscriviti col mio codice {{code}} e avremo entrambi 1 mese di Performance gratis! 🎁\n\n👉 {{link}}",
+    "card_title": "Invita un amico",
+    "card_subtitle": "Ricevi 1 mese Performance gratis",
+    "register_label": "Codice invito (opzionale)",
+    "register_placeholder": "Es. RHABCD23",
+    "register_with": "Entri con l'invito di {{name}}",
+    "redeem_success": "Codice applicato! Completa la prima corsa per attivare il bonus."
+  },
+  "settings": {
+    "language": "Lingua",
+    "language_subtitle": "Scegli la lingua dell'app"
+  },
+  "profile": {
+    "community": "Community"
+  }
+}

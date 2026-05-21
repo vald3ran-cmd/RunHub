@@ -13,6 +13,11 @@ type User = {
   role?: string;
   needs_profile_completion?: boolean;
   avatar_base64?: string | null;
+  referral_code?: string | null;
+  referred_by_user_id?: string | null;
+  referral_rewarded?: boolean;
+  bonus_premium_until?: string | null;
+  referral_rewards_count?: number;
 };
 
 type RegisterConsent = {
@@ -36,7 +41,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string) => Promise<void>;
+  register: (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string, referralCode?: string) => Promise<void>;
   loginWithSocial: (result: { token: string; user: any }) => Promise<void>;
   completeProfile: (payload: ProfileCompletionPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -71,9 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string) => {
+  const register = async (email: string, password: string, name: string, consent?: RegisterConsent, dateOfBirth?: string, referralCode?: string) => {
     const payload: any = { email, password, name };
     if (dateOfBirth) payload.date_of_birth = dateOfBirth;
+    if (referralCode && referralCode.trim()) payload.referral_code = referralCode.trim().toUpperCase();
     if (consent) {
       payload.accepted_terms = consent.accepted_terms;
       payload.accepted_privacy = consent.accepted_privacy;

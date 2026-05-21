@@ -370,6 +370,20 @@ async def send_expo_push(tokens: List[str], title: str, body: str, data: Optiona
         return {"sent": 0, "error": str(e)}
 
 def user_tier(user: dict) -> str:
+    """Resolve effective tier considering active subscription, expiry, and referral bonus."""
+    # 1) Active referral bonus → grants 'performance' tier while valid
+    bonus_until = user.get("bonus_premium_until")
+    bonus_active_perf = False
+    if bonus_until:
+        try:
+            b_dt = bonus_until if isinstance(bonus_until, datetime) else datetime.fromisoformat(str(bonus_until))
+            if b_dt.tzinfo is None:
+                b_dt = b_dt.replace(tzinfo=timezone.utc)
+            if b_dt > datetime.now(timezone.utc):
+                bonus_active_perf = True
+        except Exception:
+            pass
+
     t = user.get("tier")
     if t in TIER_ORDER:
         # Check expiry
@@ -379,10 +393,41 @@ def user_tier(user: dict) -> str:
             if exp_dt.tzinfo is None:
                 exp_dt = exp_dt.replace(tzinfo=timezone.utc)
             if exp_dt < datetime.now(timezone.utc):
-                return "free"
+                t = "free"
+        # If paid tier is "free" but bonus active → return 'performance'
+        if t == "free" and bonus_active_perf:
+            return "performance"
+        # If paid tier is lower than performance and bonus active → upgrade to performance
+        if TIER_ORDER.get(t, 0) < TIER_ORDER.get("performance", 0) and bonus_active_perf:
+            return "performance"
         return t
     # Backward compat with is_premium
-    return "performance" if user.get("is_premium") else "free"
+    if user.get("is_premium"):
+        return "performance"
+    return "performance" if bonus_active_perf else "free"
+
+
+def generate_referral_code() -> str:
+    """Generate a short, human-friendly referral code (avoids ambiguous chars)."""
+    import secrets
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no I, O, 0, 1
+    return "RH" + "".join(secrets.choice(alphabet) for _ in range(6))
+
+
+async def ensure_referral_code(user: dict) -> str:
+    """Make sure the user has a unique referral_code; create one if missing (lazy migration)."""
+    code = user.get("referral_code")
+    if code:
+        return code
+    # Generate unique
+    for _ in range(10):
+        code = generate_referral_code()
+        existing = await db.users.find_one({"referral_code": code}, {"user_id": 1})
+        if not existing:
+            break
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"referral_code": code}})
+    user["referral_code"] = code
+    return code
 
 def has_tier(user: dict, min_tier: str) -> bool:
     return TIER_ORDER.get(user_tier(user), 0) >= TIER_ORDER.get(min_tier, 0)
@@ -415,6 +460,8 @@ class RegisterRequest(BaseModel):
     accepted_at: Optional[str] = None
     terms_version: Optional[str] = None
     privacy_version: Optional[str] = None
+    # Referral code di invito (opzionale)
+    referral_code: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -563,6 +610,24 @@ async def register(data: RegisterRequest, response: Response):
         }
 
     user_id = f"user_{uuid.uuid4().hex[:12]}"
+    # Resolve referrer (if a referral_code was provided) — must exist and not be self
+    referred_by_user_id = None
+    referral_code_normalized = (data.referral_code or "").strip().upper()
+    if referral_code_normalized:
+        referrer = await db.users.find_one(
+            {"referral_code": referral_code_normalized},
+            {"user_id": 1, "email": 1}
+        )
+        if referrer and referrer.get("user_id"):
+            referred_by_user_id = referrer["user_id"]
+    # Generate unique referral_code for the new user
+    new_referral_code = None
+    for _ in range(10):
+        candidate = generate_referral_code()
+        if not await db.users.find_one({"referral_code": candidate}, {"user_id": 1}):
+            new_referral_code = candidate
+            break
+
     doc = {
         "user_id": user_id,
         "email": data.email.lower(),
@@ -574,6 +639,11 @@ async def register(data: RegisterRequest, response: Response):
         "is_premium": False,
         "onboarding_completed": False,
         "created_at": now,
+        "referral_code": new_referral_code,
+        "referred_by_user_id": referred_by_user_id,
+        "referral_rewarded": False,
+        "bonus_premium_until": None,
+        "referral_rewards_count": 0,
     }
     if dob_iso:
         doc["date_of_birth"] = dob_iso
@@ -1622,6 +1692,63 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
     except Exception as e:
         logger.error(f"badge award error: {e}")
         doc["newly_awarded_badges"] = []
+
+    # ── Referral reward trigger ─────────────────────────────────────────
+    # If this user was referred and hasn't been counted yet AND completed
+    # a real GPS workout (>=0.5 km), grant +30d Performance to the referrer.
+    try:
+        referrer_id = user.get("referred_by_user_id")
+        already_rewarded = bool(user.get("referral_rewarded", False))
+        if referrer_id and not already_rewarded and (data.distance_km or 0) >= 0.5 and len(data.locations or []) >= 3:
+            referrer = await db.users.find_one(
+                {"user_id": referrer_id},
+                {"_id": 0, "user_id": 1, "bonus_premium_until": 1, "referral_rewards_count": 1, "email": 1, "name": 1}
+            )
+            if referrer:
+                now_utc = datetime.now(timezone.utc)
+                current_bonus = referrer.get("bonus_premium_until")
+                base_dt = now_utc
+                if current_bonus:
+                    try:
+                        cb_dt = current_bonus if isinstance(current_bonus, datetime) else datetime.fromisoformat(str(current_bonus))
+                        if cb_dt.tzinfo is None:
+                            cb_dt = cb_dt.replace(tzinfo=timezone.utc)
+                        # Stack the bonus on top of remaining time, capped at 12 months from now
+                        base_dt = cb_dt if cb_dt > now_utc else now_utc
+                    except Exception:
+                        base_dt = now_utc
+                new_bonus_until = base_dt + timedelta(days=30)
+                # Cap: max 12 months from "now" to avoid abuse
+                cap = now_utc + timedelta(days=365)
+                if new_bonus_until > cap:
+                    new_bonus_until = cap
+                await db.users.update_one(
+                    {"user_id": referrer_id},
+                    {
+                        "$set": {"bonus_premium_until": new_bonus_until},
+                        "$inc": {"referral_rewards_count": 1},
+                    }
+                )
+                await db.users.update_one(
+                    {"user_id": user["user_id"]},
+                    {"$set": {"referral_rewarded": True, "referral_rewarded_at": now_utc}}
+                )
+                # Persist a referral document for audit
+                await db.referrals.insert_one({
+                    "referrer_user_id": referrer_id,
+                    "referred_user_id": user["user_id"],
+                    "referred_email": user.get("email"),
+                    "referred_name": user.get("name"),
+                    "status": "rewarded",
+                    "qualifying_session_id": session_id,
+                    "rewarded_at": now_utc,
+                    "bonus_days": 30,
+                })
+                doc["referral_reward_granted"] = True
+                logger.info(f"Referral reward granted: referrer={referrer_id} for new user={user['user_id']}")
+    except Exception as e:
+        logger.error(f"Referral reward error: {e}")
+
     return doc
 
 @api_router.get("/workouts/history")
@@ -1640,6 +1767,101 @@ async def workout_detail(session_id: str, user: dict = Depends(get_current_user)
     if not doc:
         raise HTTPException(status_code=404, detail="Sessione non trovata")
     return doc
+
+
+# ----------------- Referrals -----------------
+@api_router.get("/referrals/me")
+async def referrals_me(user: dict = Depends(get_current_user)):
+    """Return the current user's referral code, share link, and stats."""
+    code = await ensure_referral_code(user)
+    referred_users = await db.users.find(
+        {"referred_by_user_id": user["user_id"]},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "created_at": 1,
+         "referral_rewarded": 1, "referral_rewarded_at": 1}
+    ).sort("created_at", -1).to_list(500)
+    invited_total = len(referred_users)
+    qualified = sum(1 for u in referred_users if u.get("referral_rewarded"))
+    pending = invited_total - qualified
+    me_full = await db.users.find_one(
+        {"user_id": user["user_id"]},
+        {"_id": 0, "bonus_premium_until": 1, "referral_rewards_count": 1}
+    ) or {}
+    bonus_until = me_full.get("bonus_premium_until")
+    rewards_count = int(me_full.get("referral_rewards_count") or 0)
+    web_base = os.getenv("BASE_WEB_URL", "https://apprunhub.com")
+    share_link = f"{web_base}/r/{code}"
+    return {
+        "code": code,
+        "share_link": share_link,
+        "deep_link": f"runhub://r/{code}",
+        "invited_total": invited_total,
+        "qualified": qualified,
+        "pending": pending,
+        "rewards_count": rewards_count,
+        "bonus_premium_until": bonus_until,
+        "current_tier_effective": user_tier(user),
+        "friends": [
+            {
+                "name": u.get("name") or "—",
+                "rewarded": bool(u.get("referral_rewarded")),
+                "joined_at": u.get("created_at"),
+            } for u in referred_users
+        ],
+    }
+
+
+class RedeemReferralRequest(BaseModel):
+    code: str
+
+
+@api_router.post("/referrals/redeem")
+async def referrals_redeem(data: RedeemReferralRequest, user: dict = Depends(get_current_user)):
+    """Set referrer for the current user (only if not already set).
+    Used when the user signs up without code and later wants to apply one,
+    OR when redeeming from a deep link after login."""
+    code = (data.code or "").strip().upper()
+    if not code:
+        raise HTTPException(status_code=400, detail="Codice mancante")
+    if user.get("referred_by_user_id"):
+        raise HTTPException(status_code=400, detail="Hai gia' usato un codice di invito")
+    referrer = await db.users.find_one({"referral_code": code}, {"user_id": 1, "name": 1})
+    if not referrer:
+        raise HTTPException(status_code=404, detail="Codice non valido")
+    if referrer["user_id"] == user["user_id"]:
+        raise HTTPException(status_code=400, detail="Non puoi usare il tuo codice")
+    workouts = await db.workout_sessions.count_documents({"user_id": user["user_id"]})
+    if workouts > 0:
+        raise HTTPException(status_code=400, detail="Codice utilizzabile solo prima della prima corsa")
+    created_at = user.get("created_at")
+    if created_at:
+        try:
+            cdt = created_at if isinstance(created_at, datetime) else datetime.fromisoformat(str(created_at))
+            if cdt.tzinfo is None:
+                cdt = cdt.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - cdt).days > 30:
+                raise HTTPException(status_code=400, detail="Codice utilizzabile entro 30 giorni dalla registrazione")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"referred_by_user_id": referrer["user_id"], "referred_by_code": code}}
+    )
+    return {"ok": True, "referrer_name": referrer.get("name") or "Amico"}
+
+
+@api_router.get("/referrals/lookup/{code}")
+async def referrals_lookup(code: str):
+    """Public endpoint: given a referral code, return the referrer's display name."""
+    code = code.strip().upper()
+    if not code or len(code) < 4:
+        raise HTTPException(status_code=400, detail="Codice non valido")
+    referrer = await db.users.find_one({"referral_code": code}, {"_id": 0, "name": 1})
+    if not referrer:
+        raise HTTPException(status_code=404, detail="Codice non valido")
+    return {"code": code, "referrer_name": referrer.get("name") or "Amico"}
+
 
 @api_router.get("/stats/progress")
 async def stats_progress(user: dict = Depends(get_current_user)):

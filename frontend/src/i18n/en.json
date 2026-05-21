@@ -1,0 +1,57 @@
+{
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "loading": "Loading...",
+    "share": "Share",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "ok": "OK",
+    "later": "Later",
+    "yes": "Yes",
+    "no": "No",
+    "continue": "Continue",
+    "back": "Back",
+    "error": "Error",
+    "retry": "Retry"
+  },
+  "referral": {
+    "title": "Invite & Earn",
+    "subtitle": "Get 1 free month of Performance for every friend who starts running with you",
+    "your_code": "Your code",
+    "tap_to_copy": "Tap to copy",
+    "share_cta": "Share invite",
+    "stats_invited": "Invited",
+    "stats_qualified": "Rewarded",
+    "stats_rewards": "Months earned",
+    "friends_title": "Your friends",
+    "friends_empty": "You haven't invited anyone yet. Share your code to get started!",
+    "friend_pending": "Pending",
+    "friend_qualified": "Rewarded \u2713",
+    "how_it_works": "How it works",
+    "how_step_1": "Share your code with a friend",
+    "how_step_2": "Your friend signs up and completes their first run (min 0.5 km)",
+    "how_step_3": "You get 30 days of Performance for free",
+    "disclaimer": "The reward triggers after your friend's first GPS run (min 0.5 km). Code valid within 30 days of the new user's registration. Up to 12 months accumulable.",
+    "bonus_until": "Bonus active until",
+    "modal_title": "Invite a friend",
+    "modal_subtitle": "You and your friend will both get 30 days of Performance free when they complete their first run with RunHub.",
+    "modal_cta_invite": "Invite a friend",
+    "modal_cta_later": "Later",
+    "share_message": "🏃 Hey! I'm using RunHub to train and it's a game-changer. Sign up with my code {{code}} and we'll both get 1 free month of Performance! 🎁\n\n👉 {{link}}",
+    "card_title": "Invite a friend",
+    "card_subtitle": "Get 1 free month of Performance",
+    "register_label": "Invite code (optional)",
+    "register_placeholder": "e.g. RHABCD23",
+    "register_with": "You're joining with {{name}}'s invite",
+    "redeem_success": "Code applied! Complete your first run to activate the bonus."
+  },
+  "settings": {
+    "language": "Language",
+    "language_subtitle": "Choose the app language"
+  },
+  "profile": {
+    "community": "Community"
+  }
+}

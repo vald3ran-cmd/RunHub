@@ -454,10 +454,26 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Extended POST /api/workouts/complete (elevation_gain_m, splits, locations.alt)"
+    - "Referral system (codes, redeem, lookup, workout reward, bonus_premium_until tier upgrade)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+  - task: "Referral system (codes, redeem, lookup, workout reward, bonus_premium_until tier upgrade)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "74/74 assertions PASS via /app/backend_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. Tutti i 12 test della review request passano. (T1 Auto-gen code) Register fresh User A senza referral_code -> 200; user.referral_code presente e identico al campo .code di GET /referrals/me. Verificato: code='RHYC3ECK' inizia con 'RH', lunghezza 8, body 'YC3ECK' privo di I/O/0/1 (alphabet correctly excludes ambiguous chars). share_link='https://apprunhub.com/r/RHYC3ECK' inizia con http e contiene il code. deep_link='runhub://r/RHYC3ECK'. invited_total=qualified=pending=rewards_count=0, friends=[]. (T2 Lookup public) GET /referrals/lookup/{code} senza auth -> 200 {code, referrer_name:'Alice Referrer'}. Lowercase code 'rhyc3eck' -> 200 normalizzato a uppercase. GET /referrals/lookup/RHINVALID -> 404 'Codice non valido'. (T3 Register con valid code) User B registrato con referral_code=code_A -> 200. GET /auth/me User B -> 200 senza campo password_hash (get_current_user filtra _id/password_hash). GET /referrals/me User A -> invited_total=1, pending=1, qualified=0, friends ha 1 entry con name='Bob Referred', rewarded=false. (T4 Register con invalid code) User C con referral_code='RHINVALID' -> 200, referred_by_user_id=null nel doc (backend ignora silenziosamente il codice non valido). A.invited_total resta 1 (C NON e' contato). (T5 Redeem post-signup) User D registra senza codice -> 200; POST /referrals/redeem {code:code_A} con token D -> 200 {ok:true, referrer_name:'Alice Referrer'}. A.invited_total sale a 2. (T6 Redeem errors) POST con code='' -> 400 'Codice mancante'. Fresh User D2 con code='RHINVALID' -> 404 'Codice non valido'. D re-redeem -> 400 'Hai gia\\' usato un codice di invito'. A self-redeem proprio code -> 400 'Non puoi usare il tuo codice'. User E registra, completa 1 workout (walk, 1km, 3 locations), poi redeem -> 400 'Codice utilizzabile solo prima della prima corsa'. (T7 Reward trigger on GPS workout) User B (referred by A) POST /workouts/complete title='First Run', activity_type='run', duration=600, distance_km=1.0, 4 locations -> 200 con doc.referral_reward_granted=true. GET /referrals/me A: qualified=1 (was 0), rewards_count=1, bonus_premium_until='2026-06-20T18:23:05Z' (parsed: 30.00d from now), friends ora include {name:'Bob Referred', rewarded:true}. current_tier_effective='performance' (user_tier() ritorna performance per utente Free con bonus attivo). (T8 No double-reward) B chiama /workouts/complete una seconda volta con locations diverse -> 200 ma referral_reward_granted assente/false. A.rewards_count rimane 1, A.bonus_premium_until invariato (verificato uguale al valore pre-T8). (T9 Below threshold) User F (referred by A) -> /workouts/complete distance_km=0.2 con 3 locations -> 200 ma NESSUN reward (il check 'distance_km >= 0.5' impedisce trigger). A.rewards_count e A.bonus_premium_until invariati. (T10 Stacked rewards) User G (referred by A) -> qualifying workout (1.2km, 4 locs) -> 200 con referral_reward_granted=true. A.rewards_count=2. bonus_premium_until esteso ESATTAMENTE di 30 giorni su quello precedente (diff=30.00d), ora ~60.00d da now (stacked logic in complete_workout linee 1709-1724 funziona: base_dt=cb_dt se > now). (T11 Backward compat) Register senza referral_code field nel body -> 200; user.referral_code auto-generato (RHZ2WGCN, 8 char valido), referred_by_user_id=null. (T12) Coperto in T6d. Cleanup: 9 utenti test eliminati via DELETE /admin/users/{uid} come admin -> 9/9 ok. NESSUN 500 ERROR. user_tier() ritorna 'performance' correttamente per utenti free con bonus_premium_until attivo (verificato via current_tier_effective nel response di /referrals/me). Backward compatibility piena: gli endpoint di register non-referral funzionano come prima e tutti gli user docs ora hanno auto-gen referral_code + campi referral_* inizializzati. Sistema pronto per produzione."
+
+agent_communication:
+  - agent: "testing"
+    message: "Testato il nuovo REFERRAL system end-to-end. 74/74 assertions PASS via /app/backend_test.py. Tutti i 12 test della review request passano contro l'URL pubblico https://run-training-hub-1.preview.emergentagent.com/api. Highlights: (1) generate_referral_code() produce code 'RH' + 6 char senza I/O/0/1 (verificato su 4 generazioni: RHYC3ECK, RHZ2WGCN, ecc). (2) /referrals/me include code/share_link/deep_link/stats/friends/current_tier_effective/bonus_premium_until. (3) /referrals/lookup pubblico (no auth), case-insensitive, 404 per code inesistente. (4) Register con referral_code: valid -> referred_by_user_id settato; invalid -> ignorato (200, no error). (5) /referrals/redeem: tutti i 5 casi di errore (empty=400, invalid=404, already-used=400 con msg italiano 'Hai gia\\' usato un codice di invito', self-code=400 con 'Non puoi usare il tuo codice', after-first-workout=400 con 'Codice utilizzabile solo prima della prima corsa'). (6) Reward trigger su /workouts/complete: distance_km>=0.5 + len(locations)>=3 + referred_by_user_id + not referral_rewarded → grants +30d bonus al referrer e setta referral_rewarded=true sul referred. Conferma: B con distance=1.0 + 4 locations triggera (referral_reward_granted=true nel response). (7) No double-reward su 2nd workout di B. (8) Sotto-soglia (F distance=0.2) NON triggera reward. (9) STACKING: G's workout estende il bonus di A esattamente di 30d sopra quello esistente (diff=30.00d, 60.00d totali da now) — la logica base_dt=cb_dt if cb_dt>now else now funziona correttamente. (10) user_tier() ritorna 'performance' per utenti free con bonus_premium_until attivo (verificato via current_tier_effective='performance'). (11) Backward compat: register senza referral_code funziona, user auto-genera referral_code, referred_by_user_id=null. Cleanup: 9 test users eliminati via DELETE /admin/users/{uid}. NESSUN 500 ERROR. Sistema referral pronto per produzione."
 
 backend:
   - task: "Extended POST /api/workouts/complete (elevation_gain_m, splits, locations.alt)"
@@ -680,5 +696,49 @@ frontend:
 agent_communication:
   - agent: "main"
     message: "ACTIVE RUN ENHANCEMENTS: refactor della schermata corsa attiva con 7 nuove feature (split km TTS + calorie live + dislivello + meteo + pace target + auto-pausa + lap manuale). Backend: esteso CompleteWorkoutRequest con elevation_gain_m, splits[], e alt in SessionLocation. Frontend: 3 nuovi helper modules (runMetrics, weather, runSettings) + UI restyling della schermata. RICHIESTA TESTING BACKEND: verificare che POST /api/workouts/complete accetti il nuovo payload arricchito (con alt nei locations + splits + elevation_gain_m) E che resti backward compatible per client senza questi campi. Verificare anche che GET /api/workouts/{session_id} ritorni i nuovi campi quando presenti."
+
+# ─────────────────────────────────────────────────────────────
+# Referral System — Invite & Earn (30d Performance bonus)
+# ─────────────────────────────────────────────────────────────
+
+backend:
+  - task: "Referral system: codes, redemption, reward trigger on first GPS workout"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Sistema referral completo: (A) Auto-genera referral_code unico su /auth/register (formato RH + 6 alfanumerici, no I/O/0/1). (B) RegisterRequest accetta campo opzionale referral_code: validato e applicato come referred_by_user_id su nuovo user. (C) Nuovo endpoint GET /api/referrals/me restituisce code, share_link (BASE_WEB_URL+/r/code), deep_link (runhub://r/code), stats (invited_total, qualified, pending, rewards_count, bonus_premium_until, current_tier_effective, friends[]). (D) Nuovo endpoint POST /api/referrals/redeem accetta {code}: validazioni include codice esistente, no self-referral, no workout precedenti, registrazione utente entro 30 giorni, no doppio redeem. (E) GET /api/referrals/lookup/{code} pubblico per mostrare 'Stai entrando con l invito di {name}' nella schermata di register. (F) Trigger reward in POST /workouts/complete: se utente ha referred_by_user_id e !referral_rewarded AND (distance_km>=0.5 AND len(locations)>=3), grants +30 days Performance al referrer via bonus_premium_until. Stack additivo capped a 12 mesi totali. (G) Persiste documento referrals collection con audit log. (H) user_tier() esteso: bonus_premium_until attivo upgrada a 'performance' anche da Free, e da Starter. (I) ensure_referral_code() lazy migration per utenti vecchi. (J) Aggiunti campi user: referral_code, referred_by_user_id, referral_rewarded, bonus_premium_until, referral_rewards_count. Test richiesti: (1) Register con e senza referral_code -> codice generato, referrer_id risolto se valido. (2) GET /api/referrals/me -> codice + stats. (3) POST /api/referrals/redeem post-signup -> ok, errori per: codice invalido, self-code, doppio redeem, workout esistente. (4) Complete first GPS workout (>=0.5km) di un referred user -> referrer ottiene bonus_premium_until=now+30d, referral_rewards_count incrementato, referrals collection ha doc. (5) Re-completing more workouts NON aggiunge bonus (referral_rewarded=true). (6) Tier upgrade: free user con bonus_premium_until attivo -> /auth/me ritorna effective tier performance."
+
+frontend:
+  - task: "Referral UI: screen + modal post-onboarding + profile card + register code field + deep links"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/referral.tsx, frontend/src/ReferralModal.tsx, frontend/src/referral.ts, frontend/app/(tabs)/profile.tsx, frontend/app/(auth)/register.tsx, frontend/app/_layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Frontend referral completo: (A) Nuova schermata /app/referral.tsx con hero gift, codice grande tap-to-copy (expo-clipboard), pulsante 'CONDIVIDI INVITO' (Share API native + share_link), stats 3 colonne (Invitati/Premiati/Mesi vinti), 'How it works' 3 step, lista amici con avatar iniziale e status Pending/Rewarded, disclaimer. Pull-to-refresh. (B) ReferralModal componente montato in _layout.tsx, mostrato 1 volta dopo onboarding completato (gated by AsyncStorage flag 'runhub.referralModal.shown.v1' + timer 2.5s). (C) Profile.tsx: card 'INVITA UN AMICO' nella sezione COMMUNITY (orange highlight, icon Gift, sub: 'Ricevi 1 mese Performance gratis'). (D) Register.tsx: nuovo TextInput opzionale 'Codice invito' con autocaps, max 12 chars, lookup debounced 500ms a /api/referrals/lookup/{code}; se valido mostra chip 'Entri con l'invito di Marco'. Auto-fill via AsyncStorage 'runhub.pendingReferralCode' se deep link consumato in precedenza. (E) Deep link handler in _layout.tsx (expo-linking): runhub://r/CODE e https://apprunhub.com/r/CODE; se loggato e mai usato, redeem auto; se loggout, persist in AsyncStorage. (F) Nuovo modulo /src/referral.ts con getMyReferral / redeemReferral / lookupReferral typed API helpers."
+
+  - task: "i18n infrastructure (IT/EN/ES) + language selector in profile"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/i18n/index.ts, frontend/src/i18n/{it,en,es}.json, frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Setup i18n: installati i18n-js + expo-localization + expo-clipboard. Creato /src/i18n/index.ts con I18n instance, enableFallback=true, defaultLocale='it', auto-detect device language via Localization.getLocales(), override persistente in AsyncStorage (key 'runhub.locale.v1'). useT() hook ritorna t(), locale, setLocale, ready. SUPPORTED_LOCALES costante con {code, label, flag emoji}. Creati 3 file di traduzioni: it.json (sorgente), en.json, es.json — sezioni common, referral (15 chiavi), settings, profile. Tutte le nuove componenti referral (modale, schermata, card profilo, register code field) usano t() per ogni stringa, quindi nascono multilingua di default. Aggiunto language selector modale nel profilo (sezione COMMUNITY, sotto referral) con bandiere e bottone radio. loadStoredLocale() chiamato all'avvio in _layout.tsx. NOTA: rimane da tradurre il resto delle schermate esistenti (auth, home, plans, history, dashboard, active-run, ecc.) in waves successive (vedere roadmap pianificata)."
+
+
 
 

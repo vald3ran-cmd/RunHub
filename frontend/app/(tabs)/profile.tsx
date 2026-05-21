@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Star, CreditCard, Trophy, Flag, Watch, Users, Map as MapIcon,
   Rocket, UserCircle, FileText, ShieldCheck, Settings, LogOut,
-  Timer, Sparkles, ChevronRight, ExternalLink, Camera,
+  Timer, Sparkles, ChevronRight, ExternalLink, Camera, Gift, Globe,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
@@ -16,10 +16,13 @@ import { colors, spacing, radius, fonts } from '../../src/theme';
 import { showPrivacyOptionsForm } from '../../src/ConsentManager';
 import { isAdMobAvailable } from '../../src/adMobConfig';
 import { chooseAndUploadAvatar } from '../../src/avatar';
+import { useT, SUPPORTED_LOCALES, SupportedLocale } from '../../src/i18n';
 
 export default function Profile() {
   const { user, logout, refresh } = useAuth();
   const router = useRouter();
+  const { t, locale, setLocale } = useT();
+  const [showLangPicker, setShowLangPicker] = useState(false);
   const [goals, setGoals] = useState({ daily_km: '3', weekly_km: '15', monthly_km: '60' });
   const [showGoals, setShowGoals] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -208,6 +211,22 @@ export default function Profile() {
         {/* ── COMMUNITY ── */}
         <SectionLabel text="COMMUNITY" />
         <View style={styles.group}>
+          {/* Referral card — gradient highlight */}
+          <TouchableOpacity
+            testID="referral-card"
+            style={styles.referralCard}
+            onPress={() => router.push('/referral' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.referralIconWrap}>
+              <Gift size={20} color={colors.primary} strokeWidth={2.4} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.referralTitle}>{t('referral.card_title')}</Text>
+              <Text style={styles.referralSubtitle}>{t('referral.card_subtitle')}</Text>
+            </View>
+            <ChevronRight size={18} color={colors.primary} />
+          </TouchableOpacity>
           <Row
             testID="community-button"
             icon={<Users size={18} color={colors.primary} strokeWidth={2.4} />}
@@ -219,6 +238,12 @@ export default function Profile() {
             icon={<MapIcon size={18} color={colors.primary} strokeWidth={2.4} />}
             title="La mia mappa corse (heatmap)"
             onPress={() => router.push('/heatmap')}
+          />
+          <Row
+            testID="language-button"
+            icon={<Globe size={18} color={colors.primary} strokeWidth={2.4} />}
+            title={`${t('settings.language')} · ${SUPPORTED_LOCALES.find(l => l.code === locale)?.flag || ''} ${SUPPORTED_LOCALES.find(l => l.code === locale)?.label || ''}`}
+            onPress={() => setShowLangPicker(true)}
           />
         </View>
 
@@ -289,6 +314,33 @@ export default function Profile() {
           <Text style={styles.logoutText}>Esci</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Language picker modal */}
+      <Modal visible={showLangPicker} transparent animationType="fade" onRequestClose={() => setShowLangPicker(false)}>
+        <TouchableOpacity
+          style={styles.langBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowLangPicker(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.langCard} onPress={() => {}}>
+            <Text style={styles.langTitle}>{t('settings.language')}</Text>
+            <Text style={styles.langSubtitle}>{t('settings.language_subtitle')}</Text>
+            {SUPPORTED_LOCALES.map((l) => (
+              <TouchableOpacity
+                key={l.code}
+                style={[styles.langRow, locale === l.code && styles.langRowActive]}
+                onPress={async () => { await setLocale(l.code as SupportedLocale); setShowLangPicker(false); }}
+                activeOpacity={0.7}
+                testID={`lang-${l.code}`}
+              >
+                <Text style={styles.langFlag}>{l.flag}</Text>
+                <Text style={[styles.langLabel, locale === l.code && styles.langLabelActive]}>{l.label}</Text>
+                {locale === l.code ? <ChevronRight size={18} color={colors.primary} /> : null}
+              </TouchableOpacity>
+            ))}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Goals Modal */}
       <Modal visible={showGoals} transparent animationType="slide" onRequestClose={() => setShowGoals(false)}>
@@ -571,6 +623,75 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.bold,
     letterSpacing: 0.3,
+  },
+
+  // Referral card (gradient-like highlight)
+  referralCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: 'rgba(255,107,31,0.10)',
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,31,0.35)',
+    marginBottom: spacing.xs,
+  },
+  referralIconWrap: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,107,31,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  referralTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontFamily: fonts.headingBold,
+  },
+  referralSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    marginTop: 2,
+  },
+
+  // Language picker modal
+  langBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  langCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    width: '100%', maxWidth: 380,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  langTitle: {
+    color: colors.textPrimary, fontSize: 18,
+    fontFamily: fonts.headingBold,
+  },
+  langSubtitle: {
+    color: colors.textSecondary, fontSize: 12,
+    fontFamily: fonts.medium, marginTop: 4, marginBottom: spacing.md,
+  },
+  langRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    marginBottom: 4,
+  },
+  langRowActive: {
+    backgroundColor: 'rgba(255,107,31,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,31,0.35)',
+  },
+  langFlag: { fontSize: 22 },
+  langLabel: {
+    color: colors.textPrimary, fontSize: 14, flex: 1,
+    fontFamily: fonts.medium,
+  },
+  langLabelActive: {
+    fontFamily: fonts.headingBold,
+    color: colors.primary,
   },
 
   // Modal goals

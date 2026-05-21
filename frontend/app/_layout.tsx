@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../src/auth';
 import { colors } from '../src/theme';
 import { initializeAdMob } from '../src/adMobReal';
@@ -11,6 +13,9 @@ import { initConsentFlow } from '../src/ConsentManager';
 import { initNotifications, registerForPushNotifications } from '../src/notifications';
 import { initRevenueCat, identifyRevenueCatUser, logoutRevenueCat } from '../src/revenuecat';
 import { initCrashReporting, setUser as setCrashUser, setAttribute as setCrashAttribute, addBreadcrumb } from '../src/crashReporting';
+import { loadStoredLocale } from '../src/i18n';
+import { ReferralModal } from '../src/ReferralModal';
+import { redeemReferral } from '../src/referral';
 import {
   useFonts,
   Inter_400Regular,
@@ -31,7 +36,43 @@ function RootNav() {
   // Initialize Crash Reporting (Firebase Crashlytics) — deve essere il PRIMO useEffect per catturare crash di startup
   useEffect(() => {
     initCrashReporting().catch(() => {});
+    // Init i18n (loads stored locale or detects device locale)
+    loadStoredLocale().catch(() => {});
   }, []);
+
+  // Deep link handler — runhub://r/CODE and https://apprunhub.com/r/CODE
+  // If user is logged in and has not used a code yet, redeem it automatically.
+  // If logged out, store the code for use at register-time.
+  useEffect(() => {
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      try {
+        const parsed = Linking.parse(url);
+        // Match /r/CODE or runhub://r/CODE
+        const pathParts = (parsed.path || '').split('/').filter(Boolean);
+        let code: string | null = null;
+        if (pathParts[0] === 'r' && pathParts[1]) {
+          code = pathParts[1].toUpperCase();
+        } else if ((parsed.queryParams as any)?.code) {
+          code = String((parsed.queryParams as any).code).toUpperCase();
+        }
+        if (!code) return;
+        // Save the pending code for use at register
+        await AsyncStorage.setItem('runhub.pendingReferralCode', code);
+        // If user already logged in (and no referrer yet), redeem now
+        if (user && !user.referred_by_user_id && !user.referral_rewarded) {
+          try {
+            await redeemReferral(code);
+          } catch {}
+        }
+      } catch {}
+    };
+    // Cold start
+    Linking.getInitialURL().then(handleUrl).catch(() => {});
+    // While running
+    const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
+    return () => { try { (sub as any)?.remove?.(); } catch {} };
+  }, [user?.user_id]);
 
   // ─────────────────────────────────────────────────────────────
   // PRIVACY CONSENT FLOW — sequenziale, ordine corretto:
@@ -181,28 +222,33 @@ function RootNav() {
     );
   }
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="plan/[id]" options={{ presentation: 'card' }} />
-      <Stack.Screen name="workout/[id]" options={{ presentation: 'card' }} />
-      <Stack.Screen name="run-active" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="premium" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="ai-generate" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="race-predictor" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="coach" options={{ presentation: 'card' }} />
-      <Stack.Screen name="gps-test" options={{ presentation: 'card' }} />
-      <Stack.Screen name="onboarding" options={{ presentation: 'card', gestureEnabled: false }} />
-      <Stack.Screen name="badges" options={{ presentation: 'card' }} />
-      <Stack.Screen name="admin" options={{ presentation: 'card' }} />
-      <Stack.Screen name="social" options={{ presentation: 'card' }} />
-      <Stack.Screen name="heatmap" options={{ presentation: 'card' }} />
-      <Stack.Screen name="wearables" options={{ presentation: 'card' }} />
-      <Stack.Screen name="terms" options={{ presentation: 'card' }} />
-      <Stack.Screen name="privacy" options={{ presentation: 'card' }} />
-      <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="account" options={{ presentation: 'card' }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="plan/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="workout/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="run-active" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="premium" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="ai-generate" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="race-predictor" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="coach" options={{ presentation: 'card' }} />
+        <Stack.Screen name="gps-test" options={{ presentation: 'card' }} />
+        <Stack.Screen name="onboarding" options={{ presentation: 'card', gestureEnabled: false }} />
+        <Stack.Screen name="badges" options={{ presentation: 'card' }} />
+        <Stack.Screen name="admin" options={{ presentation: 'card' }} />
+        <Stack.Screen name="social" options={{ presentation: 'card' }} />
+        <Stack.Screen name="heatmap" options={{ presentation: 'card' }} />
+        <Stack.Screen name="wearables" options={{ presentation: 'card' }} />
+        <Stack.Screen name="terms" options={{ presentation: 'card' }} />
+        <Stack.Screen name="privacy" options={{ presentation: 'card' }} />
+        <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="account" options={{ presentation: 'card' }} />
+        <Stack.Screen name="referral" options={{ presentation: 'card' }} />
+      </Stack>
+      {/* Modale post-onboarding: si mostra una sola volta, solo a utenti loggati e che hanno completato l'onboarding */}
+      {user && user.onboarding_completed && !user.needs_profile_completion ? <ReferralModal /> : null}
+    </>
   );
 }
 
