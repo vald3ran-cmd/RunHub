@@ -14,6 +14,15 @@ import { RouteMap } from '../src/RouteMap';
 import { InterstitialAd, useShouldShowAds } from '../src/Ads';
 import { interstitialManager } from '../src/adMobReal';
 import { isAdMobAvailable } from '../src/adMobConfig';
+import {
+  KmSplit, ManualLap, Coord,
+  parseTargetPace, formatPace, paceStatus, PaceStatus,
+  computeElevationGain, estimateCalories,
+  detectKmCrossing, buildSplit, instantSpeedMs,
+  ttsForKmSplit, ttsManualLap,
+} from '../src/runMetrics';
+import { fetchWeather, WeatherSnapshot } from '../src/weather';
+import { loadRunSettings, RunSettings, DEFAULT_SETTINGS, VoiceFrequency } from '../src/runSettings';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -34,8 +43,9 @@ export default function RunActive() {
   const [elapsed, setElapsed] = useState(0);
   const [distance, setDistance] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [autoPaused, setAutoPaused] = useState(false);
   const [running, setRunning] = useState(false);
-  const [coords, setCoords] = useState<{ lat: number; lng: number; timestamp: number }[]>([]);
+  const [coords, setCoords] = useState<Coord[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [stepElapsed, setStepElapsed] = useState(0);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
@@ -47,6 +57,26 @@ export default function RunActive() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const lastStepAnnouncedRef = useRef<number>(-1);
   const showAds = useShouldShowAds();
+
+  // ── NEW: splits, calories, elevation, weather, settings, pace status ──
+  const [splits, setSplits] = useState<KmSplit[]>([]);
+  const [manualLaps, setManualLaps] = useState<ManualLap[]>([]);
+  const [liveCalories, setLiveCalories] = useState(0);
+  const [elevationGain, setElevationGain] = useState(0);
+  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [settings, setSettings] = useState<RunSettings>(DEFAULT_SETTINGS);
+  const [currentPaceStatus, setCurrentPaceStatus] = useState<PaceStatus>('unknown');
+
+  const lastKmCompletedRef = useRef<number>(0);
+  const last5MinAnnouncedRef = useRef<number>(0);
+  const lastLapAnchorRef = useRef<{ km: number; sec: number }>({ km: 0, sec: 0 });
+  const stationarySinceRef = useRef<number>(0);
+  const settingsRef = useRef<RunSettings>(DEFAULT_SETTINGS);
+  const splitsRef = useRef<KmSplit[]>([]);
+  const coordsRef = useRef<Coord[]>([]);
+  const distanceRef = useRef<number>(0);
+  const elapsedRef = useRef<number>(0);
+  const weatherFetchedRef = useRef<boolean>(false);
 
   const speak = (text: string) => {
     if (!audioEnabled) return;
@@ -76,6 +106,68 @@ export default function RunActive() {
       const now = Date.now();
       const total = Math.floor((now - startTimeRef.current - pausedDurationRef.current) / 1000);
       setElapsed(total);
+      elapsedRef.current = total;
+
+      // ── Live calories (MET-based) ────────────────────────────
+      const kcal = estimateCalories({
+        activity: activityType,
+        distanceKm: distanceRef.current,
+        elapsedSec: total,
+        weightKg: settingsRef.current.weightKg,
+      });
+      setLiveCalories(kcal);
+
+      // ── Km split detection (auto-lap) ────────────────────────
+      const newKm = detectKmCrossing(distanceRef.current, lastKmCompletedRef.current);
+      if (newKm > 0) {
+        const prevTotal = splitsRef.current.length > 0
+          ? splitsRef.current[splitsRef.current.length - 1].totalSec
+          : 0;
+        const split = buildSplit(newKm, total, prevTotal);
+        const updated = [...splitsRef.current, split];
+        splitsRef.current = updated;
+        setSplits(updated);
+        lastKmCompletedRef.current = newKm;
+        // Voice announcement based on user prefs
+        const freq = settingsRef.current.voiceFrequency;
+        if (freq === 'every_km' || freq === 'every_5min') {
+          speak(ttsForKmSplit(split, activityType));
+        }
+      }
+
+      // ── Every-5-min announcement ─────────────────────────────
+      if (settingsRef.current.voiceFrequency === 'every_5min') {
+        const fiveMinBucket = Math.floor(total / 300);
+        if (fiveMinBucket > last5MinAnnouncedRef.current && fiveMinBucket > 0) {
+          last5MinAnnouncedRef.current = fiveMinBucket;
+          const totalMin = Math.floor(total / 60);
+          const km = distanceRef.current.toFixed(2).replace('.', ',');
+          speak(`${totalMin} minuti. ${km} chilometri percorsi.`);
+        }
+      }
+
+      // ── Auto-pause detection ─────────────────────────────────
+      if (settingsRef.current.autoPauseEnabled && Platform.OS !== 'web') {
+        const sp = instantSpeedMs(coordsRef.current, 6);
+        // Threshold: 0.4 m/s ≈ very slow walk (or stop). For bike, 1.0 m/s
+        const threshold = activityType === 'bike' ? 1.0 : 0.4;
+        if (sp < threshold && coordsRef.current.length > 3) {
+          if (stationarySinceRef.current === 0) stationarySinceRef.current = now;
+          else if (!pausedRef.current && (now - stationarySinceRef.current) > 5000) {
+            setIsPaused(true);
+            setAutoPaused(true);
+            speak('Auto-pausa attivata.');
+          }
+        } else {
+          stationarySinceRef.current = 0;
+          if (autoPaused && pausedRef.current) {
+            setIsPaused(false);
+            setAutoPaused(false);
+            speak('Ripresa.');
+          }
+        }
+      }
+
       if (hasSteps) {
         // Compute step position
         let rem = total;
@@ -99,9 +191,49 @@ export default function RunActive() {
       }
     }, 500);
     return () => clearInterval(id);
-  }, [running, hasSteps, audioEnabled]);
+  }, [running, hasSteps, audioEnabled, activityType, autoPaused]);
+
+  // ── Load user settings on mount ─────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await loadRunSettings();
+        setSettings(s);
+        settingsRef.current = s;
+      } catch {}
+    })();
+  }, []);
 
   const requestAndStart = async () => {
+    // Helper: handle a new GPS point — updates coords/distance/elevation/refs.
+    const pushCoord = (npt: Coord) => {
+      setCoords(prev => {
+        let nextDist = distanceRef.current;
+        if (prev.length > 0) {
+          const last = prev[prev.length - 1];
+          const d = haversine(last.lat, last.lng, npt.lat, npt.lng);
+          if (d > 0.002 && d < 0.2) {
+            nextDist = nextDist + d;
+            distanceRef.current = nextDist;
+            setDistance(nextDist);
+          }
+        }
+        const next = [...prev, npt];
+        coordsRef.current = next;
+        // Re-compute elevation gain every ~10 coords (cheap heuristic)
+        if (next.length % 10 === 0) {
+          const gain = computeElevationGain(next);
+          setElevationGain(gain);
+        }
+        // Fetch weather once after we have first reliable fix
+        if (!weatherFetchedRef.current && next.length >= 1) {
+          weatherFetchedRef.current = true;
+          fetchWeather(npt.lat, npt.lng).then(w => { if (w) setWeather(w); }).catch(() => {});
+        }
+        return next;
+      });
+    };
+
     try {
       // On web: use native navigator.geolocation directly (expo-location's web impl
       // doesn't reliably trigger the browser permission prompt, and iframes may silently block)
@@ -116,20 +248,18 @@ export default function RunActive() {
             (pos) => {
               setHasLocationPermission(true);
               setGpsError('');
-              const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: pos.timestamp };
-              setCoords(prev => [...prev, pt]);
+              const pt: Coord = {
+                lat: pos.coords.latitude, lng: pos.coords.longitude,
+                timestamp: pos.timestamp, alt: pos.coords.altitude ?? null,
+              };
+              pushCoord(pt);
               // Start continuous watch
               const watchId = navigator.geolocation.watchPosition(
                 (p) => {
                   if (pausedRef.current) return;
-                  const npt = { lat: p.coords.latitude, lng: p.coords.longitude, timestamp: p.timestamp };
-                  setCoords(prev => {
-                    if (prev.length > 0) {
-                      const last = prev[prev.length - 1];
-                      const d = haversine(last.lat, last.lng, npt.lat, npt.lng);
-                      if (d > 0.002 && d < 0.2) setDistance(x => x + d);
-                    }
-                    return [...prev, npt];
+                  pushCoord({
+                    lat: p.coords.latitude, lng: p.coords.longitude,
+                    timestamp: p.timestamp, alt: p.coords.altitude ?? null,
                   });
                 },
                 (err) => { console.warn('GPS error', err); },
@@ -167,14 +297,9 @@ export default function RunActive() {
             { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
             (loc) => {
               if (pausedRef.current) return;
-              const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
-              setCoords(prev => {
-                if (prev.length > 0) {
-                  const last = prev[prev.length - 1];
-                  const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
-                  if (d > 0.002 && d < 0.2) setDistance(x => x + d);
-                }
-                return [...prev, pt];
+              pushCoord({
+                lat: loc.coords.latitude, lng: loc.coords.longitude,
+                timestamp: loc.timestamp, alt: loc.coords.altitude ?? null,
               });
             }
           );
@@ -192,6 +317,34 @@ export default function RunActive() {
   const retryGps = async () => {
     setGpsError(''); setHasLocationPermission(null);
     subRef.current?.remove();
+
+    // Shared helper (mirror of requestAndStart's pushCoord)
+    const pushCoord = (npt: Coord) => {
+      setCoords(prev => {
+        let nextDist = distanceRef.current;
+        if (prev.length > 0) {
+          const last = prev[prev.length - 1];
+          const d = haversine(last.lat, last.lng, npt.lat, npt.lng);
+          if (d > 0.002 && d < 0.2) {
+            nextDist = nextDist + d;
+            distanceRef.current = nextDist;
+            setDistance(nextDist);
+          }
+        }
+        const next = [...prev, npt];
+        coordsRef.current = next;
+        if (next.length % 10 === 0) {
+          const gain = computeElevationGain(next);
+          setElevationGain(gain);
+        }
+        if (!weatherFetchedRef.current) {
+          weatherFetchedRef.current = true;
+          fetchWeather(npt.lat, npt.lng).then(w => { if (w) setWeather(w); }).catch(() => {});
+        }
+        return next;
+      });
+    };
+
     // Re-run the same logic
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
       const inIframe = typeof window !== 'undefined' && window.self !== window.top;
@@ -199,18 +352,16 @@ export default function RunActive() {
         (pos) => {
           setHasLocationPermission(true);
           setGpsError('');
-          setCoords(prev => [...prev, { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: pos.timestamp }]);
+          pushCoord({
+            lat: pos.coords.latitude, lng: pos.coords.longitude,
+            timestamp: pos.timestamp, alt: pos.coords.altitude ?? null,
+          });
           const watchId = navigator.geolocation.watchPosition(
             (p) => {
               if (pausedRef.current) return;
-              const npt = { lat: p.coords.latitude, lng: p.coords.longitude, timestamp: p.timestamp };
-              setCoords(prev => {
-                if (prev.length > 0) {
-                  const last = prev[prev.length - 1];
-                  const d = haversine(last.lat, last.lng, npt.lat, npt.lng);
-                  if (d > 0.002 && d < 0.2) setDistance(x => x + d);
-                }
-                return [...prev, npt];
+              pushCoord({
+                lat: p.coords.latitude, lng: p.coords.longitude,
+                timestamp: p.timestamp, alt: p.coords.altitude ?? null,
               });
             },
             null as any,
@@ -235,14 +386,9 @@ export default function RunActive() {
             { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 2000 },
             (loc) => {
               if (pausedRef.current) return;
-              const pt = { lat: loc.coords.latitude, lng: loc.coords.longitude, timestamp: loc.timestamp };
-              setCoords(prev => {
-                if (prev.length > 0) {
-                  const last = prev[prev.length - 1];
-                  const d = haversine(last.lat, last.lng, pt.lat, pt.lng);
-                  if (d > 0.002 && d < 0.2) setDistance(x => x + d);
-                }
-                return [...prev, pt];
+              pushCoord({
+                lat: loc.coords.latitude, lng: loc.coords.longitude,
+                timestamp: loc.timestamp, alt: loc.coords.altitude ?? null,
               });
             }
           );
@@ -305,7 +451,14 @@ export default function RunActive() {
         duration_seconds: elapsed,
         distance_km: Number(distance.toFixed(3)),
         avg_pace_min_per_km: pace,
-        calories: Math.round(distance * activity.kcalPerKm),
+        calories: liveCalories || Math.round(distance * activity.kcalPerKm),
+        elevation_gain_m: elevationGain || null,
+        splits: splits.map(s => ({
+          km: s.km,
+          duration_sec: s.durationSec,
+          total_sec: s.totalSec,
+          pace_min_per_km: Number(s.paceMinPerKm.toFixed(3)),
+        })),
         locations: coords,
       });
       if (data.newly_awarded_badges && data.newly_awarded_badges.length > 0) {
@@ -419,15 +572,50 @@ export default function RunActive() {
     ]);
   };
 
+  // ── Manual lap action ──
+  const doManualLap = () => {
+    if (!running || isPaused) return;
+    const total = elapsedRef.current;
+    const dist = distanceRef.current;
+    const prevKm = lastLapAnchorRef.current.km;
+    const prevSec = lastLapAnchorRef.current.sec;
+    const lap: ManualLap = {
+      index: manualLaps.length + 1,
+      distanceKm: Math.max(dist - prevKm, 0),
+      durationSec: Math.max(total - prevSec, 0),
+      totalKmAtLap: dist,
+      totalSecAtLap: total,
+    };
+    lastLapAnchorRef.current = { km: dist, sec: total };
+    setManualLaps(prev => [...prev, lap]);
+    speak(ttsManualLap(lap, activityType));
+  };
+
   const currentStep = hasSteps && stepIndex < steps.length ? steps[stepIndex] : null;
   const pace = distance > 0 ? (elapsed / 60) / distance : 0;
-  const paceStr = pace > 0 ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}` : '—:—';
+  const paceStr = pace > 0 ? formatPace(pace) : '—:—';
   const stepColor = currentStep ? (stepTypeColors[currentStep.type] || activity.color) : activity.color;
+  // Pace target status (uses current step's target_pace if available)
+  const targetPaceMin = parseTargetPace(currentStep?.target_pace || null);
+  const paceState = paceStatus(targetPaceMin, pace);
+  // For bike: show km/h instead of pace
+  const kmh = elapsed > 0 ? (distance / (elapsed / 3600)) : 0;
+  const speedDisplay = activityType === 'bike'
+    ? (kmh > 0 ? kmh.toFixed(1) : '—')
+    : paceStr;
+  const speedLabel = activityType === 'bike' ? 'KM/H' : 'PASSO · /KM';
   // Hero metric: durata se Free Run, distanza se workout strutturato
   const heroValue = hasSteps && currentStep
     ? formatTime(Math.max(currentStep.duration_seconds - stepElapsed, 0))
     : distance.toFixed(2);
   const heroUnit = hasSteps && currentStep ? 'rimanenti' : 'KM';
+
+  // Pace color: green if on target, red if outside, white if no target
+  const paceColor =
+    paceState === 'onTarget' ? '#34D399'
+    : paceState === 'tooFast' ? '#3B82F6'
+    : paceState === 'tooSlow' ? '#FF6B6B'
+    : '#fff';
 
   return (
     <View style={styles.safe}>
@@ -460,13 +648,27 @@ export default function RunActive() {
       {/* ─── HERO METRIC (in alto sopra la mappa) ─────────────────── */}
       <View style={styles.heroSection}>
         {hasSteps && currentStep ? (
-          <Text style={[styles.stepBadge, { color: stepColor }]}>
-            {(stepTypeLabels[currentStep.type] || currentStep.type).toUpperCase()}
-            {currentStep.target_pace ? `  ·  ${currentStep.target_pace}` : ''}
-          </Text>
+          <View style={styles.stepBadgeRow}>
+            <Text style={[styles.stepBadge, { color: stepColor }]}>
+              {(stepTypeLabels[currentStep.type] || currentStep.type).toUpperCase()}
+              {currentStep.target_pace ? `  ·  TARGET ${currentStep.target_pace}` : ''}
+            </Text>
+            {paceState !== 'unknown' ? (
+              <View style={[styles.paceChip, {
+                backgroundColor: paceState === 'onTarget' ? 'rgba(52,211,153,0.18)'
+                  : paceState === 'tooFast' ? 'rgba(59,130,246,0.18)'
+                  : 'rgba(255,107,107,0.18)',
+                borderColor: paceColor,
+              }]}>
+                <Text style={[styles.paceChipText, { color: paceColor }]}>
+                  {paceState === 'onTarget' ? 'IN TARGET' : paceState === 'tooFast' ? 'TROPPO VELOCE' : 'TROPPO LENTO'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         ) : (
           <Text style={[styles.stepBadge, { color: stepColor }]}>
-            {activity.label} {isPaused ? '· IN PAUSA' : '· LIVE'}
+            {activity.label} {autoPaused ? '· AUTO-PAUSA' : isPaused ? '· IN PAUSA' : '· LIVE'}
           </Text>
         )}
         <View style={styles.heroRow}>
@@ -496,12 +698,56 @@ export default function RunActive() {
           </View>
         ) : null}
 
-        {/* Stats grid 2x3 — stile RUNNA */}
+        {/* Stats grid — 2 rows x up to 4 cols */}
         <View style={styles.statsGrid}>
           <StatItem value={distance.toFixed(2)} label="DISTANZA · KM" />
           <StatItem value={formatTime(elapsed)} label="TEMPO" />
-          <StatItem value={paceStr} label={activityType === 'bike' ? 'KM/H MEDI' : 'PASSO · /KM'} />
+          <StatItem value={speedDisplay} label={speedLabel} valueColor={paceColor} />
+          <StatItem value={String(liveCalories)} label="KCAL" />
         </View>
+        {/* Secondary row: elevation + last km */}
+        {(elevationGain > 0 || splits.length > 0) ? (
+          <View style={styles.statsGridSecondary}>
+            {elevationGain > 0 ? (
+              <StatItem value={`${elevationGain}`} label="DISLIVELLO · M" small />
+            ) : null}
+            {splits.length > 0 ? (
+              <StatItem
+                value={formatPace(splits[splits.length - 1].paceMinPerKm)}
+                label={`ULTIMO KM (${splits.length})`}
+                small
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Splits chips — horizontal scroll */}
+        {splits.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.splitsStrip}
+            contentContainerStyle={styles.splitsStripContent}
+          >
+            {splits.map((s, i) => {
+              const avgPace = pace || s.paceMinPerKm;
+              const isFaster = s.paceMinPerKm < avgPace;
+              return (
+                <View key={`s-${i}`} style={[styles.splitChip, {
+                  borderColor: isFaster ? 'rgba(52,211,153,0.5)' : 'rgba(255,107,107,0.4)',
+                }]}>
+                  <Text style={styles.splitChipKm}>KM {s.km}</Text>
+                  <Text style={styles.splitChipPace}>{formatPace(s.paceMinPerKm)}</Text>
+                  <Ionicons
+                    name={isFaster ? 'trending-up' : 'trending-down'}
+                    size={11}
+                    color={isFaster ? '#34D399' : '#FF6B6B'}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        ) : null}
       </View>
 
       {/* ─── MAPPA — occupa il resto dello schermo ─────────────────── */}
@@ -513,6 +759,16 @@ export default function RunActive() {
               <View style={[styles.gpsDot, { backgroundColor: '#34D399' }]} />
               <Text style={styles.gpsBadgeText}>GPS · {coords.length}</Text>
             </View>
+            {/* Weather widget */}
+            {weather ? (
+              <View style={styles.weatherBadge}>
+                <Text style={styles.weatherEmoji}>{weather.emoji}</Text>
+                <View>
+                  <Text style={styles.weatherTemp}>{weather.tempC}°C</Text>
+                  <Text style={styles.weatherWind}>{weather.windKmh} km/h</Text>
+                </View>
+              </View>
+            ) : null}
           </>
         ) : (
           <View style={styles.mapPlaceholder}>
@@ -545,9 +801,19 @@ export default function RunActive() {
       <SafeAreaView edges={['bottom']} style={styles.controlsWrap}>
         <View style={styles.controls}>
           <TouchableOpacity
+            testID="lap-button"
+            style={[styles.lapBtn, (isPaused || !running) && styles.lapBtnDisabled]}
+            onPress={doManualLap}
+            activeOpacity={0.85}
+            disabled={isPaused || !running}
+          >
+            <Ionicons name="flag" size={20} color="#fff" />
+            <Text style={styles.lapLabel}>LAP</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             testID="pause-button"
             style={styles.pauseBtn}
-            onPress={() => setIsPaused(p => !p)}
+            onPress={() => { setIsPaused(p => !p); setAutoPaused(false); }}
             activeOpacity={0.85}
           >
             <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color="#0F1115" />
@@ -570,10 +836,14 @@ export default function RunActive() {
   );
 }
 
-function StatItem({ value, label }: { value: string; label: string }) {
+function StatItem({ value, label, valueColor, small }: { value: string; label: string; valueColor?: string; small?: boolean }) {
   return (
-    <View style={styles.statItem}>
-      <Text style={styles.statValue}>{value}</Text>
+    <View style={[styles.statItem, small && styles.statItemSmall]}>
+      <Text style={[
+        styles.statValue,
+        small && styles.statValueSmall,
+        valueColor ? { color: valueColor } : null,
+      ]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -690,15 +960,62 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)',
   },
   statItem: { flex: 1 },
+  statItemSmall: { flex: 0, minWidth: 90 },
   statValue: {
     color: '#fff', fontSize: 24, letterSpacing: -0.5,
     fontFamily: fonts.heading,
     fontVariant: ['tabular-nums'],
   },
+  statValueSmall: { fontSize: 18 },
   statLabel: {
     color: 'rgba(255,255,255,0.45)', fontSize: 9,
     letterSpacing: 1.5, marginTop: 4,
     fontFamily: fonts.headingBold,
+  },
+  statsGridSecondary: {
+    flexDirection: 'row', gap: spacing.lg,
+    marginTop: spacing.sm, paddingTop: spacing.sm,
+  },
+
+  // Step badge row (with pace target chip)
+  stepBadgeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  paceChip: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  paceChipText: {
+    fontSize: 9, letterSpacing: 1.2,
+    fontFamily: fonts.headingBold,
+  },
+
+  // Splits horizontal strip
+  splitsStrip: {
+    marginTop: spacing.md,
+    marginHorizontal: -spacing.lg,
+  },
+  splitsStripContent: {
+    paddingHorizontal: spacing.lg,
+    gap: 8,
+  },
+  splitChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  splitChipKm: {
+    color: 'rgba(255,255,255,0.55)', fontSize: 9, letterSpacing: 1,
+    fontFamily: fonts.headingBold,
+  },
+  splitChipPace: {
+    color: '#fff', fontSize: 13,
+    fontFamily: fonts.headingBold,
+    fontVariant: ['tabular-nums'],
   },
 
   // Map
@@ -714,6 +1031,26 @@ const styles = StyleSheet.create({
   gpsBadgeText: {
     color: '#fff', fontSize: 10, letterSpacing: 1,
     fontFamily: fonts.headingBold,
+  },
+
+  // Weather widget — top-left of map
+  weatherBadge: {
+    position: 'absolute', top: 12, left: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  weatherEmoji: { fontSize: 18 },
+  weatherTemp: {
+    color: '#fff', fontSize: 13, lineHeight: 14,
+    fontFamily: fonts.headingBold,
+    fontVariant: ['tabular-nums'],
+  },
+  weatherWind: {
+    color: 'rgba(255,255,255,0.55)', fontSize: 9, letterSpacing: 0.5,
+    fontFamily: fonts.medium,
   },
   mapPlaceholder: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
@@ -764,6 +1101,21 @@ const styles = StyleSheet.create({
   },
   pauseLabel: {
     color: '#000', fontSize: 14, letterSpacing: 1.5,
+    fontFamily: fonts.headingBold,
+  },
+
+  // Lap button
+  lapBtn: {
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center', gap: 2,
+  },
+  lapBtnDisabled: {
+    opacity: 0.4,
+  },
+  lapLabel: {
+    color: '#fff', fontSize: 9, letterSpacing: 1.5,
     fontFamily: fonts.headingBold,
   },
   stopBtn: {

@@ -480,6 +480,13 @@ class SessionLocation(BaseModel):
     lat: float
     lng: float
     timestamp: float  # unix ms
+    alt: Optional[float] = None  # altitude in meters (GPS-derived, may be None)
+
+class SessionSplit(BaseModel):
+    km: int
+    duration_sec: int
+    total_sec: int
+    pace_min_per_km: float
 
 class CompleteWorkoutRequest(BaseModel):
     workout_id: Optional[str] = None
@@ -490,6 +497,8 @@ class CompleteWorkoutRequest(BaseModel):
     distance_km: float
     avg_pace_min_per_km: Optional[float] = None
     calories: Optional[float] = None
+    elevation_gain_m: Optional[float] = None
+    splits: Optional[List[SessionSplit]] = None
     locations: List[SessionLocation] = []
 
 class CheckoutRequest(BaseModel):
@@ -1567,6 +1576,8 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
         "distance_km": data.distance_km,
         "avg_pace_min_per_km": data.avg_pace_min_per_km,
         "calories": data.calories,
+        "elevation_gain_m": data.elevation_gain_m,
+        "splits": [s.dict() for s in (data.splits or [])],
         "locations": [l.dict() for l in data.locations],
         "completed_at": datetime.now(timezone.utc),
     }

@@ -454,10 +454,27 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Nearby Runners endpoints"
+    - "Extended POST /api/workouts/complete (elevation_gain_m, splits, locations.alt)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend:
+  - task: "Extended POST /api/workouts/complete (elevation_gain_m, splits, locations.alt)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "47/47 assertions PASS via /app/backend_workouts_extended_test.py contro https://run-training-hub-1.preview.emergentagent.com/api. Tutti e 6 i test della review request passano. (T1 Full enriched payload) POST /workouts/complete con title='Test Run with new fields', activity_type='run', duration=1800, distance=5.0, pace=6.0, calories=325, elevation_gain_m=120, splits=[5 entries con km/duration_sec/total_sec/pace_min_per_km], locations=[3 entries con alt=100.0/105.0/110.5] + Bearer admin token -> 200 con {session_id:'ws_*', new_pb:..., newly_awarded_badges:[]}. GET /workouts/{session_id} restituisce 200 con elevation_gain_m=120.0 (float persistito correttamente), splits=array di 5 elementi tutti con i 4 campi corretti, splits[4].total_sec=1800 (cumulativo), locations[0/1/2].alt=100.0/105.0/110.5. (T2 Legacy backward compat) POST con SOLO duration/distance/pace/calories/locations[senza alt] -> 200, session persistita correttamente. GET ritorna elevation_gain_m=None, splits=[] (lista vuota — il backend lo salva sempre come array vuoto per default, comportamento accettabile e backward-compatible), locations[0].alt=None. (T3 Mixed payload) elevation_gain_m=45.5 set ma splits assente, locations[0].alt=80.0 / locations[1] senza alt / locations[2].alt=85.2 -> 200; GET ritorna elevation_gain_m=45.5, splits=[], locations[0].alt=80.0, locations[1].alt=None, locations[2].alt=85.2 (Pydantic SessionLocation.alt: Optional[float]=None applica default None ai punti senza alt). (T4 Bike) activity_type='bike', distance=20, elevation_gain_m=350, splits omessi -> 200; GET ritorna activity_type='bike', elevation_gain_m=350.0, splits=[]. (T5 new_pb regression con fresh user) Registrato workout_ext_<ts>@runhub.com (con DOB + consent). Session 1: 5K @ pace 6.0 + tutti i nuovi campi -> 200 con new_pb=None (no previous, comportamento corretto). Session 2: 8K @ pace 6.25 (LONGER ma SLOWER) + tutti i nuovi campi -> 200 con new_pb={type:'longest_distance', label:'Distanza record', value:8.0, unit:'km', activity:'run'} ✅. Conferma che la PB detection logic NON è rotta dall'estensione dello schema. (T6 Regression /workouts/history) GET /workouts/history come admin -> 200 con array contenente le 4 nuove sessioni (T1+T2+T3+T4 session_id verificati presenti). GET /workouts/history come fresh user -> 200 con 2 sessioni. L'endpoint esclude correttamente il campo 'locations' dalla lista (per ridurre payload) ma include splits/elevation_gain_m. Cleanup: DELETE /admin/users/{fresh_user_id} -> 200. NESSUN 500 ERROR rilevato. Backward compatibility piena per clienti legacy. Schema extension production-ready."
+
+agent_communication:
+  - agent: "testing"
+    message: "✅ Testato l'extended POST /api/workouts/complete (3 nuovi campi opzionali: elevation_gain_m, splits[], locations[].alt). 47/47 assertions PASS via /app/backend_workouts_extended_test.py. Risultati per ciascuno dei 6 test della review: T1 (full enriched) PASS — tutti i 3 nuovi campi persistono correttamente e l'endpoint restituisce session_id+new_pb+newly_awarded_badges. T2 (legacy backward compat) PASS — payload minimale senza i nuovi campi funziona; GET restituisce elevation_gain_m=null, splits=[] (vuoto, non null — comportamento del backend che inizializza splits sempre come array), locations[].alt=null. T3 (mixed) PASS — elevation_gain_m=45.5 persistito, locations con/senza alt gestite correttamente da Pydantic Optional. T4 (bike) PASS — activity_type=bike, elevation_gain_m=350 persistito. T5 (new_pb regression con fresh user) PASS — session 1 new_pb=null, session 2 (8K più lungo ma più lento) -> new_pb={type:'longest_distance', value:8.0} ✅. T6 (regression /workouts/history) PASS — admin vede tutte le 4 nuove sessioni; fresh user vede le sue 2. NESSUN 500 ERROR. new_pb LOGIC NON E' ROTTA. BACKWARD COMPATIBILITY PIENA per clienti che NON inviano i nuovi campi. Schema extension production-ready, pronto per submission e per il rilascio app mobile aggiornata."
 
 backend:
   - task: "Nearby Runners endpoints (heartbeat, count, runners, runner detail, visibility)"
@@ -628,4 +645,40 @@ backend:
 agent_communication:
   - agent: "testing"
     message: "✅ Testati i 2 set di endpoint richiesti (avatar + new_pb in workouts/complete) — 35/35 assertions PASS via /app/backend_avatar_pb_test.py. (A) AVATAR: PUT/DELETE /api/users/me/avatar e flag avatar_base64 in /api/auth/me funzionano perfettamente. Auth required, 400 per empty/whitespace, 413 per payload >2.5M caratteri, persist+retrieve+delete verificati end-to-end, accetta sia data URI sia raw base64. (B) NEW_PB: l'endpoint POST /api/workouts/complete include sempre la chiave 'new_pb' nel response. Test su fresh user: 1st workout -> null (no previous), 2nd workout con distance maggiore e pace peggiore -> {type:'longest_distance', value:8.0, unit:'km', activity:'run'}, 3rd workout shorter+slower -> null. Le priority rules (pace>distance>duration) e i filtri (distance>=1.0 per best_pace) sono implementati correttamente. (C) Regression: /plans e /auth/me admin OK. Nessun bug rilevato. Pronti per integrazione frontend."
+
+
+# ─────────────────────────────────────────────────────────────
+# Active Run Enhancements — Km Splits + Live Calories + Elevation Gain + Weather + Pace Target
+# ─────────────────────────────────────────────────────────────
+
+backend:
+  - task: "Extended CompleteWorkoutRequest schema (elevation_gain_m, splits, alt in SessionLocation)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Esteso lo schema Pydantic dell'endpoint POST /api/workouts/complete in /app/backend/server.py per supportare nuovi campi opzionali della schermata 'Corsa Attiva' rifatta: (A) SessionLocation: aggiunto `alt: Optional[float] = None` per l'altitudine GPS dei punti. (B) Nuovo modello SessionSplit (km:int, duration_sec:int, total_sec:int, pace_min_per_km:float). (C) CompleteWorkoutRequest: aggiunti `elevation_gain_m: Optional[float] = None` e `splits: Optional[List[SessionSplit]] = None`. (D) L'handler complete_workout ora persiste sui documenti workout_sessions i campi `elevation_gain_m` e `splits` (lista serializzata da .dict()). 100% backward compatible: i client esistenti che non inviano questi campi continuano a funzionare normalmente (default None / []). Test richiesti: (1) POST /api/workouts/complete con payload completo (alt nei locations + splits + elevation_gain_m) -> 200 e tutti i nuovi campi persistiti. (2) POST stesso endpoint SENZA i nuovi campi -> 200 (regression backward compat). (3) GET /api/workouts/{session_id} -> documento contiene elevation_gain_m, splits[], e locations[] con campo alt. (4) Verifica che new_pb logic continui a funzionare con i nuovi campi presenti."
+
+frontend:
+  - task: "Active Run page enhancements (Splits TTS + Live KCAL + Elevation + Weather + Pace target + Auto-pause + Manual lap)"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/run-active.tsx, frontend/src/runMetrics.ts, frontend/src/weather.ts, frontend/src/runSettings.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Refactor pesante della schermata di corsa attiva (run-active.tsx) con 3 nuovi moduli helper: (1) /app/frontend/src/runMetrics.ts: pure helpers per parsing target pace, computeElevationGain (smoothing + threshold 1.5m), estimateCalories MET-based (run/walk/bike a varie intensità), detectKmCrossing/buildSplit per auto-lap chilometrici, instantSpeedMs (sliding window 6s), TTS line builders italiani per km splits e manual laps. (2) /app/frontend/src/weather.ts: client Open-Meteo gratuito senza API key, fetch temperature_2m + wind_speed_10m + weather_code (WMO codes con mapping IT label+emoji). (3) /app/frontend/src/runSettings.ts: preferenze utente in AsyncStorage (voiceFrequency='every_km'|'every_5min'|'start_end'|'off', weightKg default 70, autoPauseEnabled). NUOVE FEATURES nella UI: (a) SPLIT CHILOMETRICI auto: rileva crossing ogni km, calcola pace del singolo split, mostra chip orizzontale scrollabile (verde se piu' veloce della media, rosso se piu' lento) + ULTIMO KM card secondaria, TTS announce 'Hai corso N km. Passo X min Y sec al km. Tempo totale...'. (b) CALORIE LIVE: ricalcolate ogni tick MET*weight*hours, aggiunte come 4a stat principale (DIST|TEMPO|PASSO|KCAL). (c) DISLIVELLO: cattura coords.altitude su tutti i 3 paths GPS (web first call, web watch, native, native retry), computeElevationGain con smoothing window 5 + threshold 1.5m, mostrato in stat secondaria 'DISLIVELLO M'. (d) METEO: widget top-left sulla mappa con emoji + temperatura + vento km/h, fetchato 1 volta dopo prima fix GPS. (e) PACE TARGET: parsing di currentStep.target_pace (es '5:30'), confronto con pace corrente, chip 'IN TARGET'/'TROPPO VELOCE'/'TROPPO LENTO' colorato verde/blu/rosso accanto allo step badge. (f) AUTO-PAUSA: rileva velocità<0.4 m/s (1.0 per bike) per >5s, attiva pausa automaticamente, indicatore 'AUTO-PAUSA' nel badge, ripresa automatica al rilevamento movimento. (g) LAP MANUALE: nuovo button circolare 60px tra PAUSA e TERMINA, salva un lap (distanza+tempo dal precedente lap), TTS 'Lap N. X km in Y min Z sec'. Il payload del POST /workouts/complete è stato esteso per inviare elevation_gain_m, splits con (km, duration_sec, total_sec, pace_min_per_km), e calorie live (fallback al vecchio kcalPerKm constant se 0). Backend schema esteso compatibile (vedi backend task)."
+
+agent_communication:
+  - agent: "main"
+    message: "ACTIVE RUN ENHANCEMENTS: refactor della schermata corsa attiva con 7 nuove feature (split km TTS + calorie live + dislivello + meteo + pace target + auto-pausa + lap manuale). Backend: esteso CompleteWorkoutRequest con elevation_gain_m, splits[], e alt in SessionLocation. Frontend: 3 nuovi helper modules (runMetrics, weather, runSettings) + UI restyling della schermata. RICHIESTA TESTING BACKEND: verificare che POST /api/workouts/complete accetti il nuovo payload arricchito (con alt nei locations + splits + elevation_gain_m) E che resti backward compatible per client senza questi campi. Verificare anche che GET /api/workouts/{session_id} ritorni i nuovi campi quando presenti."
+
 
