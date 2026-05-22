@@ -54,7 +54,9 @@
         "android.permission.health.READ_DISTANCE",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
-        "android.permission.health.WRITE_EXERCISE"
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -149,6 +151,12 @@
       "ios_app_id": "ca-app-pub-8711276203998030~4483137691",
       "delay_app_measurement_init": true,
       "user_tracking_usage_description": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi."
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3a44948e-e474-499a-8ed8-5ae29212f1be"
+      }
     }
   }
 }
