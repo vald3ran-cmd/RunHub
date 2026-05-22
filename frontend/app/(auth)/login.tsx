@@ -9,9 +9,11 @@ import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
 import { SocialAuthButtons } from '../../src/SocialAuthButtons';
 import { api } from '../../src/api';
+import { useT } from '../../src/i18n';
 
 export default function Login() {
   const { login } = useAuth();
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,13 +57,13 @@ export default function Login() {
               <Text style={styles.tagline}>OGNI KM. OGNI BATTITO. OGNI TRAGUARDO.</Text>
             </View>
             <View style={styles.card}>
-              <Text style={styles.title}>BENTORNATO</Text>
-              <Text style={styles.subtitle}>Accedi per continuare il tuo allenamento</Text>
+              <Text style={styles.title}>{t('auth.login_title').toUpperCase()}</Text>
+              <Text style={styles.subtitle}>{t('auth.login_subtitle')}</Text>
               {error ? <Text style={styles.error} testID="login-error">{error}</Text> : null}
               <TextInput
                 testID="login-email-input"
                 style={styles.input}
-                placeholder="Email"
+                placeholder={t('auth.email')}
                 placeholderTextColor={colors.textMuted}
                 value={email} onChangeText={setEmail}
                 autoCapitalize="none" keyboardType="email-address"
@@ -69,7 +71,7 @@ export default function Login() {
               <TextInput
                 testID="login-password-input"
                 style={styles.input}
-                placeholder="Password"
+                placeholder={t('auth.password')}
                 placeholderTextColor={colors.textMuted}
                 value={password} onChangeText={setPassword} secureTextEntry
               />
@@ -77,17 +79,17 @@ export default function Login() {
                 testID="login-submit-button"
                 style={styles.button} onPress={onSubmit} disabled={loading}
               >
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>ACCEDI</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t('auth.login_cta').toUpperCase()}</Text>}
               </TouchableOpacity>
               <SocialAuthButtons mode="login" />
               <Link href="/(auth)/forgot-password" asChild>
                 <TouchableOpacity testID="forgot-password-link">
-                  <Text style={[styles.link, { marginTop: spacing.md }]}>Password dimenticata?</Text>
+                  <Text style={[styles.link, { marginTop: spacing.md }]}>{t('auth.forgot_password')}</Text>
                 </TouchableOpacity>
               </Link>
               <Link href="/(auth)/register" asChild>
                 <TouchableOpacity testID="goto-register-button">
-                  <Text style={styles.link}>Non hai un account? <Text style={{ color: colors.primary }}>Registrati</Text></Text>
+                  <Text style={styles.link}>{t('auth.no_account')} <Text style={{ color: colors.primary }}>{t('auth.sign_up')}</Text></Text>
                 </TouchableOpacity>
               </Link>
             </View>
