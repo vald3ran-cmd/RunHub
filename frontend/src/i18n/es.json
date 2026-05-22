@@ -55,7 +55,13 @@
     "explore_badges": "Tus insignias"
   },
   "plans": {
-    "title": "Planes de entrenamiento",
+    "title": "Planes",
+    "tab_for_you": "Para ti",
+    "tab_all": "Todos los planes",
+    "ai_banner_title": "Genera un plan a medida",
+    "ai_banner_sub": "AI Coach · personalizado para tus objetivos",
+    "empty_title": "Ningún plan disponible",
+    "empty_sub": "Vuelve a intentarlo en un momento",
     "subtitle": "Programas a medida para cada nivel",
     "my_plans": "Mis planes",
     "discover": "Descubrir",

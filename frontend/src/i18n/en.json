@@ -55,7 +55,13 @@
     "explore_badges": "Your badges"
   },
   "plans": {
-    "title": "Training plans",
+    "title": "Plans",
+    "tab_for_you": "For you",
+    "tab_all": "All plans",
+    "ai_banner_title": "Generate a tailored plan",
+    "ai_banner_sub": "AI Coach · personalized for your goals",
+    "empty_title": "No plans available",
+    "empty_sub": "Try again in a moment",
     "subtitle": "Tailored programs for every level",
     "my_plans": "My plans",
     "discover": "Discover",

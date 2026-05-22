@@ -55,7 +55,13 @@
     "explore_badges": "I tuoi badge"
   },
   "plans": {
-    "title": "Piani di allenamento",
+    "title": "Piani",
+    "tab_for_you": "Per te",
+    "tab_all": "Tutti i piani",
+    "ai_banner_title": "Genera un piano su misura",
+    "ai_banner_sub": "AI Coach · personalizzato per i tuoi obiettivi",
+    "empty_title": "Nessun piano disponibile",
+    "empty_sub": "Riprova fra qualche istante",
     "subtitle": "Programmi su misura per ogni livello",
     "my_plans": "I miei piani",
     "discover": "Scopri",

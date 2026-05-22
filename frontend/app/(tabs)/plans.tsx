@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../src/api';
 import { colors, spacing, radius, fonts } from '../../src/theme';
 import { SparklesIcon } from '../../src/icons/BrandIcons';
+import { useT } from '../../src/i18n';
 import { Star, Calendar, Repeat, Sparkles } from 'lucide-react-native';
 
 type Plan = {
@@ -43,6 +44,7 @@ function pickFallback(title: string, level: string): string {
 type Tab = 'forYou' | 'all';
 
 export default function Plans() {
+  const { t } = useT();
   const [predefined, setPredefined] = useState<Plan[]>([]);
   const [custom, setCustom] = useState<Plan[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,7 +82,7 @@ export default function Plans() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.h1}>Piani</Text>
+        <Text style={styles.h1}>{t('plans.title')}</Text>
       </View>
 
       {/* Tab switcher */}
@@ -90,14 +92,14 @@ export default function Plans() {
           onPress={() => setTab('forYou')}
           activeOpacity={0.85}
         >
-          <Text style={[styles.tabText, tab === 'forYou' && styles.tabTextActive]}>Per te</Text>
+          <Text style={[styles.tabText, tab === 'forYou' && styles.tabTextActive]}>{t('plans.tab_for_you')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabBtn, tab === 'all' && styles.tabBtnActive]}
           onPress={() => setTab('all')}
           activeOpacity={0.85}
         >
-          <Text style={[styles.tabText, tab === 'all' && styles.tabTextActive]}>Tutti i piani</Text>
+          <Text style={[styles.tabText, tab === 'all' && styles.tabTextActive]}>{t('plans.tab_all')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -120,16 +122,16 @@ export default function Plans() {
                 <Sparkles size={18} color="#fff" strokeWidth={2.4} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.aiBannerTitle}>Genera un piano su misura</Text>
-                <Text style={styles.aiBannerSub}>AI Coach · personalizzato per i tuoi obiettivi</Text>
+                <Text style={styles.aiBannerTitle}>{t('plans.ai_banner_title')}</Text>
+                <Text style={styles.aiBannerSub}>{t('plans.ai_banner_sub')}</Text>
               </View>
             </TouchableOpacity>
           ) : null
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Nessun piano disponibile</Text>
-            <Text style={styles.emptySub}>Riprova fra qualche istante</Text>
+            <Text style={styles.emptyTitle}>{t('plans.empty_title')}</Text>
+            <Text style={styles.emptySub}>{t('plans.empty_sub')}</Text>
           </View>
         }
         renderItem={({ item, index }) => (
