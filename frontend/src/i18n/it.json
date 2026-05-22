@@ -14,7 +14,16 @@
     "continue": "Continua",
     "back": "Indietro",
     "error": "Errore",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "updated": "Aggiornato",
+    "not_available": "Non disponibile"
+  },
+  "tabs": {
+    "home": "Home",
+    "plans": "Piani",
+    "history": "Storico",
+    "profile": "Profilo",
+    "dashboard": "Stats"
   },
   "referral": {
     "title": "Invita & Guadagna",
@@ -52,6 +61,32 @@
     "language_subtitle": "Scegli la lingua dell'app"
   },
   "profile": {
-    "community": "Community"
+    "premium_card_label": "SBLOCCA PREMIUM",
+    "premium_card_title": "AI Coach, piani avanzati, analisi complete",
+    "section_account": "ACCOUNT",
+    "section_training": "ALLENAMENTO",
+    "section_community": "COMMUNITY",
+    "section_admin": "ADMIN",
+    "section_support": "SUPPORTO E LEGALE",
+    "change_plan": "Cambia piano",
+    "manage_billing": "Gestisci pagamento e fatture",
+    "account_privacy": "Account & Privacy",
+    "subscriptions_plans": "Abbonamenti & Piani",
+    "edit_goals": "Modifica traguardi",
+    "badges": "Achievement & Badge",
+    "race_predictor": "Proiezione tempi gara & VO2max",
+    "coach_dashboard": "Coach Dashboard",
+    "wearables": "Wearables (Apple Health / Google Fit)",
+    "community_feed": "Amici, feed e classifiche",
+    "heatmap": "La mia mappa corse (heatmap)",
+    "admin_panel": "Admin Panel",
+    "terms": "Termini di Servizio",
+    "privacy": "Privacy Policy",
+    "privacy_ads": "Preferenze privacy ads (GDPR)",
+    "logout": "Esci",
+    "unable_open_portal": "Impossibile aprire il portale",
+    "prefs_updated": "Preferenze aggiornate",
+    "prefs_updated_msg": "Le tue scelte sono state salvate.",
+    "prefs_unavailable": "Le preferenze privacy per la pubblicità non sono disponibili su questo dispositivo."
   }
 }

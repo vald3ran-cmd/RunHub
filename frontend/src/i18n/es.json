@@ -14,7 +14,16 @@
     "continue": "Continuar",
     "back": "Atrás",
     "error": "Error",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "updated": "Actualizado",
+    "not_available": "No disponible"
+  },
+  "tabs": {
+    "home": "Inicio",
+    "plans": "Planes",
+    "history": "Historial",
+    "profile": "Perfil",
+    "dashboard": "Stats"
   },
   "referral": {
     "title": "Invita y Gana",
@@ -52,6 +61,32 @@
     "language_subtitle": "Elige el idioma de la app"
   },
   "profile": {
-    "community": "Comunidad"
+    "premium_card_label": "DESBLOQUEA PREMIUM",
+    "premium_card_title": "AI Coach, planes avanzados, análisis completos",
+    "section_account": "CUENTA",
+    "section_training": "ENTRENAMIENTO",
+    "section_community": "COMUNIDAD",
+    "section_admin": "ADMIN",
+    "section_support": "SOPORTE Y LEGAL",
+    "change_plan": "Cambiar plan",
+    "manage_billing": "Gestionar pago y facturas",
+    "account_privacy": "Cuenta y Privacidad",
+    "subscriptions_plans": "Suscripciones y Planes",
+    "edit_goals": "Editar objetivos",
+    "badges": "Logros e Insignias",
+    "race_predictor": "Proyección de tiempos & VO2max",
+    "coach_dashboard": "Coach Dashboard",
+    "wearables": "Wearables (Apple Health / Google Fit)",
+    "community_feed": "Amigos, feed y rankings",
+    "heatmap": "Mi mapa de carreras (heatmap)",
+    "admin_panel": "Panel Admin",
+    "terms": "Términos del Servicio",
+    "privacy": "Política de Privacidad",
+    "privacy_ads": "Preferencias de privacidad de anuncios (GDPR)",
+    "logout": "Cerrar sesión",
+    "unable_open_portal": "No se puede abrir el portal",
+    "prefs_updated": "Preferencias actualizadas",
+    "prefs_updated_msg": "Tus elecciones han sido guardadas.",
+    "prefs_unavailable": "Las preferencias de privacidad de anuncios no están disponibles en este dispositivo."
   }
 }

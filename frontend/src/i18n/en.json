@@ -14,7 +14,16 @@
     "continue": "Continue",
     "back": "Back",
     "error": "Error",
-    "retry": "Retry"
+    "retry": "Retry",
+    "updated": "Updated",
+    "not_available": "Not available"
+  },
+  "tabs": {
+    "home": "Home",
+    "plans": "Plans",
+    "history": "History",
+    "profile": "Profile",
+    "dashboard": "Stats"
   },
   "referral": {
     "title": "Invite & Earn",
@@ -52,6 +61,32 @@
     "language_subtitle": "Choose the app language"
   },
   "profile": {
-    "community": "Community"
+    "premium_card_label": "UNLOCK PREMIUM",
+    "premium_card_title": "AI Coach, advanced plans, full analytics",
+    "section_account": "ACCOUNT",
+    "section_training": "TRAINING",
+    "section_community": "COMMUNITY",
+    "section_admin": "ADMIN",
+    "section_support": "SUPPORT & LEGAL",
+    "change_plan": "Change plan",
+    "manage_billing": "Manage payment and invoices",
+    "account_privacy": "Account & Privacy",
+    "subscriptions_plans": "Subscriptions & Plans",
+    "edit_goals": "Edit goals",
+    "badges": "Achievements & Badges",
+    "race_predictor": "Race time projection & VO2max",
+    "coach_dashboard": "Coach Dashboard",
+    "wearables": "Wearables (Apple Health / Google Fit)",
+    "community_feed": "Friends, feed and leaderboards",
+    "heatmap": "My runs map (heatmap)",
+    "admin_panel": "Admin Panel",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "privacy_ads": "Ad privacy preferences (GDPR)",
+    "logout": "Sign out",
+    "unable_open_portal": "Unable to open portal",
+    "prefs_updated": "Preferences updated",
+    "prefs_updated_msg": "Your choices have been saved.",
+    "prefs_unavailable": "Ad privacy preferences are not available on this device."
   }
 }
