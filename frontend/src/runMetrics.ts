@@ -200,23 +200,32 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-// ─── TTS LINE BUILDERS (Italian) ─────────────────────────────────
-export function ttsForKmSplit(s: KmSplit, activity: ActivityType): string {
+// ─── TTS LINE BUILDERS (i18n-aware) ─────────────────────────────────
+type TfnLite = (key: string, opts?: Record<string, any>) => string;
+
+export function ttsForKmSplit(s: KmSplit, activity: ActivityType, t?: TfnLite): string {
   const min = Math.floor(s.paceMinPerKm);
   const sec = Math.floor((s.paceMinPerKm - min) * 60);
   const totalMin = Math.floor(s.totalSec / 60);
   const totalSec = s.totalSec % 60;
   if (activity === 'bike') {
     const kmh = s.durationSec > 0 ? 3600 / s.durationSec : 0;
+    if (t) return t('run.tts_km_bike', { km: s.km, kmh: kmh.toFixed(1), totalMin, totalSec });
     return `Chilometro ${s.km} completato. Velocità ${kmh.toFixed(1)} chilometri orari. Tempo totale ${totalMin} minuti e ${totalSec} secondi.`;
   }
+  const paceSecStr = String(sec).padStart(2, '0');
+  if (t) {
+    const key = activity === 'walk' ? 'run.tts_km_walk' : 'run.tts_km_run';
+    return t(key, { km: s.km, paceMin: min, paceSec: paceSecStr, totalMin, totalSec });
+  }
   const verb = activity === 'walk' ? 'camminato' : 'corso';
-  return `Hai ${verb} ${s.km} chilometri. Passo ${min} minuti e ${String(sec).padStart(2, '0')} secondi al chilometro. Tempo totale ${totalMin} minuti e ${totalSec} secondi.`;
+  return `Hai ${verb} ${s.km} chilometri. Passo ${min} minuti e ${paceSecStr} secondi al chilometro. Tempo totale ${totalMin} minuti e ${totalSec} secondi.`;
 }
 
-export function ttsManualLap(lap: ManualLap, activity: ActivityType): string {
+export function ttsManualLap(lap: ManualLap, activity: ActivityType, t?: TfnLite): string {
   const km = lap.distanceKm.toFixed(2).replace('.', ',');
   const min = Math.floor(lap.durationSec / 60);
   const sec = lap.durationSec % 60;
+  if (t) return t('run.tts_lap', { index: lap.index, km, min, sec });
   return `Lap ${lap.index}. ${km} chilometri in ${min} minuti e ${sec} secondi.`;
 }

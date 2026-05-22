@@ -23,6 +23,7 @@ import {
 } from '../src/runMetrics';
 import { fetchWeather, WeatherSnapshot } from '../src/weather';
 import { loadRunSettings, RunSettings, DEFAULT_SETTINGS, VoiceFrequency } from '../src/runSettings';
+import { useT } from '../src/i18n';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -31,7 +32,8 @@ type Step = {
 export default function RunActive() {
   const params = useLocalSearchParams<{ title?: string; workout_id?: string; plan_id?: string; steps?: string; activity_type?: string }>();
   const router = useRouter();
-  const title = params.title || 'Run Libero';
+  const { t } = useT();
+  const title = params.title || t('run.free_run');
   const steps: Step[] = params.steps ? JSON.parse(String(params.steps)) : [];
   const hasSteps = steps.length > 0;
   const activityType: ActivityType =
@@ -80,7 +82,7 @@ export default function RunActive() {
 
   const speak = (text: string) => {
     if (!audioEnabled) return;
-    try { Speech.stop(); Speech.speak(text, { language: 'it-IT', rate: 1.0 }); } catch {}
+    try { Speech.stop(); Speech.speak(text, { language: t('run.tts_locale'), rate: 1.0 }); } catch {}
   };
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
@@ -131,7 +133,7 @@ export default function RunActive() {
         // Voice announcement based on user prefs
         const freq = settingsRef.current.voiceFrequency;
         if (freq === 'every_km' || freq === 'every_5min') {
-          speak(ttsForKmSplit(split, activityType));
+          speak(ttsForKmSplit(split, activityType, t));
         }
       }
 
@@ -142,7 +144,7 @@ export default function RunActive() {
           last5MinAnnouncedRef.current = fiveMinBucket;
           const totalMin = Math.floor(total / 60);
           const km = distanceRef.current.toFixed(2).replace('.', ',');
-          speak(`${totalMin} minuti. ${km} chilometri percorsi.`);
+          speak(t('run.tts_5min', { totalMin, km }));
         }
       }
 
@@ -156,14 +158,14 @@ export default function RunActive() {
           else if (!pausedRef.current && (now - stationarySinceRef.current) > 5000) {
             setIsPaused(true);
             setAutoPaused(true);
-            speak('Auto-pausa attivata.');
+            speak(t('run.tts_auto_pause'));
           }
         } else {
           stationarySinceRef.current = 0;
           if (autoPaused && pausedRef.current) {
             setIsPaused(false);
             setAutoPaused(false);
-            speak('Ripresa.');
+            speak(t('run.tts_resume'));
           }
         }
       }
@@ -176,7 +178,9 @@ export default function RunActive() {
             if (lastStepAnnouncedRef.current !== i) {
               lastStepAnnouncedRef.current = i;
               const step = steps[i];
-              const label = stepTypeLabels[step.type] || step.type;
+              const label = (t(`run.step_${step.type}`) !== `run.step_${step.type}`)
+                ? t(`run.step_${step.type}`)
+                : (stepTypeLabels[step.type] || step.type);
               speak(`${label}. ${step.description}`);
             }
             setStepIndex(i); setStepElapsed(rem); return;
@@ -185,7 +189,7 @@ export default function RunActive() {
         }
         if (lastStepAnnouncedRef.current !== steps.length) {
           lastStepAnnouncedRef.current = steps.length;
-          speak('Allenamento completato. Ottimo lavoro!');
+          speak(t('run.tts_workout_complete'));
         }
         setStepIndex(steps.length);
       }
@@ -588,7 +592,7 @@ export default function RunActive() {
     };
     lastLapAnchorRef.current = { km: dist, sec: total };
     setManualLaps(prev => [...prev, lap]);
-    speak(ttsManualLap(lap, activityType));
+    speak(ttsManualLap(lap, activityType, t));
   };
 
   const currentStep = hasSteps && stepIndex < steps.length ? steps[stepIndex] : null;

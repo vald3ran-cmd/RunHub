@@ -22,7 +22,7 @@ type Session = {
 };
 
 export default function History() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [items, setItems] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -80,7 +80,7 @@ export default function History() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
                 <Text style={styles.itemMeta}>
-                  {formatDate(item.completed_at)} · {meta.shortLabel}
+                  {formatDate(item.completed_at, locale)} · {meta.shortLabel}
                 </Text>
               </View>
               <View style={styles.itemStats}>
@@ -99,10 +99,11 @@ export default function History() {
   );
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string = 'it') {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const tag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT';
+    return d.toLocaleDateString(tag, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   } catch { return iso; }
 }
 function formatDur(s: number) {

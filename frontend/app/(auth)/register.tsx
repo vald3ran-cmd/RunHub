@@ -87,15 +87,15 @@ export default function Register() {
 
   const onSubmit = async () => {
     setError('');
-    if (!email || !password || !name) { setError('Compila tutti i campi'); return; }
-    if (password.length < 6) { setError('Password almeno 6 caratteri'); return; }
-    if (age === null) { setError('Inserisci una data di nascita valida'); return; }
+    if (!email || !password || !name) { setError(t('auth.fill_all_fields')); return; }
+    if (password.length < 6) { setError(t('auth.password_too_short')); return; }
+    if (age === null) { setError(t('auth.invalid_dob')); return; }
     if (age < MIN_AGE_YEARS) {
-      setError(`Devi avere almeno ${MIN_AGE_YEARS} anni per iscriverti`);
+      setError(t('auth.must_be_age', { n: MIN_AGE_YEARS }));
       return;
     }
-    if (!acceptedLegal) { setError('Devi accettare Termini e Privacy per continuare'); return; }
-    if (!acceptedAge) { setError(`Devi confermare di avere almeno ${MIN_AGE_YEARS} anni`); return; }
+    if (!acceptedLegal) { setError(t('auth.must_accept_terms')); return; }
+    if (!acceptedAge) { setError(t('auth.must_confirm_age', { n: MIN_AGE_YEARS })); return; }
 
     setLoading(true);
     try {
@@ -119,7 +119,7 @@ export default function Register() {
       router.replace('/onboarding');
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      setError(typeof d === 'string' ? d : 'Registrazione fallita');
+      setError(typeof d === 'string' ? d : t('auth.register_failed'));
     } finally {
       setLoading(false);
     }
@@ -132,23 +132,23 @@ export default function Register() {
           <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
             <Image source={require('../../assets/images/logo-transparent.png')} style={{ width: 140, height: 140 }} resizeMode="contain" />
           </View>
-          <Text style={styles.title}>UNISCITI AL BRANCO</Text>
-          <Text style={styles.subtitle}>Crea il tuo profilo e inizia oggi</Text>
+          <Text style={styles.title}>{t('auth.join_pack')}</Text>
+          <Text style={styles.subtitle}>{t('auth.register_subtitle_long')}</Text>
           {error ? <Text style={styles.error} testID="register-error">{error}</Text> : null}
 
           <TextInput
             testID="register-name-input"
-            style={styles.input} placeholder="Nome" placeholderTextColor={colors.textMuted}
+            style={styles.input} placeholder={t('auth.name')} placeholderTextColor={colors.textMuted}
             value={name} onChangeText={setName}
           />
           <TextInput
             testID="register-email-input"
-            style={styles.input} placeholder="Email" placeholderTextColor={colors.textMuted}
+            style={styles.input} placeholder={t('auth.email')} placeholderTextColor={colors.textMuted}
             value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
           />
           <TextInput
             testID="register-password-input"
-            style={styles.input} placeholder="Password (min 6 caratteri)" placeholderTextColor={colors.textMuted}
+            style={styles.input} placeholder={t('auth.password_min')} placeholderTextColor={colors.textMuted}
             value={password} onChangeText={setPassword} secureTextEntry
           />
 
@@ -173,33 +173,33 @@ export default function Register() {
           ) : null}
 
           {/* Data di nascita */}
-          <Text style={styles.dobLabel}>Data di nascita</Text>
+          <Text style={styles.dobLabel}>{t('auth.date_of_birth')}</Text>
           <View style={styles.dobRow}>
             <TextInput
               testID="dob-day"
               style={[styles.dobInput, { flex: 1 }]}
-              placeholder="GG" placeholderTextColor={colors.textMuted}
+              placeholder={t('auth.dob_day_short')} placeholderTextColor={colors.textMuted}
               value={dobDay} onChangeText={(v) => setDobDay(v.replace(/\D/g, '').slice(0, 2))}
               keyboardType="number-pad" maxLength={2}
             />
             <TextInput
               testID="dob-month"
               style={[styles.dobInput, { flex: 1 }]}
-              placeholder="MM" placeholderTextColor={colors.textMuted}
+              placeholder={t('auth.dob_month_short')} placeholderTextColor={colors.textMuted}
               value={dobMonth} onChangeText={(v) => setDobMonth(v.replace(/\D/g, '').slice(0, 2))}
               keyboardType="number-pad" maxLength={2}
             />
             <TextInput
               testID="dob-year"
               style={[styles.dobInput, { flex: 1.4 }]}
-              placeholder="AAAA" placeholderTextColor={colors.textMuted}
+              placeholder={t('auth.dob_year_short')} placeholderTextColor={colors.textMuted}
               value={dobYear} onChangeText={(v) => setDobYear(v.replace(/\D/g, '').slice(0, 4))}
               keyboardType="number-pad" maxLength={4}
             />
           </View>
           {age !== null && (
             <Text style={[styles.ageHint, !ageValid && { color: colors.primary }]}>
-              {ageValid ? `✓ Età: ${age} anni` : `❌ Devi avere almeno ${MIN_AGE_YEARS} anni (hai ${age})`}
+              {ageValid ? t('auth.age_valid', { age }) : t('auth.age_invalid', { min: MIN_AGE_YEARS, age })}
             </Text>
           )}
 
@@ -216,23 +216,23 @@ export default function Register() {
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedLegal(!acceptedLegal)}>
-              Ho letto e accetto i{' '}
+              {t('auth.tos_intro')}
               <Text
                 testID="link-terms"
                 style={styles.consentLink}
                 onPress={(e: any) => { e?.stopPropagation?.(); router.push('/terms'); }}
               >
-                Termini di Servizio
+                {t('auth.tos_link')}
               </Text>
-              {' '}e la{' '}
+              {t('auth.tos_separator')}
               <Text
                 testID="link-privacy"
                 style={styles.consentLink}
                 onPress={(e: any) => { e?.stopPropagation?.(); router.push('/privacy'); }}
               >
-                Privacy Policy
+                {t('auth.tos_privacy_link')}
               </Text>
-              .
+              {t('auth.tos_end')}
             </Text>
           </View>
 
@@ -249,7 +249,7 @@ export default function Register() {
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedAge(!acceptedAge)}>
-              Confermo di avere almeno <Text style={{ fontWeight: '700' }}>{MIN_AGE_YEARS} anni</Text>.
+              {t('auth.age_confirm_text', { n: MIN_AGE_YEARS })}
             </Text>
           </View>
 
@@ -261,19 +261,18 @@ export default function Register() {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>CREA ACCOUNT</Text>}
+              : <Text style={styles.buttonText}>{t('auth.create_account')}</Text>}
           </TouchableOpacity>
 
           <Text style={styles.gdprFooter}>
-            I tuoi dati sono trattati secondo il GDPR. Puoi esportarli o cancellare l'account in qualsiasi
-            momento dalla sezione <Text style={{ fontWeight: '700' }}>Account & Privacy</Text>.
+            {t('auth.gdpr_footer')}
           </Text>
 
           <SocialAuthButtons mode="register" />
 
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity testID="goto-login-button">
-              <Text style={styles.link}>Hai gia' un account? <Text style={{ color: colors.primary }}>Accedi</Text></Text>
+              <Text style={styles.link}>{t('auth.have_account_q')} <Text style={{ color: colors.primary }}>{t('auth.sign_in')}</Text></Text>
             </TouchableOpacity>
           </Link>
         </ScrollView>

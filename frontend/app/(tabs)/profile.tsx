@@ -1,14 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking,
-  Image, ActivityIndicator,
+  Image, ActivityIndicator, Switch,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Star, CreditCard, Trophy, Flag, Watch, Users, Map as MapIcon,
   Rocket, UserCircle, FileText, ShieldCheck, Settings, LogOut,
-  Timer, Sparkles, ChevronRight, ExternalLink, Camera, Gift, Globe,
+  Timer, Sparkles, ChevronRight, ExternalLink, Camera, Gift, Globe, Eye,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
@@ -27,6 +27,28 @@ export default function Profile() {
   const [showGoals, setShowGoals] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [nearbyVisible, setNearbyVisible] = useState<boolean>(false);
+  const [togglingNearby, setTogglingNearby] = useState(false);
+
+  // Sync nearby_visible from user object
+  useEffect(() => {
+    if (user) setNearbyVisible(!!(user as any).nearby_visible);
+  }, [(user as any)?.nearby_visible]);
+
+  const onToggleNearby = async (next: boolean) => {
+    setNearbyVisible(next); // optimistic
+    setTogglingNearby(true);
+    try {
+      await api.put('/users/me/nearby-visibility', { visible: next });
+      await refresh();
+    } catch (e: any) {
+      // revert on failure
+      setNearbyVisible(!next);
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('common.retry'));
+    } finally {
+      setTogglingNearby(false);
+    }
+  };
 
   const handleEditAvatar = () => {
     chooseAndUploadAvatar({
@@ -63,7 +85,7 @@ export default function Profile() {
       });
       setShowGoals(false);
     } catch {
-      Alert.alert('Errore', 'Impossibile aggiornare i traguardi');
+      Alert.alert(t('common.error'), t('common.retry'));
     } finally { setSaving(false); }
   };
 
@@ -233,6 +255,27 @@ export default function Profile() {
             title={t('profile.community_feed')}
             onPress={() => router.push('/social')}
           />
+          {/* Nearby visibility toggle (P0 privacy control) */}
+          <View style={styles.toggleRow} testID="nearby-visibility-row">
+            <View style={styles.rowIcon}>
+              <Eye size={18} color={colors.primary} strokeWidth={2.4} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toggleTitle}>{t('profile.nearby_visibility')}</Text>
+              <Text style={styles.toggleSub}>
+                {nearbyVisible ? t('profile.nearby_visibility_on') : t('profile.nearby_visibility_off')}
+              </Text>
+            </View>
+            <Switch
+              testID="nearby-visibility-switch"
+              value={nearbyVisible}
+              onValueChange={onToggleNearby}
+              disabled={togglingNearby}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+              ios_backgroundColor={colors.border}
+            />
+          </View>
           <Row
             testID="heatmap-button"
             icon={<MapIcon size={18} color={colors.primary} strokeWidth={2.4} />}
@@ -603,6 +646,28 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: fonts.medium,
+  },
+
+  // Toggle row (e.g. nearby visibility)
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  toggleTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontFamily: fonts.medium,
+  },
+  toggleSub: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    marginTop: 2,
   },
 
   // Logout

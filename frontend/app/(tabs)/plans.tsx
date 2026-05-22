@@ -138,6 +138,7 @@ export default function Plans() {
           <PlanCard
             plan={item}
             highlight={index === 0 && tab === 'forYou'}
+            t={t}
             onPress={() => router.push({ pathname: '/plan/[id]', params: { id: item.plan_id } })}
           />
         )}
@@ -148,9 +149,11 @@ export default function Plans() {
 
 // ─────────────────────────────────────────────────────────────
 function PlanCard({
-  plan, highlight, onPress,
-}: { plan: Plan; highlight?: boolean; onPress: () => void }) {
+  plan, highlight, onPress, t,
+}: { plan: Plan; highlight?: boolean; onPress: () => void; t: (k: string, o?: any) => string }) {
   const imageUri = plan.image_url || pickFallback(plan.title, plan.level);
+  const weeksShort = t('plans.weeks_short');
+  const perWeekShort = t('plans.per_week_short');
   return (
     <TouchableOpacity
       testID={`plan-card-${plan.plan_id}`}
@@ -174,7 +177,7 @@ function PlanCard({
         <View style={styles.cardContent}>
           <View style={styles.badgeRow}>
             <View style={[styles.badge, { backgroundColor: levelColor(plan.level) }]}>
-              <Text style={styles.badgeText}>{levelLabel(plan.level)}</Text>
+              <Text style={styles.badgeText}>{levelLabel(plan.level, t)}</Text>
             </View>
             {plan.is_ai_generated ? (
               <View style={[styles.badge, { backgroundColor: colors.primary }]}>
@@ -197,10 +200,10 @@ function PlanCard({
 
           <View style={styles.metaRow}>
             <Calendar size={12} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
-            <Text style={styles.meta}>{plan.duration_weeks} sett.</Text>
+            <Text style={styles.meta}>{plan.duration_weeks} {weeksShort}</Text>
             <View style={styles.metaDot} />
             <Repeat size={12} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
-            <Text style={styles.meta}>{plan.workouts_per_week}× sett.</Text>
+            <Text style={styles.meta}>{plan.workouts_per_week}{perWeekShort}</Text>
           </View>
         </View>
       </ImageBackground>
@@ -208,8 +211,10 @@ function PlanCard({
   );
 }
 
-function levelLabel(l: string) {
-  return l === 'beginner' ? 'PRINCIPIANTE' : l === 'intermediate' ? 'INTERMEDIO' : 'ESPERTO';
+function levelLabel(l: string, t: (k: string, o?: any) => string) {
+  if (l === 'beginner') return t('plans.level_beginner_upper');
+  if (l === 'intermediate') return t('plans.level_intermediate_upper');
+  return t('plans.level_advanced_upper');
 }
 function levelColor(l: string) {
   return l === 'beginner' ? colors.success : l === 'intermediate' ? colors.warning : colors.primary;

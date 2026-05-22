@@ -30,14 +30,14 @@ export default function Login() {
 
   const onSubmit = async () => {
     setError('');
-    if (!email || !password) { setError('Compila tutti i campi'); return; }
+    if (!email || !password) { setError(t('auth.fill_all_fields')); return; }
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
       router.replace('/(tabs)/home');
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      setError(typeof d === 'string' ? d : 'Login fallito');
+      setError(typeof d === 'string' ? d : t('auth.login_failed'));
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function Login() {
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
               <Image source={require('../../assets/images/logo-transparent.png')} style={styles.logo} resizeMode="contain" />
-              <Text style={styles.tagline}>OGNI KM. OGNI BATTITO. OGNI TRAGUARDO.</Text>
+              <Text style={styles.tagline}>{t('auth.tagline')}</Text>
             </View>
             <View style={styles.card}>
               <Text style={styles.title}>{t('auth.login_title').toUpperCase()}</Text>
