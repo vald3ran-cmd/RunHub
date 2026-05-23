@@ -23,6 +23,7 @@ import {
   rcDiagnostic,
 } from '../src/revenuecat';
 import { useAuth } from '../src/auth';
+import { useT } from '../src/i18n';
 
 type Period = 'monthly' | 'yearly';
 type TierKey = 'starter' | 'performance' | 'elite';
@@ -30,10 +31,10 @@ type TierKey = 'starter' | 'performance' | 'elite';
 interface TierDef {
   key: TierKey;
   name: string;
-  tagline: string;
+  taglineKey: string;
   color: string;
   popular?: boolean;
-  features: string[];
+  featuresKeys: string[];
   monthlyProductId: string;
   yearlyProductId: string;
   monthlyPrice: number;
@@ -44,14 +45,9 @@ const TIERS: TierDef[] = [
   {
     key: 'starter',
     name: 'Starter',
-    tagline: 'Allenati',
+    taglineKey: 'paywall.tier_starter_tagline',
     color: '#3B82F6',
-    features: [
-      'Piani allenamento base',
-      'Tracciamento GPS',
-      'Storia allenamenti illimitata',
-      'Senza pubblicità',
-    ],
+    featuresKeys: ['paywall.starter_f1', 'paywall.starter_f2', 'paywall.starter_f3', 'paywall.starter_f4'],
     monthlyProductId: 'com.runhub.app.sub.starter.monthly',
     yearlyProductId: 'com.runhub.app.sub.starter.yearly',
     monthlyPrice: 4.99,
@@ -60,16 +56,10 @@ const TIERS: TierDef[] = [
   {
     key: 'performance',
     name: 'Performance',
-    tagline: 'Competi',
+    taglineKey: 'paywall.tier_performance_tagline',
     color: '#FF3B30',
     popular: true,
-    features: [
-      'Tutto di Starter',
-      'AI Coach personalizzato (Claude 4.5)',
-      'Heatmap percorsi avanzata',
-      'Predizione tempi gara',
-      'Obiettivi intelligenti',
-    ],
+    featuresKeys: ['paywall.perf_f1', 'paywall.perf_f2', 'paywall.perf_f3', 'paywall.perf_f4', 'paywall.perf_f5'],
     monthlyProductId: 'com.runhub.app.sub.performance.monthly.v2',
     yearlyProductId: 'com.runhub.app.sub.performance.yearly',
     monthlyPrice: 9.99,
@@ -78,16 +68,9 @@ const TIERS: TierDef[] = [
   {
     key: 'elite',
     name: 'Elite',
-    tagline: 'Domina',
+    taglineKey: 'paywall.tier_elite_tagline',
     color: '#F59E0B',
-    features: [
-      'Tutto di Performance',
-      'Coach umano dedicato',
-      'Apple Health / Google Fit sync',
-      'Analytics avanzate',
-      'Supporto prioritario',
-      'Piani esclusivi',
-    ],
+    featuresKeys: ['paywall.elite_f1', 'paywall.elite_f2', 'paywall.elite_f3', 'paywall.elite_f4', 'paywall.elite_f5', 'paywall.elite_f6'],
     monthlyProductId: 'com.runhub.app.sub.elite.monthly',
     yearlyProductId: 'com.runhub.app.sub.elite.yearly',
     monthlyPrice: 14.99,
@@ -98,6 +81,7 @@ const TIERS: TierDef[] = [
 export default function PaywallScreen() {
   const router = useRouter();
   const { user, refresh } = useAuth();
+  const { t } = useT();
   const [period, setPeriod] = useState<Period>('monthly');
   const [loading, setLoading] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
@@ -207,8 +191,8 @@ export default function PaywallScreen() {
       if (isNative) {
         if (!rcReady) {
           Alert.alert(
-            'Servizio pagamenti non disponibile',
-            'Il servizio abbonamenti non è ancora pronto. Riavvia l\'app e riprova tra qualche secondo. Se il problema persiste, aggiorna l\'app all\'ultima versione.'
+            t('paywall.service_unavailable'),
+            t('paywall.service_unavailable_msg')
           );
           return;
         }
@@ -217,9 +201,7 @@ export default function PaywallScreen() {
         let pkg = getPackageForTier(tier);
         let currentOfferings = offerings;
 
-        // Step 2: se il package non e' stato trovato, forza un re-fetch delle
-        // offerings (puo' succedere nel sandbox Apple se il caricamento iniziale
-        // e' fallito o se l'utente ha aperto la paywall prima che RC sia pronto).
+        // Step 2: re-fetch fallback
         if (!pkg) {
           console.log('[Paywall] Package non trovato al primo tentativo, re-fetch offerings...');
           try {
@@ -233,15 +215,13 @@ export default function PaywallScreen() {
           }
         }
 
-        // Step 3: se ancora niente, alert verboso con dati di debug (utile per
-        // screenshot del reviewer Apple).
+        // Step 3: ancora niente -> alert con debug
         if (!pkg) {
           const targetId = period === 'monthly' ? tier.monthlyProductId : tier.yearlyProductId;
           const available = currentOfferings?.availablePackages
             ?.map((p: any) => p.product?.identifier || p.identifier)
             .filter(Boolean)
             .join('\n• ') || 'nessuna offerta ricevuta';
-          // 🔍 DEBUG: dump completo dello stato RC perché in TestFlight i console.log sono strippati
           const d = rcDiagnostic;
           const debugInfo =
             `\n\n— DEBUG RC —\n` +
@@ -256,9 +236,9 @@ export default function PaywallScreen() {
             `currentPkgCount: ${d.lastCurrentPkgCount}\n` +
             `pkgIds: [${d.lastPkgIds.join(', ') || 'EMPTY'}]`;
           Alert.alert(
-            'Prodotto non disponibile',
-            `Il piano "${tier.name}" non risulta disponibile per l'acquisto.\n\n` +
-              `ID cercato:\n• ${targetId}\n\n` +
+            t('paywall.product_unavailable'),
+            t('paywall.product_unavailable_msg', { tier: tier.name }) +
+              `\n\nID cercato:\n• ${targetId}\n\n` +
               `Offerte ricevute da RevenueCat:\n• ${available}` +
               debugInfo
           );
@@ -268,15 +248,15 @@ export default function PaywallScreen() {
         const result = await purchasePackage(pkg);
         if (result.success) {
           await refresh();
-          Alert.alert('🎉 Abbonamento attivo!', `Benvenuto nel piano ${tier.name}.`);
+          Alert.alert(t('paywall.sub_active_title'), t('paywall.sub_active_msg', { tier: tier.name }));
           router.back();
         } else if (result.error && result.error !== 'cancelled') {
-          Alert.alert('Errore acquisto', result.error);
+          Alert.alert(t('paywall.purchase_error'), result.error);
         }
         return;
       }
 
-      // Stripe Checkout SOLO su web (niente Stripe su iOS/Android — violerebbe Apple 3.1.1)
+      // Stripe Checkout SOLO su web
       const pkgId = period === 'monthly' ? tier.monthlyProductId : tier.yearlyProductId;
       const res = await api.post('/stripe/checkout', { package_id: pkgId });
       const url = res.data?.url;
@@ -284,13 +264,13 @@ export default function PaywallScreen() {
         if (Platform.OS === 'web') {
           window.location.href = url;
         } else {
-          Alert.alert('Errore', 'Pagamenti non disponibili su questa piattaforma');
+          Alert.alert(t('paywall.generic_error'), t('paywall.platform_unsupported'));
         }
       } else {
-        Alert.alert('Errore', 'URL di checkout non ricevuto');
+        Alert.alert(t('paywall.generic_error'), t('paywall.checkout_no_url'));
       }
     } catch (err: any) {
-      Alert.alert('Errore', err?.response?.data?.detail || err?.message || 'Qualcosa è andato storto');
+      Alert.alert(t('paywall.generic_error'), err?.response?.data?.detail || err?.message || t('paywall.something_wrong'));
     } finally {
       setLoading(null);
     }
@@ -298,7 +278,7 @@ export default function PaywallScreen() {
 
   const handleRestore = async () => {
     if (!rcReady || !isNative) {
-      Alert.alert('Non disponibile', 'Ripristino acquisti disponibile solo su iOS/Android nativi.');
+      Alert.alert(t('paywall.restore_unavailable'), t('paywall.restore_unavailable_msg'));
       return;
     }
     setRestoring(true);
@@ -306,10 +286,10 @@ export default function PaywallScreen() {
       const info = await restorePurchases();
       if (info) {
         await refresh();
-        Alert.alert('✅ Ripristinati', 'I tuoi acquisti sono stati sincronizzati.');
+        Alert.alert(t('paywall.restore_ok_title'), t('paywall.restore_ok_msg'));
       }
     } catch (err: any) {
-      Alert.alert('Errore', err?.message || 'Errore ripristino');
+      Alert.alert(t('paywall.generic_error'), err?.message || t('paywall.restore_error'));
     } finally {
       setRestoring(false);
     }
@@ -323,7 +303,7 @@ export default function PaywallScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="close" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scegli il tuo piano</Text>
+        <Text style={styles.headerTitle}>{t('paywall.header_title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -333,7 +313,7 @@ export default function PaywallScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.subtitle}>
-          Sblocca tutto il potenziale di RunHub{'\n'}Annulla in qualsiasi momento
+          {t('paywall.subtitle')}
         </Text>
 
         {/* Toggle Mensile / Annuale */}
@@ -343,7 +323,7 @@ export default function PaywallScreen() {
             onPress={() => setPeriod('monthly')}
           >
             <Text style={[styles.periodBtnText, period === 'monthly' && styles.periodBtnTextActive]}>
-              Mensile
+              {t('paywall.monthly')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -351,10 +331,10 @@ export default function PaywallScreen() {
             onPress={() => setPeriod('yearly')}
           >
             <Text style={[styles.periodBtnText, period === 'yearly' && styles.periodBtnTextActive]}>
-              Annuale
+              {t('paywall.yearly')}
             </Text>
             <View style={styles.saveBadge}>
-              <Text style={styles.saveBadgeText}>-30%</Text>
+              <Text style={styles.saveBadgeText}>{t('paywall.save_badge')}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -363,9 +343,6 @@ export default function PaywallScreen() {
         {TIERS.map((tier) => {
           const fallbackPrice = period === 'monthly' ? tier.monthlyPrice : tier.yearlyPrice;
           const pkg = getPackageForTier(tier);
-          // Usiamo SEMPRE i prezzi hardcoded in € (formato italiano "4,99 €") come display primario.
-          // priceString di RevenueCat può essere disallineato (cache RC, sync StoreKit lento, store di test).
-          // Apple addebiterà comunque il prezzo reale configurato su ASC al momento del checkout.
           const priceDisplay = `${fallbackPrice.toFixed(2).replace('.', ',')} €`;
           const pricePerMonth = period === 'yearly' ? (fallbackPrice / 12).toFixed(2).replace('.', ',') : null;
           const currencySymbol = '€';
@@ -379,35 +356,35 @@ export default function PaywallScreen() {
             >
               {tier.popular && (
                 <View style={[styles.popularBadge, { backgroundColor: tier.color }]}>
-                  <Text style={styles.popularBadgeText}>⭐ PIÙ SCELTO</Text>
+                  <Text style={styles.popularBadgeText}>{t('paywall.popular')}</Text>
                 </View>
               )}
 
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.tierName, { color: tier.color }]}>{tier.name}</Text>
-                  <Text style={styles.tierTagline}>{tier.tagline}</Text>
+                  <Text style={styles.tierTagline}>{t(tier.taglineKey)}</Text>
                 </View>
                 {isCurrent && (
                   <View style={styles.currentBadge}>
-                    <Text style={styles.currentBadgeText}>ATTUALE</Text>
+                    <Text style={styles.currentBadgeText}>{t('paywall.current')}</Text>
                   </View>
                 )}
               </View>
 
               <View style={styles.priceRow}>
                 <Text style={styles.price}>{priceDisplay}</Text>
-                <Text style={styles.priceUnit}>/{period === 'monthly' ? 'mese' : 'anno'}</Text>
+                <Text style={styles.priceUnit}>/{period === 'monthly' ? t('paywall.month') : t('paywall.year')}</Text>
               </View>
               {pricePerMonth && (
-                <Text style={styles.pricePerMonth}>≈ {currencySymbol}{pricePerMonth}/mese</Text>
+                <Text style={styles.pricePerMonth}>{t('paywall.approx_monthly', { symbol: currencySymbol, price: pricePerMonth })}</Text>
               )}
 
               <View style={styles.features}>
-                {tier.features.map((f, i) => (
+                {tier.featuresKeys.map((fk, i) => (
                   <View key={i} style={styles.featureRow}>
                     <Ionicons name="checkmark-circle" size={18} color={tier.color} />
-                    <Text style={styles.featureText}>{f}</Text>
+                    <Text style={styles.featureText}>{t(fk)}</Text>
                   </View>
                 ))}
               </View>
@@ -426,7 +403,7 @@ export default function PaywallScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.ctaText}>
-                    {isCurrent ? 'Piano attivo' : `Abbonati a ${tier.name}`}
+                    {isCurrent ? t('paywall.current_plan') : t('paywall.subscribe_to', { tier: tier.name })}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -434,29 +411,28 @@ export default function PaywallScreen() {
           );
         })}
 
-        {/* Restore purchases (obbligatorio iOS App Store) */}
+        {/* Restore purchases */}
         <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} disabled={restoring}>
           {restoring ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
             <Text style={styles.restoreText}>
-              <Ionicons name="refresh" size={14} color={colors.primary} /> Ripristina acquisti
+              <Ionicons name="refresh" size={14} color={colors.primary} /> {t('paywall.restore')}
             </Text>
           )}
         </TouchableOpacity>
 
         {/* Legal footer */}
         <Text style={styles.legal}>
-          Gli abbonamenti si rinnovano automaticamente. Puoi annullare in qualsiasi momento dalle
-          impostazioni del tuo account.
+          {t('paywall.legal')}
         </Text>
         <View style={styles.legalLinks}>
           <TouchableOpacity onPress={() => router.push('/terms')}>
-            <Text style={styles.legalLink}>Termini</Text>
+            <Text style={styles.legalLink}>{t('paywall.legal_terms')}</Text>
           </TouchableOpacity>
           <Text style={styles.legalDot}>•</Text>
           <TouchableOpacity onPress={() => router.push('/privacy')}>
-            <Text style={styles.legalLink}>Privacy</Text>
+            <Text style={styles.legalLink}>{t('paywall.legal_privacy')}</Text>
           </TouchableOpacity>
         </View>
 

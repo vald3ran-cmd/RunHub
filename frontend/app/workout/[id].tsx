@@ -14,10 +14,12 @@ import {
   ChevronLeft, Share2, CheckCircle2, MapPin, Clock, Flame, Zap, Award,
 } from 'lucide-react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import { useT } from '../../src/i18n';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t, locale } = useT();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isNewPB, setIsNewPB] = useState<string | null>(null);
@@ -35,10 +37,10 @@ export default function WorkoutDetail() {
           const type = (data.activity_type as ActivityType) || 'run';
           const pb = pbRes.data?.[type];
           if (pb?.longest_distance?.session_id === data.session_id) {
-            setIsNewPB('Distanza Massima');
+            setIsNewPB(t('workout_detail.pb_distance'));
             haptics.success();
           } else if (pb?.best_pace?.session_id === data.session_id) {
-            setIsNewPB('Passo Migliore');
+            setIsNewPB(t('workout_detail.pb_pace'));
             haptics.success();
           }
         } catch {}
@@ -48,7 +50,7 @@ export default function WorkoutDetail() {
   }, [id]);
 
   if (loading) return <View style={styles.loader}><ActivityIndicator color={colors.primary} /></View>;
-  if (!session) return <View style={styles.loader}><Text style={{ color: colors.textSecondary }}>Sessione non trovata</Text></View>;
+  if (!session) return <View style={styles.loader}><Text style={{ color: colors.textSecondary }}>{t('workout_detail.session_not_found')}</Text></View>;
 
   const pace = session.avg_pace_min_per_km;
   const activityType: ActivityType = (session.activity_type as ActivityType) || 'run';
@@ -68,7 +70,7 @@ export default function WorkoutDetail() {
         const Sharing = require('expo-sharing');
         const available = await Sharing.isAvailableAsync();
         if (available) {
-          await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Condividi la tua corsa' });
+          await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: t('workout_detail.share_dialog_title') });
           return;
         }
       } catch {}
@@ -76,7 +78,7 @@ export default function WorkoutDetail() {
       onShareText();
     } catch (e: any) {
       console.warn('Share error:', e?.message);
-      Alert.alert('Errore condivisione', 'Riprova tra poco.');
+      Alert.alert(t('workout_detail.share_error'), t('workout_detail.share_error_msg'));
     }
   };
 
@@ -84,13 +86,13 @@ export default function WorkoutDetail() {
     try {
       const paceStr = pace ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}/km` : '';
       const emoji = activityType === 'walk' ? '🚶' : activityType === 'bike' ? '🚴' : '🏃';
-      const msg = `${emoji} Ho appena completato una ${activity.shortLabel.toLowerCase()} con RunHub!\n\n` +
+      const msg = `${t('workout_detail.share_msg_intro', { emoji, activity: activity.shortLabel.toLowerCase() })}\n\n` +
         `📍 ${session.distance_km.toFixed(2)} km\n` +
         `⏱️ ${formatTime(session.duration_seconds)}\n` +
-        (paceStr ? `⚡ Passo ${paceStr}\n` : '') +
+        (paceStr ? `⚡ ${t('workout_detail.share_msg_pace', { pace: paceStr })}\n` : '') +
         (session.calories ? `🔥 ${session.calories} kcal\n` : '') +
-        `\nScarica RunHub: https://runhub.app`;
-      await Share.share({ message: msg, title: 'La mia attività' });
+        `\n${t('workout_detail.share_msg_footer')}`;
+      await Share.share({ message: msg, title: t('workout_detail.share_msg_my_activity') });
     } catch {}
   };
 
@@ -135,7 +137,7 @@ export default function WorkoutDetail() {
             {isNewPB ? (
               <View style={styles.pbBanner}>
                 <Award size={14} color="#fff" strokeWidth={2.4} />
-                <Text style={styles.pbBannerText}>NUOVO RECORD · {isNewPB}</Text>
+                <Text style={styles.pbBannerText}>{t('workout_detail.new_record')} · {isNewPB}</Text>
               </View>
             ) : null}
 
@@ -143,13 +145,13 @@ export default function WorkoutDetail() {
             <View style={styles.cardStats}>
               <CardStat
                 icon={<Clock size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />}
-                label="DURATA"
+                label={t('workout_detail.duration')}
                 value={formatTime(session.duration_seconds)}
               />
               <View style={styles.cardDivider} />
               <CardStat
                 icon={<Zap size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />}
-                label={activityType === 'bike' ? 'KM/H' : 'PASSO'}
+                label={activityType === 'bike' ? t('workout_detail.kmh') : t('workout_detail.pace')}
                 value={
                   activityType === 'bike'
                     ? (session.duration_seconds > 0
@@ -163,13 +165,13 @@ export default function WorkoutDetail() {
               <View style={styles.cardDivider} />
               <CardStat
                 icon={<Flame size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />}
-                label="KCAL"
+                label={t('workout_detail.kcal')}
                 value={String(session.calories ?? '--')}
               />
             </View>
 
             {/* Date footer */}
-            <Text style={styles.cardDate}>{formatDate(session.completed_at)}</Text>
+            <Text style={styles.cardDate}>{formatDate(session.completed_at, locale)}</Text>
 
             {/* Decorative blobs */}
             <View style={[styles.blobBig, { backgroundColor: activity.color, opacity: 0.18 }]} />
@@ -181,10 +183,10 @@ export default function WorkoutDetail() {
         <View style={styles.metaSection}>
           <View style={styles.completedBadge}>
             <CheckCircle2 size={18} color={colors.success} strokeWidth={2.4} />
-            <Text style={styles.completedText}>COMPLETATO</Text>
+            <Text style={styles.completedText}>{t('workout_detail.completed')}</Text>
           </View>
           <Text style={styles.title}>{session.title}</Text>
-          <Text style={styles.date}>{new Date(session.completed_at).toLocaleString('it-IT')}</Text>
+          <Text style={styles.date}>{new Date(session.completed_at).toLocaleString(locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT')}</Text>
         </View>
 
         {/* Mappa */}
@@ -192,7 +194,7 @@ export default function WorkoutDetail() {
           <View style={styles.mapSection}>
             <View style={styles.mapHeader}>
               <MapPin size={16} color={colors.primary} strokeWidth={2.4} />
-              <Text style={styles.mapHeaderText}>PERCORSO</Text>
+              <Text style={styles.mapHeaderText}>{t('workout_detail.route')}</Text>
             </View>
             <RouteMap coords={session.locations} height={260} showsUser={false} />
           </View>
@@ -207,7 +209,7 @@ export default function WorkoutDetail() {
             activeOpacity={0.9}
           >
             <Share2 size={18} color="#fff" strokeWidth={2.4} />
-            <Text style={styles.shareBtnText}>Condividi card</Text>
+            <Text style={styles.shareBtnText}>{t('workout_detail.share_image')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="share-text-button"
@@ -215,7 +217,7 @@ export default function WorkoutDetail() {
             onPress={onShareText}
             activeOpacity={0.9}
           >
-            <Text style={styles.shareBtnSecondaryText}>Solo testo</Text>
+            <Text style={styles.shareBtnSecondaryText}>{t('workout_detail.share_text')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -239,9 +241,10 @@ function formatTime(s: number) {
   const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const sec = s % 60;
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
 }
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string = 'it') {
   try {
-    return new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+    const tag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT';
+    return new Date(iso).toLocaleDateString(tag, { day: '2-digit', month: 'long', year: 'numeric' });
   } catch { return ''; }
 }
 

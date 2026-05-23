@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
+import { useT } from '../src/i18n';
 
 type Badge = {
   id: string; title: string; description: string; icon: string;
@@ -13,6 +14,7 @@ type Badge = {
 
 export default function BadgesScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -34,8 +36,8 @@ export default function BadgesScreen() {
           <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>ACHIEVEMENT</Text>
-          <Text style={styles.sub}>{earned} / {total} sbloccati</Text>
+          <Text style={styles.title}>{t('badges.title')}</Text>
+          <Text style={styles.sub}>{t('badges.unlocked', { earned, total })}</Text>
         </View>
       </View>
       <ScrollView
@@ -57,12 +59,12 @@ export default function BadgesScreen() {
               {b.earned ? (
                 <View style={styles.earnedBadge}>
                   <Ionicons name="checkmark" size={12} color="#fff" />
-                  <Text style={styles.earnedText}>OTTENUTO</Text>
+                  <Text style={styles.earnedText}>{t('badges.earned')}</Text>
                 </View>
               ) : (
                 <View style={styles.lockedBadge}>
                   <Ionicons name="lock-closed" size={12} color={colors.textMuted} />
-                  <Text style={styles.lockedText}>DA SBLOCCARE</Text>
+                  <Text style={styles.lockedText}>{t('badges.locked')}</Text>
                 </View>
               )}
             </View>

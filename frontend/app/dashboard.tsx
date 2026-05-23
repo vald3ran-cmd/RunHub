@@ -12,6 +12,7 @@ import { RunIcon, WalkIcon, BikeIcon } from '../src/icons/BrandIcons';
 import {
   ChevronLeft, Award, TrendingUp, TrendingDown, X,
 } from 'lucide-react-native';
+import { useT } from '../src/i18n';
 
 type DayPoint = { date: string; weekday: string; distance_km: number; duration_seconds: number; count: number };
 type WeekPoint = { week: string; distance_km: number; count: number };
@@ -35,6 +36,7 @@ const PERIODS: Period[] = ['7G', '30G', '90G', '1A', 'TUTTO'];
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [data, setData] = useState<Dashboard | null>(null);
   const [pbs, setPbs] = useState<PBs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,7 +96,7 @@ export default function DashboardScreen() {
       >
         {/* DISTANZA card */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>DISTANZA</Text>
+          <Text style={styles.cardLabel}>{t('dashboard.card_distance')}</Text>
           <View style={styles.cardValueRow}>
             {loading ? <Skeleton width={140} height={36} /> : (
               <AnimatedCounter
@@ -105,7 +107,7 @@ export default function DashboardScreen() {
               />
             )}
           </View>
-          <DeltaBadge deltaPct={aggregated.distanceDeltaPct} periodLabel={periodCompareLabel(period)} />
+          <DeltaBadge deltaPct={aggregated.distanceDeltaPct} periodLabel={periodCompareLabel(period, t)} />
           <View style={{ marginTop: spacing.md, alignItems: 'center' }}>
             <Sparkline
               data={aggregated.distanceSeries.length > 1 ? aggregated.distanceSeries : [0.01, 0.01]}
@@ -119,7 +121,7 @@ export default function DashboardScreen() {
 
         {/* ATTIVITÀ card */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>ATTIVITÀ</Text>
+          <Text style={styles.cardLabel}>{t('dashboard.card_activity')}</Text>
           <View style={styles.cardValueRow}>
             {loading ? <Skeleton width={70} height={36} /> : (
               <AnimatedCounter
@@ -129,7 +131,7 @@ export default function DashboardScreen() {
               />
             )}
           </View>
-          <Text style={styles.cardSub}>Allenamenti</Text>
+          <Text style={styles.cardSub}>{t('dashboard.workouts')}</Text>
           <View style={{ marginTop: spacing.md, alignItems: 'center' }}>
             <BarChart
               data={aggregated.countSeries.length ? aggregated.countSeries : [0, 0, 0, 0, 0, 0, 0]}
@@ -144,19 +146,19 @@ export default function DashboardScreen() {
         {/* RITMO MEDIO card */}
         {aggregated.avgPaceMin > 0 ? (
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>RITMO MEDIO</Text>
+            <Text style={styles.cardLabel}>{t('dashboard.card_pace_avg')}</Text>
             <View style={styles.cardValueRow}>
               <Text style={styles.cardValue}>{fmtPace(aggregated.avgPaceMin)}</Text>
               <Text style={styles.cardUnit}>/km</Text>
             </View>
-            <DeltaBadge deltaPct={aggregated.paceDeltaPct} periodLabel={periodCompareLabel(period)} invert />
+            <DeltaBadge deltaPct={aggregated.paceDeltaPct} periodLabel={periodCompareLabel(period, t)} invert />
           </View>
         ) : null}
 
         {/* PERSONAL BESTS */}
         <View style={styles.sectionLabelRow}>
           <Award size={16} color={colors.primary} strokeWidth={2.4} />
-          <Text style={styles.sectionLabel}>PERSONAL BEST</Text>
+          <Text style={styles.sectionLabel}>{t('dashboard.personal_best')}</Text>
         </View>
 
         {(['run', 'walk', 'bike'] as ActivityType[]).map((type) => {
@@ -171,7 +173,7 @@ export default function DashboardScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.pbActivity}>{meta.label}</Text>
-                <Text style={styles.pbEmpty}>Nessun record ancora</Text>
+                <Text style={styles.pbEmpty}>{t('dashboard.pb_empty')}</Text>
               </View>
             </View>
           );
@@ -188,19 +190,19 @@ export default function DashboardScreen() {
                   {pb.longest_distance ? (
                     <View style={styles.pbStat}>
                       <Text style={styles.pbValue}>{pb.longest_distance.value_km}</Text>
-                      <Text style={styles.pbLabel}>km max</Text>
+                      <Text style={styles.pbLabel}>{t('dashboard.km_max')}</Text>
                     </View>
                   ) : null}
                   {pb.longest_duration ? (
                     <View style={styles.pbStat}>
                       <Text style={styles.pbValue}>{fmtDur(pb.longest_duration.value_seconds)}</Text>
-                      <Text style={styles.pbLabel}>tempo max</Text>
+                      <Text style={styles.pbLabel}>{t('dashboard.time_max')}</Text>
                     </View>
                   ) : null}
                   {pb.best_pace ? (
                     <View style={styles.pbStat}>
                       <Text style={styles.pbValue}>{fmtPace(pb.best_pace.pace_min_per_km)}</Text>
-                      <Text style={styles.pbLabel}>passo top</Text>
+                      <Text style={styles.pbLabel}>{t('dashboard.pace_best')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -344,13 +346,13 @@ function deltaSplit(arr: number[]): number | null {
   return ((second - first) / first) * 100;
 }
 
-function periodCompareLabel(p: Period): string {
+function periodCompareLabel(p: Period, t: (k: string, o?: any) => string): string {
   switch (p) {
-    case '7G': return '7 giorni precedenti';
-    case '30G': return '30 giorni precedenti';
-    case '90G': return '90 giorni precedenti';
-    case '1A': return 'anno precedente';
-    default: return 'periodo precedente';
+    case '7G': return t('dashboard.cmp_7');
+    case '30G': return t('dashboard.cmp_30');
+    case '90G': return t('dashboard.cmp_90');
+    case '1A': return t('dashboard.cmp_1y');
+    default: return t('dashboard.cmp_default');
   }
 }
 

@@ -778,3 +778,33 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Wave 4 i18n complete: (A) Aggiunte 3 nuove sezioni nei JSON IT/EN/ES: `onboarding` (24 chiavi: titoli step, livelli, obiettivi, days), `record` (7 chiavi: NEW RECORD, share template, CTA), `preview` (15 chiavi: phase labels, details, intensity, button) + chiavi UI `run.ui_*` (alert finish/quit, paceState, GPS init/error, PAUSA/RIPRENDI). (B) onboarding.tsx: riscritto completamente con useT() hook - tutti i 3 step localizzati (livello/goal/giorni), LEVELS/GOALS dinamici via useMemo+t, summary localizzato. (C) new-record.tsx: titolo, label, tagline, CTA share/home tutti localizzati, share message template usa t('record.share_message') con placeholders. (D) workout-preview.tsx: phase labels (warmup/main/cooldown), details (distance/duration/intensity), CTA button, describePhase() e intensityFromSteps() ora accettano t opzionale e usano run.step_* + preview.intensity_*. (E) run-active.tsx: confirmStop/confirmExit Alert con titoli/messaggi/CTA localizzati, paceState (IN TARGET/TROPPO VELOCE/TROPPO LENTO), speedLabel (KM/H / PASSO·/KM), GPS init/error messages, Pause/Resume button label tutti via t(). (F) Verificato compilation con tsc --noEmit (0 nuovi errori). Screenshot login screen renderizzato correttamente in EN. (G) Backend NON modificato - tutto frontend. Pronto per EAS build v1.4.4 b69 trilingue (IT/EN/ES)."
+
+
+# ─────────────────────────────────────────────────────────────
+# Wave 5 i18n: Paywall, Dashboard, Badges, Workout Detail (sessione terminata)
+# ─────────────────────────────────────────────────────────────
+
+frontend:
+  - task: "i18n Wave 5: paywall, dashboard, badges, workout/[id] (resoconto sessione)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/i18n/{it,en,es}.json, frontend/app/paywall.tsx, frontend/app/dashboard.tsx, frontend/app/badges.tsx, frontend/app/workout/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Wave 5 completata: aggiunte ~120 chiavi nuove in IT/EN/ES (paywall completo con tier features, dashboard cards/PB, workout_detail, badges, social, account). Tradotti: paywall (header/toggle/tier features/CTAs/Alerts/restore/legal), dashboard (DISTANZA/ATTIVITA/RITMO MEDIO/PB cards + periodCompareLabel), badges (titolo/count/OTTENUTO/DA SBLOCCARE), workout/[id] - resoconto sessione (NUOVO RECORD/COMPLETATO/PERCORSO/DURATA/KM-H-PASSO/KCAL + share message multilingue + locale-aware date). tsc --noEmit zero nuovi errori."
+
+  - task: "CRITICO: package.json contiene versioni che ROMPERANNO EAS build iOS"
+    implemented: false
+    working: false
+    file: "frontend/package.json"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "DEPENDENCY DRIFT rilevato (ricorrenza nota): package.json contiene: react-native-reanimated ~4.1.1 (deve essere 3.19.5 esatto), react-native-worklets 0.5.1 (deve essere RIMOSSO), @rnmapbox/maps ^10.3.1 (deve essere 10.2.10 esatto), resolutions ~3.19.5 (deve essere 3.19.5 senza tilde). Causa crash eas build iOS phase Install Pods. Prima del prossimo eas build: yarn remove react-native-worklets && yarn add react-native-reanimated@3.19.5 @rnmapbox/maps@10.2.10 e correggere resolutions."
