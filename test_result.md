@@ -760,3 +760,21 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Wave 3 i18n complete: (A) Aggiunte ~80 chiavi nuove in it/en/es.json - sezioni `auth` complete (forgot-password, register, errori), `history.session_singular/plural`, `plans.weeks_short/per_week_short/level_*_upper`, `profile.nearby_visibility/_sub/_on/_off`, nuova sezione `run.*` con step labels e TTS templates. (B) plans.tsx: levelLabel ora prende t() e ritorna plans.level_X_upper localizzato; PlanCard riceve t prop e usa weeks_short/per_week_short. (C) history.tsx: session count usa session_singular/plural; formatDate ora locale-aware (it-IT/en-US/es-ES) basato su useT().locale. (D) login.tsx: errori 'Compila tutti i campi' e 'Login fallito' -> t('auth.fill_all_fields'/'auth.login_failed'); tagline -> t('auth.tagline'). (E) forgot-password.tsx: riscritto completamente con useT hook, tutte stringhe localizzate (forgot_title_block, send_code, code_sent_msg, code_label, new_password_label, confirm_password_label, reset_cta, didnt_receive_code, resend, back_to_login, etc) + Alert localizzati. (F) register.tsx: tutti gli error messages, placeholders (Nome/Email/Password min/GG/MM/AAAA), titolo (UNISCITI AL BRANCO), subtitle, age hint, ToS consent text, age confirm text, GDPR footer, CREA ACCOUNT button, link 'Hai già un account?' -> tutti via t(). (G) TTS Audio Coach localizzato: runMetrics.ts -> ttsForKmSplit/ttsManualLap accettano t opzionale e usano run.tts_km_run/walk/bike + run.tts_lap; run-active.tsx passa t() alle helpers, usa t('run.tts_locale') per Speech.speak language ('it-IT'/'en-US'/'es-ES'), localizza TTS messages (5min/auto_pause/resume/workout_complete/step labels). (H) Profile P0 toggle: aggiunto Switch 'Visibile ai RunHubber vicini' nella sezione COMMUNITY, chiama PUT /api/users/me/nearby-visibility con optimistic update + revert on failure, sub-text dinamico (on/off). (I) Verificato compilation con tsc --noEmit (no nuovi errori). Screenshot login + forgot-password OK in EN locale. Pronto per EAS build v1.4.4 b69 multi-language."
+
+
+# ─────────────────────────────────────────────────────────────
+# Wave 4 i18n: Onboarding, New Record, Workout Preview, Run-Active UI
+# ─────────────────────────────────────────────────────────────
+
+frontend:
+  - task: "i18n Wave 4: localize Onboarding wizard, New Record celebration, Workout Preview, Run-Active UI labels & alerts"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/i18n/{it,en,es}.json, frontend/app/{onboarding,new-record,workout-preview,run-active}.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Wave 4 i18n complete: (A) Aggiunte 3 nuove sezioni nei JSON IT/EN/ES: `onboarding` (24 chiavi: titoli step, livelli, obiettivi, days), `record` (7 chiavi: NEW RECORD, share template, CTA), `preview` (15 chiavi: phase labels, details, intensity, button) + chiavi UI `run.ui_*` (alert finish/quit, paceState, GPS init/error, PAUSA/RIPRENDI). (B) onboarding.tsx: riscritto completamente con useT() hook - tutti i 3 step localizzati (livello/goal/giorni), LEVELS/GOALS dinamici via useMemo+t, summary localizzato. (C) new-record.tsx: titolo, label, tagline, CTA share/home tutti localizzati, share message template usa t('record.share_message') con placeholders. (D) workout-preview.tsx: phase labels (warmup/main/cooldown), details (distance/duration/intensity), CTA button, describePhase() e intensityFromSteps() ora accettano t opzionale e usano run.step_* + preview.intensity_*. (E) run-active.tsx: confirmStop/confirmExit Alert con titoli/messaggi/CTA localizzati, paceState (IN TARGET/TROPPO VELOCE/TROPPO LENTO), speedLabel (KM/H / PASSO·/KM), GPS init/error messages, Pause/Resume button label tutti via t(). (F) Verificato compilation con tsc --noEmit (0 nuovi errori). Screenshot login screen renderizzato correttamente in EN. (G) Backend NON modificato - tutto frontend. Pronto per EAS build v1.4.4 b69 trilingue (IT/EN/ES)."

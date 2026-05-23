@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator
 } from 'react-native';
@@ -8,31 +8,33 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { useAuth } from '../src/auth';
 import { colors, spacing, radius } from '../src/theme';
-
-const LEVELS = [
-  { key: 'beginner', label: 'PRINCIPIANTE', desc: 'Mai corso o ricomincio' },
-  { key: 'intermediate', label: 'INTERMEDIO', desc: 'Corro occasionalmente' },
-  { key: 'expert', label: 'ESPERTO', desc: 'Alleno da anni' },
-];
-
-const GOALS = [
-  { key: '5k', label: 'Correre 5K', icon: 'flag' },
-  { key: '10k', label: 'Correre 10K', icon: 'ribbon' },
-  { key: 'half', label: 'Mezza Maratona', icon: 'medal' },
-  { key: 'fitness', label: 'Forma fisica', icon: 'fitness' },
-  { key: 'weight_loss', label: 'Dimagrire', icon: 'flame' },
-];
+import { useT } from '../src/i18n';
 
 const DAYS = [2, 3, 4, 5, 6];
 
 export default function Onboarding() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const { t } = useT();
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState('');
   const [goal, setGoal] = useState('');
   const [days, setDays] = useState(3);
   const [saving, setSaving] = useState(false);
+
+  const LEVELS = useMemo(() => ([
+    { key: 'beginner',     label: t('onboarding.level_beginner'),     desc: t('onboarding.level_beginner_desc') },
+    { key: 'intermediate', label: t('onboarding.level_intermediate'), desc: t('onboarding.level_intermediate_desc') },
+    { key: 'expert',       label: t('onboarding.level_expert'),       desc: t('onboarding.level_expert_desc') },
+  ]), [t]);
+
+  const GOALS = useMemo(() => ([
+    { key: '5k',          label: t('onboarding.goal_5k'),          icon: 'flag' },
+    { key: '10k',         label: t('onboarding.goal_10k'),         icon: 'ribbon' },
+    { key: 'half',        label: t('onboarding.goal_half'),        icon: 'medal' },
+    { key: 'fitness',     label: t('onboarding.goal_fitness'),     icon: 'fitness' },
+    { key: 'weight_loss', label: t('onboarding.goal_weight_loss'), icon: 'flame' },
+  ]), [t]);
 
   const next = () => setStep(s => s + 1);
   const back = () => setStep(s => Math.max(0, s - 1));
@@ -40,13 +42,11 @@ export default function Onboarding() {
   const finish = async () => {
     setSaving(true);
     try {
-      await api.post('/onboarding', {
-        level, goal, days_per_week: days,
-      });
+      await api.post('/onboarding', { level, goal, days_per_week: days });
       await refresh();
       router.replace('/(tabs)/home');
     } catch (e: any) {
-      Alert.alert('Errore', 'Salvataggio fallito');
+      Alert.alert(t('common.error'), t('onboarding.save_failed'));
     } finally { setSaving(false); }
   };
 
@@ -61,8 +61,8 @@ export default function Onboarding() {
       <ScrollView contentContainerStyle={styles.content}>
         {step === 0 && (
           <>
-            <Text style={styles.h1}>QUAL&apos;E&apos; IL TUO LIVELLO?</Text>
-            <Text style={styles.sub}>Scegli quello che ti descrive meglio</Text>
+            <Text style={styles.h1}>{t('onboarding.step_level_title')}</Text>
+            <Text style={styles.sub}>{t('onboarding.step_level_sub')}</Text>
             {LEVELS.map(l => (
               <TouchableOpacity
                 key={l.key}
@@ -82,8 +82,8 @@ export default function Onboarding() {
 
         {step === 1 && (
           <>
-            <Text style={styles.h1}>IL TUO OBIETTIVO?</Text>
-            <Text style={styles.sub}>Cosa vuoi raggiungere con RunHub</Text>
+            <Text style={styles.h1}>{t('onboarding.step_goal_title')}</Text>
+            <Text style={styles.sub}>{t('onboarding.step_goal_sub')}</Text>
             {GOALS.map(g => (
               <TouchableOpacity
                 key={g.key}
@@ -101,8 +101,8 @@ export default function Onboarding() {
 
         {step === 2 && (
           <>
-            <Text style={styles.h1}>QUANTI GIORNI/SETTIMANA?</Text>
-            <Text style={styles.sub}>Quanto tempo puoi dedicare</Text>
+            <Text style={styles.h1}>{t('onboarding.step_days_title')}</Text>
+            <Text style={styles.sub}>{t('onboarding.step_days_sub')}</Text>
             <View style={styles.daysRow}>
               {DAYS.map(d => (
                 <TouchableOpacity
@@ -112,16 +112,16 @@ export default function Onboarding() {
                   onPress={() => setDays(d)}
                 >
                   <Text style={[styles.dayNum, days === d && { color: '#fff' }]}>{d}</Text>
-                  <Text style={[styles.dayLabel, days === d && { color: '#fff' }]}>GIORNI</Text>
+                  <Text style={[styles.dayLabel, days === d && { color: '#fff' }]}>{t('onboarding.days_label')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={styles.summary}>
-              <Text style={styles.summaryLabel}>IL TUO PROFILO</Text>
+              <Text style={styles.summaryLabel}>{t('onboarding.your_profile')}</Text>
               <Text style={styles.summaryText}>
                 {LEVELS.find(l => l.key === level)?.label} ·{' '}
                 {GOALS.find(g => g.key === goal)?.label} ·{' '}
-                {days} allenamenti a settimana
+                {t('onboarding.workouts_per_week', { n: days })}
               </Text>
             </View>
           </>
@@ -141,7 +141,7 @@ export default function Onboarding() {
             disabled={!((step === 0 && level) || (step === 1 && goal))}
             onPress={next}
           >
-            <Text style={styles.nextText}>CONTINUA</Text>
+            <Text style={styles.nextText}>{t('onboarding.continue')}</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
@@ -151,7 +151,7 @@ export default function Onboarding() {
           >
             {saving ? <ActivityIndicator color="#fff" /> : (
               <>
-                <Text style={styles.nextText}>VAI AL MIO PIANO</Text>
+                <Text style={styles.nextText}>{t('onboarding.go_to_plan')}</Text>
                 <Ionicons name="rocket" size={18} color="#fff" />
               </>
             )}

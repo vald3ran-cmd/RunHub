@@ -8,6 +8,7 @@ import Svg, { Polygon, Defs, LinearGradient as SvgGradient, Stop } from 'react-n
 import { Trophy, Share2, Home } from 'lucide-react-native';
 import { colors, spacing, radius, fonts } from '../src/theme';
 import { haptics } from '../src/uiPolish';
+import { useT } from '../src/i18n';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ const CONFETTI_COUNT = 60;
 
 export default function NewRecord() {
   const router = useRouter();
+  const { t } = useT();
   const params = useLocalSearchParams<{
     title?: string;
     value?: string;
@@ -24,8 +26,8 @@ export default function NewRecord() {
     session_id?: string;
   }>();
 
-  const title = params.title || 'NUOVO RECORD';
-  const label = params.label || 'Personal Best';
+  const title = params.title || t('record.title_new_record');
+  const label = params.label || t('record.label_pb');
   const value = params.value || '—';
   const unit = params.unit || '';
   const sessionId = params.session_id;
@@ -55,7 +57,7 @@ export default function NewRecord() {
     haptics.light();
     try {
       await Share.share({
-        message: `🏆 Nuovo Personal Best! ${value} ${unit} · ${label}\nScarica RunHub e mettiti alla prova!`,
+        message: t('record.share_message', { value, unit, label }),
       });
     } catch {}
   };
@@ -97,7 +99,7 @@ export default function NewRecord() {
             </View>
           </View>
           <Text style={styles.tagline}>
-            Hai superato te stesso. Continua così! 🔥
+            {t('record.tagline_great')}
           </Text>
         </Animated.View>
 
@@ -110,7 +112,7 @@ export default function NewRecord() {
             activeOpacity={0.85}
           >
             <Share2 size={18} color="#fff" strokeWidth={2.4} />
-            <Text style={styles.shareText}>CONDIVIDI</Text>
+            <Text style={styles.shareText}>{t('record.share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="home-record-button"
@@ -119,7 +121,7 @@ export default function NewRecord() {
             activeOpacity={0.85}
           >
             <Home size={18} color={colors.textPrimary} strokeWidth={2.4} />
-            <Text style={styles.homeText}>VAI ALL'ALLENAMENTO</Text>
+            <Text style={styles.homeText}>{t('record.go_workout')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </SafeAreaView>

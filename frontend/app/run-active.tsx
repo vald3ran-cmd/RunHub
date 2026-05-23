@@ -282,7 +282,7 @@ export default function RunActive() {
               } else if (err.code === err.TIMEOUT) {
                 setGpsError('Timeout GPS. Prova a riprovare.');
               } else {
-                setGpsError(err.message || 'Errore GPS');
+                setGpsError(err.message || t('run.ui_gps_error'));
               }
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -311,7 +311,7 @@ export default function RunActive() {
       }
     } catch (e: any) {
       setHasLocationPermission(false);
-      setGpsError(e?.message || 'Errore accesso GPS');
+      setGpsError(e?.message || t('run.ui_gps_access_error'));
     }
     startTimeRef.current = Date.now();
     pausedDurationRef.current = 0;
@@ -377,7 +377,7 @@ export default function RunActive() {
           setHasLocationPermission(false);
           setGpsError(err.code === err.PERMISSION_DENIED && inIframe
             ? 'Permesso bloccato. Apri la preview in una nuova scheda del browser.'
-            : err.message || 'Errore GPS');
+            : err.message || t('run.ui_gps_error'));
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
@@ -402,7 +402,7 @@ export default function RunActive() {
         }
       } catch (e: any) {
         setHasLocationPermission(false);
-        setGpsError(e?.message || 'Errore GPS');
+        setGpsError(e?.message || t('run.ui_gps_error'));
       }
     }
   };
@@ -558,9 +558,9 @@ export default function RunActive() {
   };
 
   const confirmStop = () => {
-    Alert.alert('Termina allenamento?', 'La sessione verra\' salvata.', [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Termina', style: 'destructive', onPress: stop },
+    Alert.alert(t('run.alert_finish_title'), t('run.alert_finish_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('run.alert_finish_cta'), style: 'destructive', onPress: stop },
     ]);
   };
 
@@ -570,9 +570,9 @@ export default function RunActive() {
       router.back();
       return;
     }
-    Alert.alert('Uscire senza salvare?', 'La sessione verra\' scartata.', [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Esci', style: 'destructive', onPress: () => { subRef.current?.remove(); router.back(); } },
+    Alert.alert(t('run.alert_quit_title'), t('run.alert_quit_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.back'), style: 'destructive', onPress: () => { subRef.current?.remove(); router.back(); } },
     ]);
   };
 
@@ -607,7 +607,7 @@ export default function RunActive() {
   const speedDisplay = activityType === 'bike'
     ? (kmh > 0 ? kmh.toFixed(1) : '—')
     : paceStr;
-  const speedLabel = activityType === 'bike' ? 'KM/H' : 'PASSO · /KM';
+  const speedLabel = activityType === 'bike' ? t('run.ui_kmh') : t('run.ui_pace_short');
   // Hero metric: durata se Free Run, distanza se workout strutturato
   const heroValue = hasSteps && currentStep
     ? formatTime(Math.max(currentStep.duration_seconds - stepElapsed, 0))
@@ -665,7 +665,7 @@ export default function RunActive() {
                 borderColor: paceColor,
               }]}>
                 <Text style={[styles.paceChipText, { color: paceColor }]}>
-                  {paceState === 'onTarget' ? 'IN TARGET' : paceState === 'tooFast' ? 'TROPPO VELOCE' : 'TROPPO LENTO'}
+                  {paceState === 'onTarget' ? t('run.ui_in_target') : paceState === 'tooFast' ? t('run.ui_too_fast') : t('run.ui_too_slow')}
                 </Text>
               </View>
             ) : null}
@@ -787,7 +787,7 @@ export default function RunActive() {
                   ? 'IN ATTESA SEGNALE GPS...'
                   : hasLocationPermission === false
                   ? 'GPS NON ATTIVO'
-                  : 'INIZIALIZZAZIONE GPS...'}
+                  : t('run.ui_gps_init')}
               </Text>
             </View>
             {gpsError ? <Text style={styles.placeholderText}>{gpsError}</Text> : null}
@@ -821,7 +821,7 @@ export default function RunActive() {
             activeOpacity={0.85}
           >
             <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color="#0F1115" />
-            <Text style={styles.pauseLabel}>{isPaused ? 'RIPRENDI' : 'PAUSA'}</Text>
+            <Text style={styles.pauseLabel}>{isPaused ? t('run.ui_resume') : t('run.ui_pause')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="stop-button"

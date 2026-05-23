@@ -9,6 +9,7 @@ import {
   ChevronLeft, Sun, Activity, Wind, MapPin, Clock, Flame,
 } from 'lucide-react-native';
 import { haptics } from '../src/uiPolish';
+import { useT } from '../src/i18n';
 
 type Step = {
   type: string;
@@ -80,15 +81,19 @@ function fmtMinutes(s: number): string {
   return `${Math.round(s / 60)} min`;
 }
 
-function describePhase(steps: Step[]): string[] {
+function describePhase(steps: Step[], t?: (k: string, o?: any) => string): string[] {
   return steps.map((s) => {
-    const label = stepTypeLabels[s.type] || s.type.toUpperCase();
+    const i18nLabel = t ? t(`run.step_${s.type}`) : '';
+    const label = (t && i18nLabel !== `run.step_${s.type}`)
+      ? i18nLabel
+      : (stepTypeLabels[s.type] || s.type.toUpperCase());
+    const minUnit = t ? t('preview.min') : 'min';
     if (s.distance_m && s.repeats && s.repeats > 1) {
       const km = s.distance_m >= 1000 ? `${s.distance_m / 1000} km` : `${s.distance_m} m`;
       return `${s.repeats} × ${km}${s.pace ? ` · ${s.pace}` : ''}`;
     }
     if (s.duration_seconds) {
-      return `${Math.round(s.duration_seconds / 60)} min · ${label.toLowerCase()}`;
+      return `${Math.round(s.duration_seconds / 60)} ${minUnit} · ${label.toLowerCase()}`;
     }
     if (s.distance_m) {
       const km = s.distance_m >= 1000 ? `${s.distance_m / 1000} km` : `${s.distance_m} m`;
@@ -98,18 +103,19 @@ function describePhase(steps: Step[]): string[] {
   });
 }
 
-function intensityFromSteps(steps: Step[]): { label: string; color: string } {
-  // simple heuristic: presence of sprint/run with pace ratio
+function intensityFromSteps(steps: Step[], t?: (k: string, o?: any) => string): { label: string; color: string } {
+  const L = (k: string, fallback: string) => t ? t(k) : fallback;
   const types = new Set(steps.map(s => s.type));
-  if (types.has('sprint')) return { label: 'Massima', color: '#EF4444' };
-  if (types.has('run') && (steps.some(s => (s.repeats || 1) >= 4))) return { label: 'Alta', color: colors.primary };
-  if (types.has('run')) return { label: 'Media', color: colors.warning };
-  return { label: 'Bassa', color: colors.success };
+  if (types.has('sprint')) return { label: L('preview.intensity_max', 'Massima'), color: '#EF4444' };
+  if (types.has('run') && (steps.some(s => (s.repeats || 1) >= 4))) return { label: L('preview.intensity_high', 'Alta'), color: colors.primary };
+  if (types.has('run')) return { label: L('preview.intensity_medium', 'Media'), color: colors.warning };
+  return { label: L('preview.intensity_low', 'Bassa'), color: colors.success };
 }
 
 // ─────────────────────────────────────────────────────────────
 export default function WorkoutPreview() {
   const router = useRouter();
+  const { t } = useT();
   const params = useLocalSearchParams<{
     title?: string;
     subtitle?: string;
@@ -125,7 +131,7 @@ export default function WorkoutPreview() {
   }, [params.steps]);
 
   const phases = useMemo(() => classifyPhases(steps), [steps]);
-  const intensity = useMemo(() => intensityFromSteps(steps), [steps]);
+  const intensity = useMemo(() => intensityFromSteps(steps, t), [steps, t]);
 
   const totalDurationSec = totalSeconds(steps);
   const totalDistanceM = totalMeters(steps);
@@ -141,7 +147,7 @@ export default function WorkoutPreview() {
     router.replace({
       pathname: '/run-active',
       params: {
-        title: params.title || 'Allenamento',
+        title: params.title || t('preview.workout'),
         workout_id: params.workout_id,
         plan_id: params.plan_id,
         steps: params.steps,
@@ -149,8 +155,8 @@ export default function WorkoutPreview() {
     });
   };
 
-  const title = params.title || 'Allenamento';
-  const subtitle = params.subtitle || (steps.length > 0 ? `${steps.length} step` : '');
+  const title = params.title || t('preview.workout');
+  const subtitle = params.subtitle || (steps.length > 0 ? t('preview.steps_count', { n: steps.length }) : '');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -172,8 +178,8 @@ export default function WorkoutPreview() {
         {phases.warmup.length > 0 ? (
           <PhaseCard
             icon={<Sun size={16} color={colors.textSecondary} strokeWidth={2.4} />}
-            label="RISCALDAMENTO"
-            lines={describePhase(phases.warmup)}
+            label={t('preview.phase_warmup')}
+            lines={describePhase(phases.warmup, t)}
           />
         ) : null}
 
@@ -181,8 +187,8 @@ export default function WorkoutPreview() {
         {phases.main.length > 0 ? (
           <PhaseCard
             icon={<Activity size={16} color={colors.primary} strokeWidth={2.4} />}
-            label="PARTE PRINCIPALE"
-            lines={describePhase(phases.main)}
+            label={t('preview.phase_main')}
+            lines={describePhase(phases.main, t)}
             highlight
           />
         ) : null}
@@ -191,32 +197,32 @@ export default function WorkoutPreview() {
         {phases.cooldown.length > 0 ? (
           <PhaseCard
             icon={<Wind size={16} color={colors.textSecondary} strokeWidth={2.4} />}
-            label="DEFATICAMENTO"
-            lines={describePhase(phases.cooldown)}
+            label={t('preview.phase_cooldown')}
+            lines={describePhase(phases.cooldown, t)}
           />
         ) : null}
 
         {/* DETTAGLI */}
         <View style={styles.detailsHeader}>
           <View style={styles.sectionDot} />
-          <Text style={styles.detailsHeaderText}>DETTAGLI</Text>
+          <Text style={styles.detailsHeaderText}>{t('preview.details')}</Text>
         </View>
         <View style={styles.detailsCard}>
           <DetailRow
             icon={<MapPin size={16} color={colors.textSecondary} strokeWidth={2.4} />}
-            label="Distanza"
+            label={t('preview.distance')}
             value={distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '—'}
           />
           <View style={styles.detailsDivider} />
           <DetailRow
             icon={<Clock size={16} color={colors.textSecondary} strokeWidth={2.4} />}
-            label="Durata stimata"
-            value={durationMin > 0 ? `${durationMin} min` : '—'}
+            label={t('preview.duration_estimated')}
+            value={durationMin > 0 ? `${durationMin} ${t('preview.min')}` : '—'}
           />
           <View style={styles.detailsDivider} />
           <DetailRowBadge
             icon={<Flame size={16} color={colors.textSecondary} strokeWidth={2.4} />}
-            label="Intensità"
+            label={t('preview.intensity')}
             badgeText={intensity.label}
             badgeColor={intensity.color}
           />
@@ -231,7 +237,7 @@ export default function WorkoutPreview() {
           onPress={onStart}
           activeOpacity={0.85}
         >
-          <Text style={styles.ctaText}>Inizia allenamento</Text>
+          <Text style={styles.ctaText}>{t('preview.start_workout')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
