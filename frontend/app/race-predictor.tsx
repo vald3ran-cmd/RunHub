@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
+import { useT } from '../src/i18n';
 
 type Predictions = {
   predictions: Record<string, { distance_km: number; seconds: number; hms: string; pace_min_per_km: number }>;
@@ -16,6 +17,7 @@ type Predictions = {
 
 export default function RacePredictor() {
   const router = useRouter();
+  const { t } = useT();
   const [km, setKm] = useState('5');
   const [minutes, setMinutes] = useState('25');
   const [seconds, setSeconds] = useState('0');
@@ -23,18 +25,18 @@ export default function RacePredictor() {
   const [loading, setLoading] = useState(false);
 
   const onPredict = async () => {
-    const t = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
+    const tSec = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
     const d = parseFloat(km) || 0;
-    if (t <= 0 || d <= 0) { Alert.alert('Errore', 'Inserisci distanza e tempo validi'); return; }
+    if (tSec <= 0 || d <= 0) { Alert.alert(t('common.error'), t('race.subtitle')); return; }
     setLoading(true);
     try {
       const { data } = await api.post('/stats/predict-races', {
-        recent_distance_km: d, recent_time_seconds: t,
+        recent_distance_km: d, recent_time_seconds: tSec,
       });
       setResult(data);
     } catch (e: any) {
       const det = e?.response?.data?.detail;
-      Alert.alert('Errore', typeof det === 'string' ? det : 'Previsione fallita');
+      Alert.alert(t('common.error'), typeof det === 'string' ? det : t('common.retry'));
     } finally { setLoading(false); }
   };
 
@@ -51,17 +53,17 @@ export default function RacePredictor() {
           <View style={styles.icon}>
             <Ionicons name="stopwatch" size={32} color="#fff" />
           </View>
-          <Text style={styles.title}>PROIEZIONE TEMPI</Text>
-          <Text style={styles.sub}>Inserisci una tua prestazione recente. Calcolo Riegel + stima VO2max.</Text>
+          <Text style={styles.title}>{t('race.title')}</Text>
+          <Text style={styles.sub}>{t('race.subtitle')}</Text>
 
-          <Text style={styles.label}>DISTANZA (KM)</Text>
+          <Text style={styles.label}>{t('race.distance_label')}</Text>
           <TextInput
             testID="predict-km-input"
             style={styles.input} keyboardType="numeric"
             value={km} onChangeText={setKm}
           />
 
-          <Text style={styles.label}>TEMPO</Text>
+          <Text style={styles.label}>{t('race.time_label')}</Text>
           <View style={styles.timeRow}>
             <View style={{ flex: 1 }}>
               <TextInput
@@ -69,7 +71,7 @@ export default function RacePredictor() {
                 style={styles.input} keyboardType="numeric" placeholder="min" placeholderTextColor={colors.textMuted}
                 value={minutes} onChangeText={setMinutes}
               />
-              <Text style={styles.unit}>MINUTI</Text>
+              <Text style={styles.unit}>{t('race.minutes')}</Text>
             </View>
             <Text style={styles.colon}>:</Text>
             <View style={{ flex: 1 }}>
@@ -78,7 +80,7 @@ export default function RacePredictor() {
                 style={styles.input} keyboardType="numeric" placeholder="sec" placeholderTextColor={colors.textMuted}
                 value={seconds} onChangeText={setSeconds}
               />
-              <Text style={styles.unit}>SECONDI</Text>
+              <Text style={styles.unit}>{t('race.seconds')}</Text>
             </View>
           </View>
 
@@ -89,7 +91,7 @@ export default function RacePredictor() {
             {loading ? <ActivityIndicator color="#fff" /> : (
               <>
                 <Ionicons name="analytics" size={18} color="#fff" />
-                <Text style={styles.btnText}>CALCOLA PREVISIONI</Text>
+                <Text style={styles.btnText}>{t('race.calculate')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -97,12 +99,12 @@ export default function RacePredictor() {
           {result ? (
             <>
               <View style={styles.vo2Card}>
-                <Text style={styles.vo2Label}>STIMA VO2MAX</Text>
+                <Text style={styles.vo2Label}>{t('race.vo2max').toUpperCase()}</Text>
                 <Text style={styles.vo2Value}>{result.vo2max_estimate}</Text>
                 <Text style={styles.vo2Unit}>ml/kg/min</Text>
                 <Text style={styles.vo2Desc}>{vo2Comment(result.vo2max_estimate)}</Text>
               </View>
-              <Text style={styles.sectionTitle}>PREVISIONI DI GARA</Text>
+              <Text style={styles.sectionTitle}>{t('race.predictions').toUpperCase()}</Text>
               {Object.entries(result.predictions).map(([name, p]) => (
                 <View key={name} style={styles.raceRow}>
                   <Text style={styles.raceName}>{name}</Text>

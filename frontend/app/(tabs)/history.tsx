@@ -78,7 +78,7 @@ export default function History() {
                 <Icon size={22} color={meta.color} strokeWidth={2.2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.itemTitle} numberOfLines={1}>{translateSessionTitle(item.title, t)}</Text>
                 <Text style={styles.itemMeta}>
                   {formatDate(item.completed_at, locale)} · {meta.shortLabel}
                 </Text>
@@ -105,6 +105,26 @@ function formatDate(iso: string, locale: string = 'it') {
     const tag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT';
     return d.toLocaleDateString(tag, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   } catch { return iso; }
+}
+
+// Traduce titoli legacy salvati nel DB in italiano (es. "Corsa libera")
+function translateSessionTitle(title: string, t: (k: string, o?: any) => string): string {
+  if (!title) return title;
+  const map: Record<string, string> = {
+    'corsa libera': 'run.free_run',
+    'run libero': 'run.free_run',
+    'corsa': 'run.step_run',
+    'camminata': 'run.step_walk',
+    'bici': 'run.step_bike',
+    'stretching': 'run.step_stretching',
+    'ginnastica': 'run.step_gymnastics',
+  };
+  const key = map[title.toLowerCase().trim()];
+  if (!key) return title;
+  const translated = t(key);
+  // Capitalize first letter, lowercase rest (for nice display)
+  const nice = translated.charAt(0).toUpperCase() + translated.slice(1).toLowerCase();
+  return nice;
 }
 function formatDur(s: number) {
   const m = Math.floor(s / 60); const sec = s % 60;

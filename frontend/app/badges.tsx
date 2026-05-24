@@ -54,8 +54,8 @@ export default function BadgesScreen() {
               <View style={[styles.iconBox, b.earned && styles.iconBoxEarned]}>
                 <Ionicons name={b.icon as any} size={32} color={b.earned ? '#fff' : colors.textMuted} />
               </View>
-              <Text style={[styles.cardTitle, !b.earned && { color: colors.textSecondary }]}>{b.title}</Text>
-              <Text style={styles.cardDesc}>{b.description}</Text>
+              <Text style={[styles.cardTitle, !b.earned && { color: colors.textSecondary }]}>{translateBadgeTitle(b, t)}</Text>
+              <Text style={styles.cardDesc}>{translateBadgeDesc(b, t)}</Text>
               {b.earned ? (
                 <View style={styles.earnedBadge}>
                   <Ionicons name="checkmark" size={12} color="#fff" />
@@ -95,3 +95,44 @@ const styles = StyleSheet.create({
   lockedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceSecondary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, marginTop: spacing.xs },
   lockedText: { color: colors.textMuted, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
 });
+
+// ─────────────────────────────────────────────────────────────
+// Backend returns badge title/description in italian.
+// We translate via a mapping using the badge id (slug) when available,
+// falling back to a fuzzy match on the italian title.
+// ─────────────────────────────────────────────────────────────
+function translateBadgeTitle(b: Badge, t: (k: string, o?: any) => string): string {
+  const key = badgeKeyFromBadge(b);
+  if (!key) return b.title;
+  const translated = t(`badge_names.${key}`);
+  // If the i18n returns the raw key, fall back to backend title
+  return translated.startsWith('badge_names.') ? b.title : translated;
+}
+
+function translateBadgeDesc(b: Badge, t: (k: string, o?: any) => string): string {
+  const key = badgeKeyFromBadge(b);
+  if (!key) return b.description;
+  const translated = t(`badge_names.${key}_desc`);
+  return translated.startsWith('badge_names.') ? b.description : translated;
+}
+
+function badgeKeyFromBadge(b: Badge): string | null {
+  // Prefer the id (slug) if backend uses it
+  const id = (b.id || '').toLowerCase().trim();
+  if (id) return id.replace(/-/g, '_');
+  // Fallback: map italian titles to keys
+  const titleMap: Record<string, string> = {
+    'primo passo': 'first_step',
+    'runner regolare': 'regular_runner',
+    'abitudine creata': 'habit_created',
+    'primo 5k': 'first_5k',
+    'primo 10k': 'first_10k',
+    'mezza maratona': 'half_marathon',
+    'maratona': 'marathon',
+    'velocista': 'speed_demon',
+    'mattiniero': 'early_bird',
+    'nottambulo': 'night_owl',
+  };
+  const t = (b.title || '').toLowerCase().trim();
+  return titleMap[t] || null;
+}
