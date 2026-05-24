@@ -200,6 +200,15 @@ export default function WorkoutDetail() {
           </View>
         ) : null}
 
+        {/* Statistiche dettagliate */}
+        <DetailedStatsCard session={session} t={t} />
+
+        {/* Split km per km */}
+        <SplitsCard session={session} t={t} />
+
+        {/* Fun equivalents */}
+        <FunEquivalentsCard session={session} t={t} />
+
         {/* Share buttons */}
         <View style={styles.shareRow}>
           <TouchableOpacity
@@ -235,6 +244,214 @@ function CardStat({ icon, label, value }: { icon: React.ReactNode; label: string
       <Text style={styles.cardStatValue}>{value}</Text>
     </View>
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DETAILED STATS CARD
+// ─────────────────────────────────────────────────────────────
+function DetailedStatsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const dur = Number(session.duration_seconds || 0);
+  const dist = Number(session.distance_km || 0);
+  const kcal = Number(session.calories || 0);
+  const activityType: ActivityType = (session.activity_type as ActivityType) || 'run';
+  const splits = Array.isArray(session.splits) ? session.splits : [];
+
+  // Avg speed
+  const avgSpeed = dur > 0 ? (dist / dur) * 3600 : 0;
+  // Max speed (compute from locations if available)
+  const maxSpeed = computeMaxSpeed(session.locations || []);
+  // Avg pace from session or recompute
+  const avgPace = session.avg_pace_min_per_km || (dur > 0 && dist > 0 ? (dur / 60) / dist : 0);
+  // Best/Worst km
+  let bestPace = Infinity, worstPace = 0;
+  splits.forEach((s: any) => {
+    const p = Number(s.pace_min_per_km);
+    if (p > 0) {
+      if (p < bestPace) bestPace = p;
+      if (p > worstPace) worstPace = p;
+    }
+  });
+  const kcalPerKm = dist > 0 ? kcal / dist : 0;
+  const kcalPerMin = dur > 0 ? (kcal * 60) / dur : 0;
+  const elev = Number(session.elevation_gain_m || 0);
+
+  const rows: { label: string; value: string; show: boolean }[] = [
+    { label: t('workout_detail.stat_elevation_gain'), value: `${elev.toFixed(0)} m`, show: elev > 0 },
+    { label: t('workout_detail.stat_avg_speed'), value: `${avgSpeed.toFixed(1)} km/h`, show: avgSpeed > 0 },
+    { label: t('workout_detail.stat_max_speed'), value: `${maxSpeed.toFixed(1)} km/h`, show: maxSpeed > 0 },
+    { label: t('workout_detail.stat_avg_pace'), value: activityType !== 'bike' && avgPace > 0 ? `${formatPace(avgPace)} /km` : '—', show: activityType !== 'bike' && avgPace > 0 },
+    { label: t('workout_detail.stat_best_km_pace'), value: activityType !== 'bike' && bestPace !== Infinity ? `${formatPace(bestPace)} /km` : '—', show: activityType !== 'bike' && bestPace !== Infinity },
+    { label: t('workout_detail.stat_slowest_km_pace'), value: activityType !== 'bike' && worstPace > 0 ? `${formatPace(worstPace)} /km` : '—', show: activityType !== 'bike' && worstPace > 0 },
+    { label: t('workout_detail.stat_kcal_per_km'), value: `${kcalPerKm.toFixed(0)} kcal`, show: kcalPerKm > 0 },
+    { label: t('workout_detail.stat_kcal_per_min'), value: `${kcalPerMin.toFixed(1)} kcal`, show: kcalPerMin > 0 },
+  ].filter(r => r.show);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <View style={styles.statsCard}>
+      <View style={styles.cardSectionHeader}>
+        <Text style={styles.cardSectionTitle}>{t('workout_detail.detailed_stats')}</Text>
+      </View>
+      <View style={styles.statsGrid}>
+        {rows.map((r, i) => (
+          <View key={i} style={styles.statCell}>
+            <Text style={styles.statCellLabel}>{r.label}</Text>
+            <Text style={styles.statCellValue}>{r.value}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SPLITS CARD (table + bar chart per km)
+// ─────────────────────────────────────────────────────────────
+function SplitsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const splits = Array.isArray(session.splits) ? session.splits : [];
+  const activityType: ActivityType = (session.activity_type as ActivityType) || 'run';
+  if (splits.length === 0) {
+    return (
+      <View style={styles.statsCard}>
+        <View style={styles.cardSectionHeader}>
+          <Text style={styles.cardSectionTitle}>{t('workout_detail.splits_title')}</Text>
+        </View>
+        <Text style={styles.splitsEmpty}>{t('workout_detail.splits_empty')}</Text>
+      </View>
+    );
+  }
+  // best/worst
+  let bestIdx = 0, worstIdx = 0;
+  let bestPace = Infinity, worstPace = 0;
+  splits.forEach((s: any, i: number) => {
+    const p = Number(s.pace_min_per_km);
+    if (p > 0 && p < bestPace) { bestPace = p; bestIdx = i; }
+    if (p > worstPace) { worstPace = p; worstIdx = i; }
+  });
+  const range = worstPace - bestPace;
+
+  return (
+    <View style={styles.statsCard}>
+      <View style={styles.cardSectionHeader}>
+        <Text style={styles.cardSectionTitle}>{t('workout_detail.splits_title')}</Text>
+      </View>
+      {/* Header */}
+      <View style={styles.splitHeader}>
+        <Text style={[styles.splitColHead, { flex: 0.5 }]}>{t('workout_detail.splits_col_km')}</Text>
+        <Text style={[styles.splitColHead, { flex: 1 }]}>{t('workout_detail.splits_col_time')}</Text>
+        <Text style={[styles.splitColHead, { flex: 2 }]}>{activityType === 'bike' ? 'KM/H' : t('workout_detail.splits_col_pace')}</Text>
+      </View>
+      {splits.map((s: any, i: number) => {
+        const p = Number(s.pace_min_per_km) || 0;
+        const dur = Number(s.duration_sec) || 0;
+        const isBest = i === bestIdx && bestPace !== Infinity;
+        const isWorst = i === worstIdx && worstPace > bestPace;
+        // bar fill: best=100% green, worst=100% red. proporzional
+        const fill = range > 0 ? 1 - (p - bestPace) / range : 1;
+        const barColor = isBest ? colors.success : isWorst ? colors.primary : '#8B5CF6';
+        const speedDisp = activityType === 'bike' && dur > 0 ? `${(3600 / dur).toFixed(1)} km/h` : `${formatPace(p)} /km`;
+        return (
+          <View key={i} style={styles.splitRow}>
+            <Text style={[styles.splitKm, { flex: 0.5 }]}>{s.km}</Text>
+            <Text style={[styles.splitTime, { flex: 1 }]}>{formatDuration(dur)}</Text>
+            <View style={[styles.splitBarWrap, { flex: 2 }]}>
+              <View style={[styles.splitBar, { width: `${Math.max(20, Math.min(100, fill * 100))}%`, backgroundColor: barColor }]}>
+                <Text style={styles.splitBarLabel}>{speedDisp}</Text>
+              </View>
+              {isBest ? <Text style={styles.splitTag}>{t('workout_detail.splits_best')}</Text> : null}
+              {isWorst ? <Text style={styles.splitTag}>{t('workout_detail.splits_worst')}</Text> : null}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// FUN EQUIVALENTS CARD
+// ─────────────────────────────────────────────────────────────
+function FunEquivalentsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const kcal = Number(session.calories || 0);
+  const dist = Number(session.distance_km || 0);
+  const elev = Number(session.elevation_gain_m || 0);
+  const activityType: ActivityType = (session.activity_type as ActivityType) || 'run';
+
+  // 1 fetta di pizza margherita ~ 250 kcal; 1 barretta cioccolato ~ 200 kcal
+  const pizzaSlices = kcal > 0 ? Math.max(1, Math.round((kcal / 250) * 10) / 10) : 0;
+  const chocoBars = kcal > 0 ? Math.max(1, Math.round((kcal / 200) * 10) / 10) : 0;
+  // 1 passo ~ 0.75m corsa, 0.6m camminata
+  const stepsPerKm = activityType === 'walk' ? 1400 : activityType === 'run' ? 1300 : 0;
+  const totalSteps = stepsPerKm > 0 ? Math.round(dist * stepsPerKm) : 0;
+  // 1 campo da calcio ~ 105m
+  const footballFields = dist > 0 ? Math.round((dist * 1000) / 105) : 0;
+  // Burj Khalifa = 828m
+  const burjTimes = elev > 0 ? Math.round((elev / 828) * 100) / 100 : 0;
+
+  const items: string[] = [];
+  if (pizzaSlices > 0) {
+    const n = pizzaSlices % 1 === 0 ? String(pizzaSlices.toFixed(0)) : pizzaSlices.toFixed(1).replace('.', ',');
+    const isOne = pizzaSlices <= 1;
+    items.push(t('workout_detail.equiv_pizza', { n, unit: isOne ? t('workout_detail.equiv_pizza_slice_one') : t('workout_detail.equiv_pizza_slice_many') }));
+  }
+  if (chocoBars > 0) {
+    const n = chocoBars % 1 === 0 ? String(chocoBars.toFixed(0)) : chocoBars.toFixed(1).replace('.', ',');
+    const isOne = chocoBars <= 1;
+    items.push(t('workout_detail.equiv_choco', { n, unit: isOne ? t('workout_detail.equiv_choco_one') : t('workout_detail.equiv_choco_many') }));
+  }
+  if (totalSteps > 0) items.push(t('workout_detail.equiv_steps', { n: totalSteps.toLocaleString() }));
+  if (footballFields > 0) items.push(t('workout_detail.equiv_field', { n: footballFields }));
+  if (burjTimes > 0) items.push(t('workout_detail.equiv_burj', { n: burjTimes.toString().replace('.', ',') }));
+
+  if (items.length === 0) return null;
+
+  return (
+    <View style={styles.statsCard}>
+      <View style={styles.cardSectionHeader}>
+        <Text style={styles.cardSectionTitle}>{t('workout_detail.equiv_title')}</Text>
+      </View>
+      {items.map((line, i) => (
+        <Text key={i} style={styles.equivLine}>{line}</Text>
+      ))}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+function formatPace(p: number): string {
+  if (!p || p <= 0 || !isFinite(p)) return '—';
+  const min = Math.floor(p);
+  const sec = Math.floor((p - min) * 60);
+  return `${min}:${String(sec).padStart(2, '0')}`;
+}
+function formatDuration(s: number): string {
+  const m = Math.floor(s / 60); const sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+function computeMaxSpeed(locations: any[]): number {
+  if (!Array.isArray(locations) || locations.length < 2) return 0;
+  let max = 0;
+  for (let i = 1; i < locations.length; i++) {
+    const a = locations[i - 1], b = locations[i];
+    if (!a?.lat || !b?.lat) continue;
+    const dt = (b.timestamp - a.timestamp) / 1000; // seconds
+    if (dt <= 0 || dt > 10) continue; // skip large gaps
+    const d = haversine(a.lat, a.lng, b.lat, b.lng);
+    const kmh = (d / dt) * 3.6;
+    if (kmh > max && kmh < 60) max = kmh; // cap at 60 km/h for noise
+  }
+  return max;
+}
+function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 function formatTime(s: number) {
@@ -343,4 +560,65 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   shareBtnSecondaryText: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
+
+  // ─── New: detailed stats / splits / fun equivalents cards ───
+  statsCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cardSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginBottom: spacing.sm,
+  },
+  cardSectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 12, fontWeight: '900', letterSpacing: 2,
+  },
+  statsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+  },
+  statCell: {
+    width: '50%',
+    paddingVertical: 10,
+    paddingRight: 8,
+  },
+  statCellLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 },
+  statCellValue: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
+
+  // Splits
+  splitsEmpty: { color: colors.textSecondary, fontSize: 12, fontStyle: 'italic', textAlign: 'center', paddingVertical: spacing.md },
+  splitHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingBottom: 6, marginBottom: 4,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  splitColHead: { color: colors.textMuted, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  splitRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 6,
+  },
+  splitKm: { color: colors.textPrimary, fontSize: 14, fontWeight: '900' },
+  splitTime: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  splitBarWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+  },
+  splitBar: {
+    height: 22, borderRadius: 6,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    minWidth: 60,
+  },
+  splitBarLabel: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  splitTag: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+
+  // Fun equivalents
+  equivLine: {
+    color: colors.textPrimary, fontSize: 14, fontWeight: '500',
+    marginVertical: 4, lineHeight: 20,
+  },
 });
