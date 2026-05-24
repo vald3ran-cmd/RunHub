@@ -23,6 +23,8 @@ import {
 } from '../src/runMetrics';
 import { fetchWeather, WeatherSnapshot } from '../src/weather';
 import { loadRunSettings, RunSettings, DEFAULT_SETTINGS, VoiceFrequency } from '../src/runSettings';
+import { useT } from '../src/i18n';
+import { hasTierAccess, useTierAccess } from '../src/PremiumGate';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -31,7 +33,9 @@ type Step = {
 export default function RunActive() {
   const params = useLocalSearchParams<{ title?: string; workout_id?: string; plan_id?: string; steps?: string; activity_type?: string }>();
   const router = useRouter();
-  const title = params.title || 'Run Libero';
+  const { t } = useT();
+  const { hasAccess: hasPerformance } = useTierAccess('performance');
+  const title = params.title || t('run.free_run');
   const steps: Step[] = params.steps ? JSON.parse(String(params.steps)) : [];
   const hasSteps = steps.length > 0;
   const activityType: ActivityType =
@@ -80,7 +84,7 @@ export default function RunActive() {
 
   const speak = (text: string) => {
     if (!audioEnabled) return;
-    try { Speech.stop(); Speech.speak(text, { language: 'it-IT', rate: 1.0 }); } catch {}
+    try { Speech.stop(); Speech.speak(text, { language: t('run.tts_locale'), rate: 1.0 }); } catch {}
   };
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
@@ -131,23 +135,23 @@ export default function RunActive() {
         // Voice announcement based on user prefs
         const freq = settingsRef.current.voiceFrequency;
         if (freq === 'every_km' || freq === 'every_5min') {
-          speak(ttsForKmSplit(split, activityType));
+          speak(ttsForKmSplit(split, activityType, t));
         }
       }
 
-      // ── Every-5-min announcement ─────────────────────────────
-      if (settingsRef.current.voiceFrequency === 'every_5min') {
+      // ── Every-5-min announcement (Performance+) ─────────────
+      if (hasPerformance && settingsRef.current.voiceFrequency === 'every_5min') {
         const fiveMinBucket = Math.floor(total / 300);
         if (fiveMinBucket > last5MinAnnouncedRef.current && fiveMinBucket > 0) {
           last5MinAnnouncedRef.current = fiveMinBucket;
           const totalMin = Math.floor(total / 60);
           const km = distanceRef.current.toFixed(2).replace('.', ',');
-          speak(`${totalMin} minuti. ${km} chilometri percorsi.`);
+          speak(t('run.tts_5min', { totalMin, km }));
         }
       }
 
-      // ── Auto-pause detection ─────────────────────────────────
-      if (settingsRef.current.autoPauseEnabled && Platform.OS !== 'web') {
+      // ── Auto-pause detection (Performance+) ─────────────────
+      if (hasPerformance && settingsRef.current.autoPauseEnabled && Platform.OS !== 'web') {
         const sp = instantSpeedMs(coordsRef.current, 6);
         // Threshold: 0.4 m/s ≈ very slow walk (or stop). For bike, 1.0 m/s
         const threshold = activityType === 'bike' ? 1.0 : 0.4;
@@ -156,14 +160,14 @@ export default function RunActive() {
           else if (!pausedRef.current && (now - stationarySinceRef.current) > 5000) {
             setIsPaused(true);
             setAutoPaused(true);
-            speak('Auto-pausa attivata.');
+            speak(t('run.tts_auto_pause'));
           }
         } else {
           stationarySinceRef.current = 0;
           if (autoPaused && pausedRef.current) {
             setIsPaused(false);
             setAutoPaused(false);
-            speak('Ripresa.');
+            speak(t('run.tts_resume'));
           }
         }
       }
@@ -176,7 +180,9 @@ export default function RunActive() {
             if (lastStepAnnouncedRef.current !== i) {
               lastStepAnnouncedRef.current = i;
               const step = steps[i];
-              const label = stepTypeLabels[step.type] || step.type;
+              const label = (t(`run.step_${step.type}`) !== `run.step_${step.type}`)
+                ? t(`run.step_${step.type}`)
+                : (stepTypeLabels[step.type] || step.type);
               speak(`${label}. ${step.description}`);
             }
             setStepIndex(i); setStepElapsed(rem); return;
@@ -185,7 +191,7 @@ export default function RunActive() {
         }
         if (lastStepAnnouncedRef.current !== steps.length) {
           lastStepAnnouncedRef.current = steps.length;
-          speak('Allenamento completato. Ottimo lavoro!');
+          speak(t('run.tts_workout_complete'));
         }
         setStepIndex(steps.length);
       }
@@ -278,7 +284,7 @@ export default function RunActive() {
               } else if (err.code === err.TIMEOUT) {
                 setGpsError('Timeout GPS. Prova a riprovare.');
               } else {
-                setGpsError(err.message || 'Errore GPS');
+                setGpsError(err.message || t('run.ui_gps_error'));
               }
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -307,7 +313,7 @@ export default function RunActive() {
       }
     } catch (e: any) {
       setHasLocationPermission(false);
-      setGpsError(e?.message || 'Errore accesso GPS');
+      setGpsError(e?.message || t('run.ui_gps_access_error'));
     }
     startTimeRef.current = Date.now();
     pausedDurationRef.current = 0;
@@ -373,7 +379,7 @@ export default function RunActive() {
           setHasLocationPermission(false);
           setGpsError(err.code === err.PERMISSION_DENIED && inIframe
             ? 'Permesso bloccato. Apri la preview in una nuova scheda del browser.'
-            : err.message || 'Errore GPS');
+            : err.message || t('run.ui_gps_error'));
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
@@ -398,7 +404,7 @@ export default function RunActive() {
         }
       } catch (e: any) {
         setHasLocationPermission(false);
-        setGpsError(e?.message || 'Errore GPS');
+        setGpsError(e?.message || t('run.ui_gps_error'));
       }
     }
   };
@@ -554,9 +560,9 @@ export default function RunActive() {
   };
 
   const confirmStop = () => {
-    Alert.alert('Termina allenamento?', 'La sessione verra\' salvata.', [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Termina', style: 'destructive', onPress: stop },
+    Alert.alert(t('run.alert_finish_title'), t('run.alert_finish_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('run.alert_finish_cta'), style: 'destructive', onPress: stop },
     ]);
   };
 
@@ -566,9 +572,9 @@ export default function RunActive() {
       router.back();
       return;
     }
-    Alert.alert('Uscire senza salvare?', 'La sessione verra\' scartata.', [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Esci', style: 'destructive', onPress: () => { subRef.current?.remove(); router.back(); } },
+    Alert.alert(t('run.alert_quit_title'), t('run.alert_quit_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.back'), style: 'destructive', onPress: () => { subRef.current?.remove(); router.back(); } },
     ]);
   };
 
@@ -588,7 +594,7 @@ export default function RunActive() {
     };
     lastLapAnchorRef.current = { km: dist, sec: total };
     setManualLaps(prev => [...prev, lap]);
-    speak(ttsManualLap(lap, activityType));
+    speak(ttsManualLap(lap, activityType, t));
   };
 
   const currentStep = hasSteps && stepIndex < steps.length ? steps[stepIndex] : null;
@@ -596,14 +602,14 @@ export default function RunActive() {
   const paceStr = pace > 0 ? formatPace(pace) : '—:—';
   const stepColor = currentStep ? (stepTypeColors[currentStep.type] || activity.color) : activity.color;
   // Pace target status (uses current step's target_pace if available)
-  const targetPaceMin = parseTargetPace(currentStep?.target_pace || null);
+  const targetPaceMin = hasPerformance ? parseTargetPace(currentStep?.target_pace || null) : null;
   const paceState = paceStatus(targetPaceMin, pace);
   // For bike: show km/h instead of pace
   const kmh = elapsed > 0 ? (distance / (elapsed / 3600)) : 0;
   const speedDisplay = activityType === 'bike'
     ? (kmh > 0 ? kmh.toFixed(1) : '—')
     : paceStr;
-  const speedLabel = activityType === 'bike' ? 'KM/H' : 'PASSO · /KM';
+  const speedLabel = activityType === 'bike' ? t('run.ui_kmh') : t('run.ui_pace_short');
   // Hero metric: durata se Free Run, distanza se workout strutturato
   const heroValue = hasSteps && currentStep
     ? formatTime(Math.max(currentStep.duration_seconds - stepElapsed, 0))
@@ -661,7 +667,7 @@ export default function RunActive() {
                 borderColor: paceColor,
               }]}>
                 <Text style={[styles.paceChipText, { color: paceColor }]}>
-                  {paceState === 'onTarget' ? 'IN TARGET' : paceState === 'tooFast' ? 'TROPPO VELOCE' : 'TROPPO LENTO'}
+                  {paceState === 'onTarget' ? t('run.ui_in_target') : paceState === 'tooFast' ? t('run.ui_too_fast') : t('run.ui_too_slow')}
                 </Text>
               </View>
             ) : null}
@@ -760,7 +766,7 @@ export default function RunActive() {
               <Text style={styles.gpsBadgeText}>GPS · {coords.length}</Text>
             </View>
             {/* Weather widget */}
-            {weather ? (
+            {weather && hasPerformance ? (
               <View style={styles.weatherBadge}>
                 <Text style={styles.weatherEmoji}>{weather.emoji}</Text>
                 <View>
@@ -783,7 +789,7 @@ export default function RunActive() {
                   ? 'IN ATTESA SEGNALE GPS...'
                   : hasLocationPermission === false
                   ? 'GPS NON ATTIVO'
-                  : 'INIZIALIZZAZIONE GPS...'}
+                  : t('run.ui_gps_init')}
               </Text>
             </View>
             {gpsError ? <Text style={styles.placeholderText}>{gpsError}</Text> : null}
@@ -817,7 +823,7 @@ export default function RunActive() {
             activeOpacity={0.85}
           >
             <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color="#0F1115" />
-            <Text style={styles.pauseLabel}>{isPaused ? 'RIPRENDI' : 'PAUSA'}</Text>
+            <Text style={styles.pauseLabel}>{isPaused ? t('run.ui_resume') : t('run.ui_pause')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="stop-button"

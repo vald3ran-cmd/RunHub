@@ -55,7 +55,14 @@ export default function ReferralScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} testID="referral-back-loading">
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('referral.title')}</Text>
+          <View style={styles.headerBtn} />
+        </View>
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
@@ -65,11 +72,22 @@ export default function ReferralScreen() {
 
   if (!data) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} testID="referral-back-error">
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('referral.title')}</Text>
+          <View style={styles.headerBtn} />
+        </View>
         <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color="rgba(255,255,255,0.4)" />
           <Text style={styles.errorText}>{t('common.error')}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
             <Text style={styles.retryText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.retryBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, marginTop: 12 }]} onPress={() => router.back()}>
+            <Text style={[styles.retryText, { color: '#fff' }]}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

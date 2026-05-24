@@ -1,14 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking,
-  Image, ActivityIndicator,
+  Image, ActivityIndicator, Switch,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Star, CreditCard, Trophy, Flag, Watch, Users, Map as MapIcon,
   Rocket, UserCircle, FileText, ShieldCheck, Settings, LogOut,
-  Timer, Sparkles, ChevronRight, ExternalLink, Camera, Gift, Globe,
+  Timer, Sparkles, ChevronRight, ExternalLink, Camera, Gift, Globe, Eye,
 } from 'lucide-react-native';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
@@ -27,6 +27,28 @@ export default function Profile() {
   const [showGoals, setShowGoals] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [nearbyVisible, setNearbyVisible] = useState<boolean>(false);
+  const [togglingNearby, setTogglingNearby] = useState(false);
+
+  // Sync nearby_visible from user object
+  useEffect(() => {
+    if (user) setNearbyVisible(!!(user as any).nearby_visible);
+  }, [(user as any)?.nearby_visible]);
+
+  const onToggleNearby = async (next: boolean) => {
+    setNearbyVisible(next); // optimistic
+    setTogglingNearby(true);
+    try {
+      await api.put('/users/me/nearby-visibility', { visible: next });
+      await refresh();
+    } catch (e: any) {
+      // revert on failure
+      setNearbyVisible(!next);
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('common.retry'));
+    } finally {
+      setTogglingNearby(false);
+    }
+  };
 
   const handleEditAvatar = () => {
     chooseAndUploadAvatar({
@@ -63,7 +85,7 @@ export default function Profile() {
       });
       setShowGoals(false);
     } catch {
-      Alert.alert('Errore', 'Impossibile aggiornare i traguardi');
+      Alert.alert(t('common.error'), t('common.retry'));
     } finally { setSaving(false); }
   };
 
@@ -121,35 +143,35 @@ export default function Profile() {
               <Sparkles size={20} color="#fff" strokeWidth={2.4} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.premiumLabel}>SBLOCCA PREMIUM</Text>
-              <Text style={styles.premiumTitle}>AI Coach, piani avanzati, analisi complete</Text>
+              <Text style={styles.premiumLabel}>{t('profile.premium_card_label')}</Text>
+              <Text style={styles.premiumTitle}>{t('profile.premium_card_title')}</Text>
             </View>
             <ChevronRight size={22} color="#fff" strokeWidth={2.4} />
           </TouchableOpacity>
         ) : null}
 
         {/* ── ACCOUNT ── */}
-        <SectionLabel text="ACCOUNT" />
+        <SectionLabel text={t('profile.section_account')} />
         <View style={styles.group}>
           {!isFree ? (
             <>
               <Row
                 testID="manage-premium-button"
                 icon={<Star size={18} color={colors.primary} strokeWidth={2.4} />}
-                title="Cambia piano"
+                title={t('profile.change_plan')}
                 onPress={() => router.push('/premium')}
               />
               <Row
                 testID="billing-portal-button"
                 icon={<CreditCard size={18} color={colors.primary} strokeWidth={2.4} />}
-                title="Gestisci pagamento e fatture"
+                title={t('profile.manage_billing')}
                 rightIcon={<ExternalLink size={16} color={colors.textMuted} strokeWidth={2.4} />}
                 onPress={async () => {
                   try {
                     const { data } = await api.post('/stripe/portal');
                     if (data?.url) Linking.openURL(data.url);
                   } catch (e: any) {
-                    Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile aprire il portale');
+                    Alert.alert(t('common.error'), e?.response?.data?.detail || t('profile.unable_open_portal'));
                   }
                 }}
               />
@@ -158,37 +180,37 @@ export default function Profile() {
           <Row
             testID="account-button"
             icon={<UserCircle size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Account & Privacy"
+            title={t('profile.account_privacy')}
             onPress={() => router.push('/account')}
           />
           <Row
             testID="paywall-button"
             icon={<Rocket size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Abbonamenti & Piani"
+            title={t('profile.subscriptions_plans')}
             onPress={() => router.push('/paywall')}
           />
         </View>
 
         {/* ── ALLENAMENTO ── */}
-        <SectionLabel text="ALLENAMENTO" />
+        <SectionLabel text={t('profile.section_training')} />
         <View style={styles.group}>
           <Row
             testID="edit-goals-button"
             icon={<Flag size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Modifica traguardi"
+            title={t('profile.edit_goals')}
             onPress={() => setShowGoals(true)}
           />
           <Row
             testID="badges-button"
             icon={<Trophy size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Achievement & Badge"
+            title={t('profile.badges')}
             onPress={() => router.push('/badges')}
           />
           {(tier === 'performance' || tier === 'elite') ? (
             <Row
               testID="race-predictor-button"
               icon={<Timer size={18} color={colors.primary} strokeWidth={2.4} />}
-              title="Proiezione tempi gara & VO2max"
+              title={t('profile.race_predictor')}
               onPress={() => router.push('/race-predictor')}
             />
           ) : null}
@@ -196,20 +218,20 @@ export default function Profile() {
             <Row
               testID="coach-dashboard-button"
               icon={<Users size={18} color={colors.primary} strokeWidth={2.4} />}
-              title="Coach Dashboard"
+              title={t('profile.coach_dashboard')}
               onPress={() => router.push('/coach')}
             />
           ) : null}
           <Row
             testID="wearables-button"
             icon={<Watch size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Wearables (Apple Health / Google Fit)"
+            title={t('profile.wearables')}
             onPress={() => router.push('/wearables')}
           />
         </View>
 
         {/* ── COMMUNITY ── */}
-        <SectionLabel text="COMMUNITY" />
+        <SectionLabel text={t('profile.section_community')} />
         <View style={styles.group}>
           {/* Referral card — gradient highlight */}
           <TouchableOpacity
@@ -230,13 +252,34 @@ export default function Profile() {
           <Row
             testID="community-button"
             icon={<Users size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Amici, feed e classifiche"
+            title={t('profile.community_feed')}
             onPress={() => router.push('/social')}
           />
+          {/* Nearby visibility toggle (P0 privacy control) */}
+          <View style={styles.toggleRow} testID="nearby-visibility-row">
+            <View style={styles.rowIcon}>
+              <Eye size={18} color={colors.primary} strokeWidth={2.4} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toggleTitle}>{t('profile.nearby_visibility')}</Text>
+              <Text style={styles.toggleSub}>
+                {nearbyVisible ? t('profile.nearby_visibility_on') : t('profile.nearby_visibility_off')}
+              </Text>
+            </View>
+            <Switch
+              testID="nearby-visibility-switch"
+              value={nearbyVisible}
+              onValueChange={onToggleNearby}
+              disabled={togglingNearby}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+              ios_backgroundColor={colors.border}
+            />
+          </View>
           <Row
             testID="heatmap-button"
             icon={<MapIcon size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="La mia mappa corse (heatmap)"
+            title={t('profile.heatmap')}
             onPress={() => router.push('/heatmap')}
           />
           <Row
@@ -261,7 +304,7 @@ export default function Profile() {
                 <View style={[styles.rowIcon, { backgroundColor: colors.primary }]}>
                   <ShieldCheck size={18} color="#fff" strokeWidth={2.4} />
                 </View>
-                <Text style={[styles.rowText, { color: colors.primary }]}>Admin Panel</Text>
+                <Text style={[styles.rowText, { color: colors.primary }]}>{t('profile.admin_panel')}</Text>
                 <ChevronRight size={18} color={colors.primary} strokeWidth={2.4} />
               </TouchableOpacity>
             </View>
@@ -269,33 +312,33 @@ export default function Profile() {
         ) : null}
 
         {/* ── SUPPORTO ── */}
-        <SectionLabel text="SUPPORTO E LEGALE" />
+        <SectionLabel text={t('profile.section_support')} />
         <View style={styles.group}>
           <Row
             testID="terms-button"
             icon={<FileText size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Termini di Servizio"
+            title={t('profile.terms')}
             onPress={() => router.push('/terms')}
           />
           <Row
             testID="privacy-button"
             icon={<ShieldCheck size={18} color={colors.primary} strokeWidth={2.4} />}
-            title="Privacy Policy"
+            title={t('profile.privacy')}
             onPress={() => router.push('/privacy')}
           />
           {isAdMobAvailable ? (
             <Row
               testID="privacy-options-button"
               icon={<Settings size={18} color={colors.primary} strokeWidth={2.4} />}
-              title="Preferenze privacy ads (GDPR)"
+              title={t('profile.privacy_ads')}
               onPress={async () => {
                 try {
                   await showPrivacyOptionsForm();
-                  Alert.alert('Preferenze aggiornate', 'Le tue scelte sono state salvate.');
+                  Alert.alert(t('profile.prefs_updated'), t('profile.prefs_updated_msg'));
                 } catch {
                   Alert.alert(
-                    'Non disponibile',
-                    'Le preferenze privacy per la pubblicità non sono disponibili su questo dispositivo.',
+                    t('common.not_available'),
+                    t('profile.prefs_unavailable'),
                   );
                 }
               }}
@@ -311,7 +354,7 @@ export default function Profile() {
           activeOpacity={0.85}
         >
           <LogOut size={18} color={colors.danger} strokeWidth={2.4} />
-          <Text style={styles.logoutText}>Esci</Text>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -603,6 +646,28 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: fonts.medium,
+  },
+
+  // Toggle row (e.g. nearby visibility)
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  toggleTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontFamily: fonts.medium,
+  },
+  toggleSub: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    marginTop: 2,
   },
 
   // Logout

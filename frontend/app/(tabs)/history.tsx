@@ -8,6 +8,7 @@ import { api } from '../../src/api';
 import { colors, spacing, radius, fonts, activityMeta, ActivityType } from '../../src/theme';
 import { RunIcon, WalkIcon, BikeIcon } from '../../src/icons/BrandIcons';
 import { Footprints, ChevronRight } from 'lucide-react-native';
+import { useT } from '../../src/i18n';
 
 type Session = {
   session_id: string;
@@ -21,6 +22,7 @@ type Session = {
 };
 
 export default function History() {
+  const { t, locale } = useT();
   const [items, setItems] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -39,9 +41,9 @@ export default function History() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Storico</Text>
+        <Text style={styles.title}>{t('history.title')}</Text>
         <Text style={styles.subtitle}>
-          {items.length} {items.length === 1 ? 'sessione' : 'sessioni'} salvate
+          {items.length} {items.length === 1 ? t('history.session_singular') : t('history.session_plural')}
         </Text>
       </View>
 
@@ -57,8 +59,8 @@ export default function History() {
             <View style={styles.emptyIcon}>
               <Footprints size={36} color={colors.textMuted} strokeWidth={1.8} />
             </View>
-            <Text style={styles.emptyText}>Nessuna attività ancora</Text>
-            <Text style={styles.emptySub}>Inizia la tua prima sessione dalla tab CORRI</Text>
+            <Text style={styles.emptyText}>{t('history.empty')}</Text>
+            <Text style={styles.emptySub}>{t('history.empty_subtitle')}</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -78,7 +80,7 @@ export default function History() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
                 <Text style={styles.itemMeta}>
-                  {formatDate(item.completed_at)} · {meta.shortLabel}
+                  {formatDate(item.completed_at, locale)} · {meta.shortLabel}
                 </Text>
               </View>
               <View style={styles.itemStats}>
@@ -97,10 +99,11 @@ export default function History() {
   );
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string = 'it') {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const tag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT';
+    return d.toLocaleDateString(tag, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   } catch { return iso; }
 }
 function formatDur(s: number) {

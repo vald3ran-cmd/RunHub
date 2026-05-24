@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from './theme';
 import { useAuth } from './auth';
+import { useT } from './i18n';
 
 export type Tier = 'free' | 'starter' | 'performance' | 'elite';
 
@@ -51,6 +52,7 @@ interface PremiumGateProps {
 
 export function PremiumGate({ require, title, description, children, compact }: PremiumGateProps) {
   const router = useRouter();
+  const { t } = useT();
   const { hasAccess, currentTier } = useTierAccess(require);
 
   if (hasAccess) return <>{children}</>;
@@ -66,7 +68,7 @@ export function PremiumGate({ require, title, description, children, compact }: 
       >
         <Ionicons name="lock-closed" size={16} color={colors.primary} />
         <Text style={styles.compactBannerText}>
-          Sblocca con {tierLabel}
+          {t('gate.unlock_with', { tier: tierLabel })}
         </Text>
         <Ionicons name="chevron-forward" size={14} color={colors.primary} />
       </TouchableOpacity>
@@ -81,19 +83,75 @@ export function PremiumGate({ require, title, description, children, compact }: 
       <Text style={styles.title}>{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
       <Text style={styles.currentBadge}>
-        Piano attuale: <Text style={{ fontWeight: '700' }}>{currentTier === 'free' ? 'Gratuito' : currentTier}</Text>
+        {t('gate.current_plan', { tier: currentTier === 'free' ? t('gate.free_label') : currentTier })}
       </Text>
       <TouchableOpacity
         style={styles.cta}
         onPress={() => router.push('/paywall')}
         testID={`premium-gate-cta-${require}`}
       >
-        <Text style={styles.ctaText}>Sblocca {tierLabel}</Text>
+        <Text style={styles.ctaText}>{t('gate.unlock_with', { tier: tierLabel })}</Text>
         <Ionicons name="arrow-forward" size={18} color="#fff" />
       </TouchableOpacity>
     </View>
   );
 }
+
+/**
+ * LockedTeaser: card teaser (compatta, in stile statsCard) per mostrare una
+ * feature bloccata nel resoconto sessione, con titolo + descrizione + CTA.
+ */
+export function LockedTeaser({
+  require, title, description,
+}: { require: Tier; title: string; description: string }) {
+  const router = useRouter();
+  const { t } = useT();
+  const { hasAccess } = useTierAccess(require);
+  if (hasAccess) return null;
+  const tierLabel = require === 'elite' ? 'Elite' : require === 'performance' ? 'Performance' : 'Starter';
+  return (
+    <TouchableOpacity
+      style={lockedStyles.card}
+      onPress={() => router.push('/paywall')}
+      activeOpacity={0.9}
+      testID={`locked-teaser-${require}`}
+    >
+      <View style={lockedStyles.iconRow}>
+        <Ionicons name="lock-closed" size={18} color={colors.primary} />
+        <Text style={lockedStyles.title}>{title}</Text>
+      </View>
+      <Text style={lockedStyles.desc}>{description}</Text>
+      <View style={lockedStyles.cta}>
+        <Text style={lockedStyles.ctaText}>{t('gate.unlock_with', { tier: tierLabel })}</Text>
+        <Ionicons name="arrow-forward" size={14} color="#fff" />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const lockedStyles = StyleSheet.create({
+  card: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  iconRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  title: { color: colors.textPrimary, fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
+  desc: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginBottom: spacing.sm },
+  cta: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radius.pill,
+  },
+  ctaText: { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+});
 
 const styles = StyleSheet.create({
   container: {

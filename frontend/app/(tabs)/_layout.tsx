@@ -4,8 +4,10 @@ import { colors, shadows } from '../../src/theme';
 import {
   HomeIcon, PlansIcon, RunIcon, HistoryIcon, ProfileIcon,
 } from '../../src/icons/BrandIcons';
+import { useT } from '../../src/i18n';
 
 export default function TabsLayout() {
+  const { t } = useT();
   return (
     <Tabs
       screenOptions={{
@@ -31,14 +33,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ color }) => <HomeIcon size={22} color={color} strokeWidth={2.2} />,
         }}
       />
       <Tabs.Screen
         name="plans"
         options={{
-          title: 'Piani',
+          title: t('tabs.plans'),
           tabBarIcon: ({ color }) => <PlansIcon size={22} color={color} strokeWidth={2.2} />,
         }}
       />
@@ -56,14 +58,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Storico',
+          title: t('tabs.history'),
           tabBarIcon: ({ color }) => <HistoryIcon size={22} color={color} strokeWidth={2.2} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profilo',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color }) => <ProfileIcon size={22} color={color} strokeWidth={2.2} />,
         }}
       />

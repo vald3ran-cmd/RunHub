@@ -15,6 +15,7 @@ import {
   ChevronRight, Calendar, BarChart3, Sparkles, Users, Award, Heart, MapPin,
 } from 'lucide-react-native';
 import { BoltIcon } from '../../src/icons/BrandIcons';
+import { useT } from '../../src/i18n';
 
 type Progress = {
   daily: { distance_km: number; duration_seconds: number; count: number };
@@ -44,6 +45,7 @@ type PlanLite = {
 };
 
 export default function Home() {
+  const { t } = useT();
   const { user } = useAuth();
   const [progress, setProgress] = useState<Progress | null>(null);
   const [activePlan, setActivePlan] = useState<PlanLite | null>(null);
@@ -130,37 +132,37 @@ export default function Home() {
         {/* Greeting */}
         <View style={styles.greeting}>
           <View style={styles.greetingRow}>
-            <Text style={styles.greetingHello}>Ciao {userName}!</Text>
+            <Text style={styles.greetingHello}>{t('home.greeting', { name: userName })}</Text>
             <Image
               source={require('../../assets/images/logo-transparent.png')}
               style={styles.greetingLogo}
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.greetingSubtitle}>Pronto a dare il massimo oggi?</Text>
+          <Text style={styles.greetingSubtitle}>{t('home.greeting_subtitle')}</Text>
         </View>
 
         {/* ── PANORAMICA ── */}
-        <SectionLabel text="PANORAMICA" />
+        <SectionLabel text={t('home.section_overview')} />
         <View style={styles.panoramaCard}>
           <PanoramaTile
-            label="DISTANZA"
+            label={t('home.distance')}
             value={progress?.weekly.distance_km ?? 0}
             decimals={1}
             unit="km"
           />
           <View style={styles.panoramaDivider} />
           <PanoramaTile
-            label="TEMPO"
+            label={t('home.time')}
             valueText={fmtTimeHours(progress?.weekly.duration_seconds ?? 0)}
             unit="h"
           />
           <View style={styles.panoramaDivider} />
           <PanoramaTile
-            label="ALLENAMENTI"
+            label={t('home.workouts')}
             value={progress?.weekly.count ?? 0}
             decimals={0}
-            unit="questa settimana"
+            unit={t('home.this_week_lower')}
             unitSmall
           />
         </View>
@@ -185,22 +187,22 @@ export default function Home() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.nearbyHeadline} numberOfLines={2}>
-              {nearbyHeadline || 'Scopri chi corre con RunHub vicino a te'}
+              {nearbyHeadline || t('home.nearby_default')}
             </Text>
             {nearby && nearby.active > 0 ? (
               <View style={styles.nearbyLiveRow}>
                 <View style={styles.nearbyLiveDot} />
-                <Text style={styles.nearbyLiveText}>{nearby.active} in corsa adesso</Text>
+                <Text style={styles.nearbyLiveText}>{t('home.nearby_running_now', { count: nearby.active })}</Text>
               </View>
             ) : (
-              <Text style={styles.nearbySub}>Tocca per vedere chi e dove</Text>
+              <Text style={styles.nearbySub}>{t('home.nearby_tap')}</Text>
             )}
           </View>
           <ChevronRight size={22} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
         </TouchableOpacity>
 
         {/* ── I TUOI PIANI ── */}
-        <SectionLabel text="I TUOI PIANI" />
+        <SectionLabel text={t('home.section_plans')} />
         {activePlan ? (
           <TouchableOpacity
             style={styles.planCard}
@@ -220,7 +222,7 @@ export default function Home() {
             </View>
             {activePlan.current_week && activePlan.total_weeks ? (
               <Text style={styles.planMeta}>
-                Settimana {activePlan.current_week}/{activePlan.total_weeks}
+                {t('home.plan_week', { current: activePlan.current_week, total: activePlan.total_weeks })}
               </Text>
             ) : null}
           </TouchableOpacity>
@@ -230,14 +232,14 @@ export default function Home() {
             activeOpacity={0.85}
             onPress={() => router.push('/(tabs)/plans')}
           >
-            <Text style={styles.planEmptyTitle}>Scegli il tuo piano</Text>
-            <Text style={styles.planEmptySubtitle}>Inizia un programma personalizzato</Text>
+            <Text style={styles.planEmptyTitle}>{t('home.plan_choose')}</Text>
+            <Text style={styles.planEmptySubtitle}>{t('home.plan_subtitle')}</Text>
             <ChevronRight size={20} color={colors.primary} />
           </TouchableOpacity>
         )}
 
         {/* ── PROSSIMO ALLENAMENTO ── */}
-        <SectionLabel text="PROSSIMO ALLENAMENTO" />
+        <SectionLabel text={t('home.section_next')} />
         {nextWorkout ? (
           <TouchableOpacity
             style={styles.nextWorkoutCard}
@@ -251,7 +253,7 @@ export default function Home() {
               <Text style={styles.nextWorkoutMeta} numberOfLines={1}>
                 {nextWorkout.distance_km
                   ? `${nextWorkout.distance_km} km`
-                  : (nextWorkout.type || 'Allenamento')}
+                  : (nextWorkout.type || t('common.workout'))}
                 {nextWorkout.scheduled_for ? ` · ${fmtSchedule(nextWorkout.scheduled_for)}` : ''}
               </Text>
             </View>
@@ -267,17 +269,17 @@ export default function Home() {
               <Calendar size={20} color={colors.primary} strokeWidth={2.2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.nextWorkoutTitle}>Nessun allenamento in programma</Text>
-              <Text style={styles.nextWorkoutMeta}>Avvia una corsa libera</Text>
+              <Text style={styles.nextWorkoutTitle}>{t('home.no_workout_scheduled')}</Text>
+              <Text style={styles.nextWorkoutMeta}>{t('home.start_free_run')}</Text>
             </View>
             <ChevronRight size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
 
         {/* ── PROGRESSI ── */}
-        <SectionLabel text="PROGRESSI" />
+        <SectionLabel text={t('home.section_progress')} />
         <View style={styles.progressCard}>
-          <Text style={styles.progressSubtitle}>Questa settimana</Text>
+          <Text style={styles.progressSubtitle}>{t('home.this_week')}</Text>
           <View style={styles.barChartWrap}>
             <BarChart
               data={weeklyBars}
@@ -290,30 +292,30 @@ export default function Home() {
         </View>
 
         {/* ── ESPLORA ── (link rapidi) */}
-        <SectionLabel text="ESPLORA" />
+        <SectionLabel text={t('home.section_explore')} />
         <View style={styles.exploreList}>
           <ExploreItem
             testID="cta-dashboard-button"
             icon={<BarChart3 size={20} color={colors.primary} strokeWidth={2.2} />}
-            title="Dashboard e Personal Best"
+            title={t('home.explore_dashboard')}
             onPress={() => router.push('/dashboard')}
           />
           <ExploreItem
             testID="cta-ai-button"
             icon={<Sparkles size={20} color={colors.primary} strokeWidth={2.2} />}
-            title="AI Coach · genera un piano"
+            title={t('home.explore_ai')}
             onPress={() => router.push('/ai-generate')}
             highlight
           />
           <ExploreItem
             testID="cta-social-button"
             icon={<Users size={20} color={colors.primary} strokeWidth={2.2} />}
-            title="Community e classifiche"
+            title={t('home.explore_community')}
             onPress={() => router.push('/social')}
           />
           <ExploreItem
             icon={<Award size={20} color={colors.primary} strokeWidth={2.2} />}
-            title="I tuoi badge"
+            title={t('home.explore_badges')}
             onPress={() => router.push('/badges')}
           />
           {Platform.OS !== 'web' && (
