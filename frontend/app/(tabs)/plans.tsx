@@ -9,6 +9,7 @@ import { api } from '../../src/api';
 import { colors, spacing, radius, fonts } from '../../src/theme';
 import { SparklesIcon } from '../../src/icons/BrandIcons';
 import { useT } from '../../src/i18n';
+import { tBackend } from '../../src/i18n/backendStrings';
 import { Star, Calendar, Repeat, Sparkles } from 'lucide-react-native';
 
 type Plan = {
@@ -44,7 +45,7 @@ function pickFallback(title: string, level: string): string {
 type Tab = 'forYou' | 'all';
 
 export default function Plans() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [predefined, setPredefined] = useState<Plan[]>([]);
   const [custom, setCustom] = useState<Plan[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,11 +150,13 @@ export default function Plans() {
 
 // ─────────────────────────────────────────────────────────────
 function PlanCard({
-  plan, highlight, onPress, t,
-}: { plan: Plan; highlight?: boolean; onPress: () => void; t: (k: string, o?: any) => string }) {
+  plan, highlight, onPress, t, locale,
+}: { plan: Plan; highlight?: boolean; onPress: () => void; t: (k: string, o?: any) => string; locale: string }) {
   const imageUri = plan.image_url || pickFallback(plan.title, plan.level);
   const weeksShort = t('plans.weeks_short');
   const perWeekShort = t('plans.per_week_short');
+  const title = tBackend(plan.title, locale);
+  const desc = tBackend(plan.description, locale);
   return (
     <TouchableOpacity
       testID={`plan-card-${plan.plan_id}`}
@@ -194,9 +197,9 @@ function PlanCard({
           </View>
 
           <Text style={styles.cardTitle} numberOfLines={2}>
-            {plan.title.toUpperCase()}
+            {title.toUpperCase()}
           </Text>
-          <Text style={styles.cardDesc} numberOfLines={2}>{plan.description}</Text>
+          <Text style={styles.cardDesc} numberOfLines={2}>{desc}</Text>
 
           <View style={styles.metaRow}>
             <Calendar size={12} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
