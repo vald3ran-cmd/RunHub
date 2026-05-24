@@ -15,6 +15,7 @@ import {
 } from 'lucide-react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useT } from '../../src/i18n';
+import { useTierAccess, LockedTeaser } from '../../src/PremiumGate';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -200,13 +201,13 @@ export default function WorkoutDetail() {
           </View>
         ) : null}
 
-        {/* Statistiche dettagliate */}
+        {/* Statistiche dettagliate (Performance+) */}
         <DetailedStatsCard session={session} t={t} />
 
-        {/* Split km per km */}
+        {/* Split km per km (Starter+) */}
         <SplitsCard session={session} t={t} />
 
-        {/* Fun equivalents */}
+        {/* Fun equivalents (Performance+) */}
         <FunEquivalentsCard session={session} t={t} />
 
         {/* Share buttons */}
@@ -250,6 +251,16 @@ function CardStat({ icon, label, value }: { icon: React.ReactNode; label: string
 // DETAILED STATS CARD
 // ─────────────────────────────────────────────────────────────
 function DetailedStatsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const { hasAccess } = useTierAccess('performance');
+  if (!hasAccess) {
+    return (
+      <LockedTeaser
+        require="performance"
+        title={t('gate.stats_locked_title')}
+        description={t('gate.stats_locked_desc')}
+      />
+    );
+  }
   const dur = Number(session.duration_seconds || 0);
   const dist = Number(session.distance_km || 0);
   const kcal = Number(session.calories || 0);
@@ -309,6 +320,16 @@ function DetailedStatsCard({ session, t }: { session: any; t: (k: string, o?: an
 // SPLITS CARD (table + bar chart per km)
 // ─────────────────────────────────────────────────────────────
 function SplitsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const { hasAccess } = useTierAccess('starter');
+  if (!hasAccess) {
+    return (
+      <LockedTeaser
+        require="starter"
+        title={t('gate.splits_locked_title')}
+        description={t('gate.splits_locked_desc')}
+      />
+    );
+  }
   const splits = Array.isArray(session.splits) ? session.splits : [];
   const activityType: ActivityType = (session.activity_type as ActivityType) || 'run';
   if (splits.length === 0) {
@@ -373,6 +394,16 @@ function SplitsCard({ session, t }: { session: any; t: (k: string, o?: any) => s
 // FUN EQUIVALENTS CARD
 // ─────────────────────────────────────────────────────────────
 function FunEquivalentsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const { hasAccess } = useTierAccess('performance');
+  if (!hasAccess) {
+    return (
+      <LockedTeaser
+        require="performance"
+        title={t('gate.equiv_locked_title')}
+        description={t('gate.equiv_locked_desc')}
+      />
+    );
+  }
   const kcal = Number(session.calories || 0);
   const dist = Number(session.distance_km || 0);
   const elev = Number(session.elevation_gain_m || 0);

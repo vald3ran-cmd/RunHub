@@ -458,6 +458,24 @@
     "equiv_field": "⚽ {{n}} volte la lunghezza di un campo da calcio",
     "equiv_burj": "🏙️ {{n}} volte l'altezza del Burj Khalifa scalata"
   },
+  "gate": {
+    "unlock_with": "Sblocca con {{tier}}",
+    "unlock_starter": "Sblocca con Starter",
+    "unlock_performance": "Sblocca con Performance",
+    "unlock_elite": "Sblocca con Elite",
+    "current_plan": "Piano attuale: {{tier}}",
+    "free_label": "Gratuito",
+    "splits_locked_title": "Split per chilometro",
+    "splits_locked_desc": "Vedi il dettaglio del tuo passo km per km, scopri il km migliore e il più lento. Solo con Starter.",
+    "stats_locked_title": "Statistiche avanzate",
+    "stats_locked_desc": "Dislivello, velocità massima, calorie per km, km più veloce e più lento. Solo con Performance.",
+    "equiv_locked_title": "Lo sapevi?",
+    "equiv_locked_desc": "Scopri quante pizze hai bruciato e altri equivalenti divertenti da condividere. Solo con Performance.",
+    "weather_locked": "Meteo · Performance",
+    "auto_pause_locked": "Auto-pausa · Performance",
+    "target_pace_locked": "Target pace · Performance",
+    "voice_advanced_locked": "Voice 5 min/Lap · Performance"
+  },
   "badges": {
     "title": "ACHIEVEMENT",
     "unlocked": "{{earned}} / {{total}} sbloccati",

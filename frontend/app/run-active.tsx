@@ -24,6 +24,7 @@ import {
 import { fetchWeather, WeatherSnapshot } from '../src/weather';
 import { loadRunSettings, RunSettings, DEFAULT_SETTINGS, VoiceFrequency } from '../src/runSettings';
 import { useT } from '../src/i18n';
+import { hasTierAccess, useTierAccess } from '../src/PremiumGate';
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
@@ -33,6 +34,7 @@ export default function RunActive() {
   const params = useLocalSearchParams<{ title?: string; workout_id?: string; plan_id?: string; steps?: string; activity_type?: string }>();
   const router = useRouter();
   const { t } = useT();
+  const { hasAccess: hasPerformance } = useTierAccess('performance');
   const title = params.title || t('run.free_run');
   const steps: Step[] = params.steps ? JSON.parse(String(params.steps)) : [];
   const hasSteps = steps.length > 0;
@@ -137,8 +139,8 @@ export default function RunActive() {
         }
       }
 
-      // ── Every-5-min announcement ─────────────────────────────
-      if (settingsRef.current.voiceFrequency === 'every_5min') {
+      // ── Every-5-min announcement (Performance+) ─────────────
+      if (hasPerformance && settingsRef.current.voiceFrequency === 'every_5min') {
         const fiveMinBucket = Math.floor(total / 300);
         if (fiveMinBucket > last5MinAnnouncedRef.current && fiveMinBucket > 0) {
           last5MinAnnouncedRef.current = fiveMinBucket;
@@ -148,8 +150,8 @@ export default function RunActive() {
         }
       }
 
-      // ── Auto-pause detection ─────────────────────────────────
-      if (settingsRef.current.autoPauseEnabled && Platform.OS !== 'web') {
+      // ── Auto-pause detection (Performance+) ─────────────────
+      if (hasPerformance && settingsRef.current.autoPauseEnabled && Platform.OS !== 'web') {
         const sp = instantSpeedMs(coordsRef.current, 6);
         // Threshold: 0.4 m/s ≈ very slow walk (or stop). For bike, 1.0 m/s
         const threshold = activityType === 'bike' ? 1.0 : 0.4;
@@ -600,7 +602,7 @@ export default function RunActive() {
   const paceStr = pace > 0 ? formatPace(pace) : '—:—';
   const stepColor = currentStep ? (stepTypeColors[currentStep.type] || activity.color) : activity.color;
   // Pace target status (uses current step's target_pace if available)
-  const targetPaceMin = parseTargetPace(currentStep?.target_pace || null);
+  const targetPaceMin = hasPerformance ? parseTargetPace(currentStep?.target_pace || null) : null;
   const paceState = paceStatus(targetPaceMin, pace);
   // For bike: show km/h instead of pace
   const kmh = elapsed > 0 ? (distance / (elapsed / 3600)) : 0;
@@ -764,7 +766,7 @@ export default function RunActive() {
               <Text style={styles.gpsBadgeText}>GPS · {coords.length}</Text>
             </View>
             {/* Weather widget */}
-            {weather ? (
+            {weather && hasPerformance ? (
               <View style={styles.weatherBadge}>
                 <Text style={styles.weatherEmoji}>{weather.emoji}</Text>
                 <View>

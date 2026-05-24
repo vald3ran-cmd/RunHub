@@ -458,6 +458,24 @@
     "equiv_field": "⚽ {{n}} veces el largo de un campo de fútbol",
     "equiv_burj": "🏙️ {{n}} veces la altura del Burj Khalifa escalada"
   },
+  "gate": {
+    "unlock_with": "Desbloquear con {{tier}}",
+    "unlock_starter": "Desbloquear con Starter",
+    "unlock_performance": "Desbloquear con Performance",
+    "unlock_elite": "Desbloquear con Elite",
+    "current_plan": "Plan actual: {{tier}}",
+    "free_label": "Gratuito",
+    "splits_locked_title": "Parciales por km",
+    "splits_locked_desc": "Ve tu ritmo km a km, descubre tu mejor km y el más lento. Disponible con Starter.",
+    "stats_locked_title": "Estadísticas avanzadas",
+    "stats_locked_desc": "Desnivel, velocidad máxima, calorías por km, km más rápido y más lento. Disponible con Performance.",
+    "equiv_locked_title": "¿Lo sabías?",
+    "equiv_locked_desc": "Descubre cuántas pizzas has quemado y otros equivalentes divertidos para compartir. Disponible con Performance.",
+    "weather_locked": "Meteo · Performance",
+    "auto_pause_locked": "Pausa automática · Performance",
+    "target_pace_locked": "Ritmo objetivo · Performance",
+    "voice_advanced_locked": "Voz 5 min/Vuelta · Performance"
+  },
   "badges": {
     "title": "LOGROS",
     "unlocked": "{{earned}} / {{total}} desbloqueados",
