@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../src/auth';
 import { api } from '../src/api';
 import { colors, spacing, radius, fonts } from '../src/theme';
+import { useT } from '../src/i18n';
 import {
   fetchNearbyCount, fetchNearbyRunners, fetchRunnerDetail,
   requestLocationPermission, getApproxLocation, type NearbyRunner,
@@ -21,6 +22,7 @@ const RADII = [3, 5, 10, 15, 25];
 
 export default function NearbyScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { user } = useAuth();
   const tier = (user?.tier || 'free').toLowerCase();
   const isPaidTier = tier !== 'free';
@@ -43,8 +45,8 @@ export default function NearbyScreen() {
       if (!granted) {
         setLoading(false);
         Alert.alert(
-          'Permesso GPS necessario',
-          'Per scoprire i RunHubber nelle vicinanze attiva la posizione nelle Impostazioni.',
+          t('nearby.gps_required_title'),
+          t('nearby.gps_required_msg'),
         );
         return;
       }
@@ -72,7 +74,7 @@ export default function NearbyScreen() {
       const detail = await fetchRunnerDetail(r.user_id);
       setRunnerDetail(detail);
     } catch (e: any) {
-      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile caricare i dettagli');
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('common.unable_load_details'));
       setSelectedRunner(null);
     } finally {
       setDetailLoading(false);
@@ -83,10 +85,10 @@ export default function NearbyScreen() {
     if (!selectedRunner) return;
     try {
       await api.post('/social/friends/request', { to_user_id: selectedRunner.user_id });
-      Alert.alert('Richiesta inviata', 'Aspetta che venga accettata.');
+      Alert.alert(t('common.request_sent'), t('common.request_sent_msg'));
       setRunnerDetail({ ...runnerDetail, request_pending: true });
     } catch (e: any) {
-      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile inviare la richiesta');
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('common.unable_send_request'));
     }
   };
 
@@ -102,25 +104,25 @@ export default function NearbyScreen() {
         <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2.4} />
         </TouchableOpacity>
-        <Text style={styles.title}>Vicino a te</Text>
+        <Text style={styles.title}>{t('nearby.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {loading ? (
         <View style={styles.loader}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.loaderText}>Cerco RunHubber nelle vicinanze…</Text>
+          <Text style={styles.loaderText}>{t('nearby.loader')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
           {/* Counter hero */}
           <View style={styles.heroBox}>
             <Text style={styles.heroNum}>{count?.total ?? 0}</Text>
-            <Text style={styles.heroLabel}>RunHubber {isPaidTier ? `entro ${radius} km` : `entro 10 km`}</Text>
+            <Text style={styles.heroLabel}>{isPaidTier ? t('nearby.within_paid', { km: radius }) : t('nearby.within_free')}</Text>
             {count && count.active > 0 ? (
               <View style={styles.activeChip}>
                 <View style={styles.activeDot} />
-                <Text style={styles.activeText}>{count.active} in corsa adesso</Text>
+                <Text style={styles.activeText}>{t('nearby.active_now', { n: count.active })}</Text>
               </View>
             ) : null}
           </View>
@@ -135,7 +137,7 @@ export default function NearbyScreen() {
                 </View>
                 <View style={styles.blurOverlay}>
                   <Lock size={36} color="#fff" strokeWidth={2} />
-                  <Text style={styles.blurTitle}>Mappa bloccata</Text>
+                  <Text style={styles.blurTitle}>{t('nearby.map_locked')}</Text>
                 </View>
               </View>
 
@@ -143,13 +145,13 @@ export default function NearbyScreen() {
                 <View style={styles.paywallIconBox}>
                   <Sparkles size={20} color="#fff" strokeWidth={2.4} />
                 </View>
-                <Text style={styles.paywallEyebrow}>SBLOCCA CON STARTER</Text>
-                <Text style={styles.paywallTitle}>Scopri DOVE corrono i RunHubber vicino a te</Text>
+                <Text style={styles.paywallEyebrow}>{t('nearby.unlock_starter_eyebrow')}</Text>
+                <Text style={styles.paywallTitle}>{t('nearby.paywall_title')}</Text>
                 <View style={styles.bullets}>
-                  <Bullet text="Mappa con posizioni approssimate (privacy-safe)" />
-                  <Bullet text="Raggio personalizzabile fino a 25 km" />
-                  <Bullet text="Aggiungi altri runner come amici con un tap" />
-                  <Bullet text="Statistiche pubbliche (km, badge, livello)" />
+                  <Bullet text={t('nearby.bullet_map')} />
+                  <Bullet text={t('nearby.bullet_radius')} />
+                  <Bullet text={t('nearby.bullet_friends')} />
+                  <Bullet text={t('nearby.bullet_stats')} />
                 </View>
                 <TouchableOpacity
                   testID="nearby-upgrade-button"
@@ -157,7 +159,7 @@ export default function NearbyScreen() {
                   onPress={() => router.push('/premium')}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.upgradeBtnText}>UPGRADE A STARTER</Text>
+                  <Text style={styles.upgradeBtnText}>{t('nearby.upgrade_starter')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -186,12 +188,12 @@ export default function NearbyScreen() {
               {/* List */}
               <View style={styles.sectionRow}>
                 <View style={styles.sectionDot} />
-                <Text style={styles.sectionLabel}>RUNHUBBER VICINI</Text>
+                <Text style={styles.sectionLabel}>{t('nearby.section_nearby')}</Text>
               </View>
               {runners.length === 0 ? (
                 <View style={styles.empty}>
-                  <Text style={styles.emptyTitle}>Nessuno in zona</Text>
-                  <Text style={styles.emptySub}>Prova un raggio più ampio o riprova più tardi.</Text>
+                  <Text style={styles.emptyTitle}>{t('nearby.empty_title')}</Text>
+                  <Text style={styles.emptySub}>{t('nearby.empty_sub')}</Text>
                 </View>
               ) : (
                 <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
@@ -213,7 +215,7 @@ export default function NearbyScreen() {
                         <Text style={styles.runnerName} numberOfLines={1}>{r.name}</Text>
                         <Text style={styles.runnerMeta}>
                           {r.distance_km} km
-                          {r.active ? '  ·  IN CORSA' : ''}
+                          {r.active ? `  ·  ${t('nearby.running_now_inline')}` : ''}
                           {r.tier !== 'free' ? `  ·  ${r.tier.toUpperCase()}` : ''}
                         </Text>
                       </View>
@@ -258,25 +260,25 @@ export default function NearbyScreen() {
                 <View style={styles.statsGrid}>
                   <View style={styles.statBox}>
                     <Text style={styles.statValue}>{runnerDetail.total_distance_km}</Text>
-                    <Text style={styles.statLabel}>km totali</Text>
+                    <Text style={styles.statLabel}>{t('nearby.stat_km_total')}</Text>
                   </View>
                   <View style={styles.statBox}>
                     <Text style={styles.statValue}>{runnerDetail.total_workouts}</Text>
-                    <Text style={styles.statLabel}>allenamenti</Text>
+                    <Text style={styles.statLabel}>{t('nearby.stat_workouts')}</Text>
                   </View>
                   <View style={styles.statBox}>
                     <Text style={styles.statValue}>{runnerDetail.badges_count}</Text>
-                    <Text style={styles.statLabel}>badge</Text>
+                    <Text style={styles.statLabel}>{t('nearby.stat_badges')}</Text>
                   </View>
                 </View>
 
                 {runnerDetail.is_friend ? (
                   <View style={styles.friendChip}>
-                    <Text style={styles.friendChipText}>✓ GIÀ AMICI</Text>
+                    <Text style={styles.friendChipText}>{t('nearby.already_friends')}</Text>
                   </View>
                 ) : runnerDetail.request_pending ? (
                   <View style={styles.friendChip}>
-                    <Text style={styles.friendChipText}>RICHIESTA IN ATTESA</Text>
+                    <Text style={styles.friendChipText}>{t('nearby.request_pending')}</Text>
                   </View>
                 ) : (
                   <TouchableOpacity
@@ -285,7 +287,7 @@ export default function NearbyScreen() {
                     activeOpacity={0.85}
                   >
                     <UserPlus size={18} color="#fff" strokeWidth={2.4} />
-                    <Text style={styles.addFriendBtnText}>AGGIUNGI AMICO</Text>
+                    <Text style={styles.addFriendBtnText}>{t('nearby.add_friend_upper')}</Text>
                   </TouchableOpacity>
                 )}
               </>

@@ -9,16 +9,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { useAuth } from '../src/auth';
 import { colors, spacing, radius } from '../src/theme';
-
-const LEVELS = [
-  { key: 'beginner', label: 'PRINCIPIANTE' },
-  { key: 'intermediate', label: 'INTERMEDIO' },
-  { key: 'expert', label: 'ESPERTO' },
-];
+import { useT } from '../src/i18n';
 
 export default function AIGenerate() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useT();
+  const LEVELS = [
+    { key: 'beginner',     label: t('ai_generate.level_beginner') },
+    { key: 'intermediate', label: t('ai_generate.level_intermediate') },
+    { key: 'expert',       label: t('ai_generate.level_expert') },
+  ];
   const [level, setLevel] = useState('beginner');
   const [goal, setGoal] = useState('');
   const [daysPerWeek, setDaysPerWeek] = useState('3');
@@ -29,13 +30,13 @@ export default function AIGenerate() {
 
   const onGenerate = async () => {
     if (!user?.is_premium) {
-      Alert.alert('Premium richiesto', 'Abbonati per generare piani con AI', [
-        { text: 'Dopo' },
-        { text: 'Upgrade', onPress: () => router.replace('/premium') },
+      Alert.alert(t('ai_generate.premium_required_title'), t('ai_generate.premium_required_msg'), [
+        { text: t('common.later') },
+        { text: t('ai_generate.upgrade'), onPress: () => router.replace('/premium') },
       ]);
       return;
     }
-    if (!goal.trim()) { Alert.alert('Errore', 'Inserisci il tuo obiettivo'); return; }
+    if (!goal.trim()) { Alert.alert(t('common.error'), t('ai_generate.goal_required')); return; }
     setLoading(true);
     try {
       const { data } = await api.post('/plans/ai-generate', {
@@ -53,9 +54,9 @@ export default function AIGenerate() {
     } catch (e: any) {
       const d = e?.response?.data?.detail;
       const isTimeout = e?.code === 'ECONNABORTED' || /timeout/i.test(e?.message || '');
-      Alert.alert('Errore', typeof d === 'string' ? d : isTimeout
-        ? 'L\'AI sta impiegando più tempo del previsto. Riprova tra qualche istante.'
-        : 'Generazione fallita');
+      Alert.alert(t('common.error'), typeof d === 'string' ? d : isTimeout
+        ? t('ai_generate.ai_timeout')
+        : t('ai_generate.generate_failed'));
     } finally { setLoading(false); }
   };
 
@@ -72,17 +73,17 @@ export default function AIGenerate() {
           <View style={styles.aiIcon}>
             <Ionicons name="sparkles" size={32} color="#fff" />
           </View>
-          <Text style={styles.title}>AI COACH</Text>
-          <Text style={styles.sub}>Un piano personalizzato su misura in pochi secondi</Text>
+          <Text style={styles.title}>{t('ai_generate.title')}</Text>
+          <Text style={styles.sub}>{t('ai_generate.subtitle')}</Text>
 
           {!user?.is_premium ? (
             <View style={styles.warnBox}>
               <Ionicons name="lock-closed" size={16} color={colors.primary} />
-              <Text style={styles.warnText}>Funzione Premium — passa a Premium per generare piani AI</Text>
+              <Text style={styles.warnText}>{t('ai_generate.premium_locked_warn')}</Text>
             </View>
           ) : null}
 
-          <Text style={styles.label}>LIVELLO</Text>
+          <Text style={styles.label}>{t('ai_generate.label_level')}</Text>
           <View style={styles.pillRow}>
             {LEVELS.map(l => (
               <TouchableOpacity
@@ -101,31 +102,31 @@ export default function AIGenerate() {
             ))}
           </View>
 
-          <Text style={styles.label}>OBIETTIVO</Text>
+          <Text style={styles.label}>{t('ai_generate.label_goal')}</Text>
           <TextInput
             testID="goal-input"
-            style={styles.input} placeholder="Es. Correre 10K senza fermarmi"
+            style={styles.input} placeholder={t('ai_generate.goal_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={goal} onChangeText={setGoal} multiline
           />
 
           <View style={styles.gridRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>SETTIMANE</Text>
+              <Text style={styles.label}>{t('ai_generate.label_weeks')}</Text>
               <TextInput
                 testID="weeks-input"
                 style={styles.input} keyboardType="numeric" value={weeks} onChangeText={setWeeks}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>GIORNI/SETT</Text>
+              <Text style={styles.label}>{t('ai_generate.label_days_per_week')}</Text>
               <TextInput
                 testID="days-input"
                 style={styles.input} keyboardType="numeric" value={daysPerWeek} onChangeText={setDaysPerWeek}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>MIN/SESS</Text>
+              <Text style={styles.label}>{t('ai_generate.label_minutes')}</Text>
               <TextInput
                 testID="minutes-input"
                 style={styles.input} keyboardType="numeric" value={minutes} onChangeText={setMinutes}
@@ -133,11 +134,11 @@ export default function AIGenerate() {
             </View>
           </View>
 
-          <Text style={styles.label}>NOTE (OPZIONALE)</Text>
+          <Text style={styles.label}>{t('ai_generate.label_notes')}</Text>
           <TextInput
             testID="notes-input"
             style={[styles.input, { minHeight: 80 }]}
-            placeholder="Infortuni, preferenze, ecc."
+            placeholder={t('ai_generate.notes_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={notes} onChangeText={setNotes} multiline
           />
@@ -151,7 +152,7 @@ export default function AIGenerate() {
             ) : (
               <>
                 <Ionicons name="sparkles" size={18} color="#fff" />
-                <Text style={styles.generateText}>GENERA PIANO</Text>
+                <Text style={styles.generateText}>{t('ai_generate.generate_btn')}</Text>
               </>
             )}
           </TouchableOpacity>

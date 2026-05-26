@@ -9,6 +9,7 @@ import * as Device from 'expo-device';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
 import { isWearablesAvailable, connectWearable, fetchWearableStats } from '../src/wearables';
+import { useT } from '../src/i18n';
 
 type Stats = {
   steps?: number;
@@ -21,6 +22,7 @@ type Stats = {
 
 export default function WearablesScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [today, setToday] = useState<Stats>({});
   const [history, setHistory] = useState<Stats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +34,11 @@ export default function WearablesScreen() {
 
   const loadData = async () => {
     try {
-      const [t, h] = await Promise.all([
+      const [tData, h] = await Promise.all([
         api.get('/wearables/today'),
         api.get('/wearables/history?days=7'),
       ]);
-      setToday(t.data || {});
+      setToday(tData.data || {});
       setHistory(h.data || []);
     } catch {}
   };
@@ -55,8 +57,8 @@ export default function WearablesScreen() {
       step = `connectWearable→${JSON.stringify(conn)}`;
       if (!conn.ok) {
         Alert.alert(
-          'Permesso non concesso',
-          `Per sincronizzare Apple Health concedi il permesso nelle Impostazioni > Privacy > Salute.\n\n[DEBUG] platform=${conn.platform} reason=${(conn as any).reason || 'denied/cancel'}`
+          t('wearables.permission_denied_title'),
+          t('wearables.permission_denied_msg', { platform: conn.platform, reason: (conn as any).reason || 'denied/cancel' })
         );
         setSyncing(false);
         return;
@@ -66,8 +68,8 @@ export default function WearablesScreen() {
       step = `fetchWearableStats→${stats ? 'ok' : 'null'}`;
       if (!stats) {
         Alert.alert(
-          'Nessun dato disponibile',
-          'Apple Health non ha ancora dati per oggi. Sincronizza dopo aver fatto attività fisica monitorata da iPhone o Apple Watch.'
+          t('wearables.no_data_dialog_title'),
+          t('wearables.no_data_dialog_msg')
         );
         setSyncing(false);
         return;
@@ -76,14 +78,14 @@ export default function WearablesScreen() {
       await api.post('/wearables/sync', { ...stats, platform: conn.platform });
       step = 'loadData';
       await loadData();
-      Alert.alert('Sincronizzato!', 'I dati di oggi sono stati aggiornati.');
+      Alert.alert(t('wearables.synced_title'), t('wearables.synced_msg'));
     } catch (e: any) {
       // Esponi l'errore reale on-screen perché in TestFlight i console.log sono strippati
       const msg = String(e?.message || e || 'unknown');
       const stack = String(e?.stack || '').substring(0, 400);
       const name = String(e?.name || 'Error');
       Alert.alert(
-        'DEBUG · Sync fallito',
+        t('wearables.sync_failed_debug_title'),
         `Step: ${step}\nError: ${name}: ${msg}\n\nStack:\n${stack}`,
         [{ text: 'OK' }]
       );
@@ -95,8 +97,8 @@ export default function WearablesScreen() {
   const onSync = async () => {
     if (!isWearablesAvailable()) {
       Alert.alert(
-        'Sincronizzazione wearable',
-        'La sincronizzazione con Apple Health / Google Health Connect funziona solo in build nativa (EAS). In Expo Go non è disponibile.',
+        t('wearables.expo_go_unavailable_title'),
+        t('wearables.expo_go_unavailable_msg'),
       );
       return;
     }
@@ -104,8 +106,8 @@ export default function WearablesScreen() {
     // Su iPad HealthKit è progettato per iPhone — informa l'utente e non procede
     if (isIpad) {
       Alert.alert(
-        'Apple Health non disponibile su iPad',
-        'La sincronizzazione con Apple Health è progettata per iPhone. Per usare questa funzione, accedi a RunHub dal tuo iPhone.',
+        t('wearables.ipad_dialog_title'),
+        t('wearables.ipad_dialog_msg'),
         [{ text: 'OK' }]
       );
       return;
@@ -115,10 +117,10 @@ export default function WearablesScreen() {
     // Se l'utente vuole rifiutare, può farlo nella finestra nativa di iOS che apparirà.
     if (Platform.OS === 'ios') {
       Alert.alert(
-        'Connessione ad Apple Health',
-        'RunHub leggerà da Apple Health passi, distanza, frequenza cardiaca e calorie, e scriverà i tuoi allenamenti completati.\n\nTra poco apparirà la finestra di sistema di Apple per concedere i permessi. Potrai sempre modificarli da Impostazioni > Privacy e sicurezza > Salute > RunHub.',
+        t('wearables.connect_title'),
+        t('wearables.connect_msg'),
         [
-          { text: 'Continua', onPress: () => performSync() },
+          { text: t('common.continue') || 'Continua', onPress: () => performSync() },
         ]
       );
       return;
@@ -157,7 +159,7 @@ export default function WearablesScreen() {
             color={colors.textPrimary}
           />
           <Text style={styles.brandText}>
-            {Platform.OS === 'ios' ? 'APPLE HEALTH' : Platform.OS === 'android' ? 'HEALTH CONNECT' : 'WEARABLES'}
+            {Platform.OS === 'ios' ? t('wearables.apple_health_brand') : Platform.OS === 'android' ? t('wearables.health_connect_brand') : t('wearables.wearables_brand')}
           </Text>
         </View>
 
@@ -165,9 +167,9 @@ export default function WearablesScreen() {
           <View style={styles.warnBox}>
             <Ionicons name="information-circle" size={22} color={colors.warning} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.warnTitle}>Non disponibile in Expo Go</Text>
+              <Text style={styles.warnTitle}>{t('wearables.expogo_warn_title')}</Text>
               <Text style={styles.warnText}>
-                La sincronizzazione con Apple Health / Google Health Connect richiede una build nativa (EAS). Gli endpoint backend sono pronti.
+                {t('wearables.expogo_warn_text')}
               </Text>
             </View>
           </View>
@@ -177,9 +179,9 @@ export default function WearablesScreen() {
           <View style={styles.warnBox}>
             <Ionicons name="information-circle" size={22} color={colors.warning} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.warnTitle}>Apple Health è disponibile solo su iPhone</Text>
+              <Text style={styles.warnTitle}>{t('wearables.ipad_warn_title')}</Text>
               <Text style={styles.warnText}>
-                Apri RunHub da iPhone per sincronizzare i dati con Apple Health.
+                {t('wearables.ipad_warn_text')}
               </Text>
             </View>
           </View>
@@ -196,36 +198,36 @@ export default function WearablesScreen() {
           ) : (
             <>
               <Ionicons name="sync" size={20} color="#fff" />
-              <Text style={styles.syncText}>SINCRONIZZA ORA</Text>
+              <Text style={styles.syncText}>{t('wearables.sync_now')}</Text>
             </>
           )}
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>OGGI</Text>
+        <Text style={styles.sectionTitle}>{t('wearables.today_section')}</Text>
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
         ) : (
           <View style={styles.grid}>
-            <StatCard icon="walk" label="PASSI" value={(today.steps ?? 0).toLocaleString('it-IT')} />
+            <StatCard icon="walk" label={t('wearables.steps')} value={(today.steps ?? 0).toLocaleString('it-IT')} />
             <StatCard icon="map" label="KM" value={(today.distance_km ?? 0).toFixed(2)} />
             <StatCard icon="flame" label="KCAL" value={Math.round(today.active_calories ?? 0).toString()} />
             <StatCard icon="heart" label="BPM" value={today.heart_rate_avg ? Math.round(today.heart_rate_avg).toString() : '—'} />
           </View>
         )}
         <Text style={styles.meta}>
-          {today.updated_at ? `Ultimo sync: ${new Date(today.updated_at).toLocaleString('it-IT')}` : 'Nessun dato sincronizzato oggi'}
+          {today.updated_at ? t('wearables.last_sync', { when: new Date(today.updated_at).toLocaleString('it-IT') }) : t('wearables.no_data_today')}
           {today.platform ? ` · ${platformLabel}` : ''}
         </Text>
 
-        <Text style={styles.sectionTitle}>ULTIMI 7 GIORNI</Text>
+        <Text style={styles.sectionTitle}>{t('wearables.last_7_days')}</Text>
         {history.length === 0 ? (
-          <Text style={styles.emptyText}>Nessuna sincronizzazione negli ultimi 7 giorni.</Text>
+          <Text style={styles.emptyText}>{t('wearables.no_sync_7_days')}</Text>
         ) : history.map((d, i) => (
           <View key={i} style={styles.histRow}>
             <Text style={styles.histDate}>{new Date(d.date as any).toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' })}</Text>
             <View style={{ flex: 1, flexDirection: 'row', gap: spacing.md, justifyContent: 'flex-end' }}>
-              <Text style={styles.histStat}>{(d.steps ?? 0).toLocaleString('it-IT')} passi</Text>
-              <Text style={styles.histStat}>{(d.distance_km ?? 0).toFixed(1)} km</Text>
+              <Text style={styles.histStat}>{(d.steps ?? 0).toLocaleString('it-IT')} {t('wearables.steps_short')}</Text>
+              <Text style={styles.histStat}>{(d.distance_km ?? 0).toFixed(1)} {t('wearables.km_short')}</Text>
             </View>
           </View>
         ))}
@@ -234,8 +236,8 @@ export default function WearablesScreen() {
           <Ionicons name="bulb" size={18} color={colors.primary} />
           <Text style={styles.infoText}>
             {Platform.OS === 'android'
-              ? 'Su Android, installa Health Connect dal Play Store e connetti le tue app (Google Fit, Samsung Health, ecc).'
-              : 'Su iOS, i dati sono condivisi da Apple Watch o dall\'iPhone stesso. Attiva i permessi al primo sync.'}
+              ? t('wearables.info_android')
+              : t('wearables.info_ios')}
           </Text>
         </View>
       </ScrollView>
