@@ -46,11 +46,15 @@ export async function loadStoredLocale(): Promise<SupportedLocale> {
     const stored = await AsyncStorage.getItem(LOCALE_STORAGE_KEY);
     if (stored === 'it' || stored === 'en' || stored === 'es') {
       i18n.locale = stored;
+      // Best-effort sync to backend (silent if not authenticated yet).
+      syncLocaleToBackend(stored).catch(() => {});
       return stored;
     }
   } catch {}
   const detected = detectDeviceLocale();
   i18n.locale = detected;
+  // Best-effort sync to backend (silent if not authenticated yet).
+  syncLocaleToBackend(detected).catch(() => {});
   return detected;
 }
 
@@ -59,6 +63,21 @@ export async function persistLocale(loc: SupportedLocale): Promise<void> {
     await AsyncStorage.setItem(LOCALE_STORAGE_KEY, loc);
   } catch {}
   i18n.locale = loc;
+  // Best-effort sync to backend so push notifications use this locale.
+  // Failure is silent — locale is still set client-side and AI Coach will
+  // also pass the locale explicitly in the request body.
+  syncLocaleToBackend(loc).catch(() => {});
+}
+
+async function syncLocaleToBackend(loc: SupportedLocale): Promise<void> {
+  try {
+    // Lazy import to avoid circular dep (api → auth → i18n in some setups).
+    const mod = await import('../api');
+    if (!mod?.api) return;
+    await mod.api.put('/users/me/locale', { locale: loc }, { timeout: 6000 });
+  } catch {
+    // No auth yet or network error — ignore silently.
+  }
 }
 
 // Hook: returns current locale + a setter that persists.

@@ -9,12 +9,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { useAuth } from '../src/auth';
 import { colors, spacing, radius } from '../src/theme';
-import { useT } from '../src/i18n';
+import { useT, useLocale } from '../src/i18n';
 
 export default function AIGenerate() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useT();
+  const { locale } = useLocale();
   const LEVELS = [
     { key: 'beginner',     label: t('ai_generate.level_beginner') },
     { key: 'intermediate', label: t('ai_generate.level_intermediate') },
@@ -45,6 +46,7 @@ export default function AIGenerate() {
         duration_weeks: parseInt(weeks) || 4,
         available_minutes: parseInt(minutes) || 45,
         notes: notes.trim() || null,
+        locale,  // Pass user's preferred language so Claude generates the plan in IT/EN/ES
       }, {
         // L'AI può impiegare 60-90s per generare un piano completo.
         // Default global timeout (30s) è troppo poco.

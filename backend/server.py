@@ -522,6 +522,7 @@ class AIGenerateRequest(BaseModel):
     duration_weeks: int = 4
     available_minutes: int = 45
     notes: Optional[str] = None
+    locale: Optional[str] = "it"  # User-preferred language: it/en/es
 
 class SessionLocation(BaseModel):
     lat: float
@@ -939,13 +940,127 @@ async def delete_my_account(user: dict = Depends(get_current_user)):
 
 # Notification endpoints (register/unregister push tokens, send test)
 
+# ----------------- Backend i18n templates for notifications -----------------
+# Used by send_localized_push() and any future backend-driven notification.
+NOTIFICATION_TEMPLATES = {
+    "test": {
+        "it": {"title": "Test RunHub", "body": "Questa è una notifica di test da RunHub"},
+        "en": {"title": "Test RunHub", "body": "This is a test notification from RunHub"},
+        "es": {"title": "Test RunHub", "body": "Esta es una notificación de prueba de RunHub"},
+    },
+    "badge_unlocked": {
+        "it": {"title": "🏆 Nuovo badge sbloccato!", "body": "Hai sbloccato: {name}"},
+        "en": {"title": "🏆 New badge unlocked!", "body": "You unlocked: {name}"},
+        "es": {"title": "🏆 ¡Nueva insignia desbloqueada!", "body": "Has desbloqueado: {name}"},
+    },
+    "workout_reminder": {
+        "it": {"title": "🏃 È ora di correre!", "body": "Il tuo allenamento ti aspetta su RunHub"},
+        "en": {"title": "🏃 Time to run!", "body": "Your workout is waiting on RunHub"},
+        "es": {"title": "🏃 ¡Hora de correr!", "body": "Tu entrenamiento te espera en RunHub"},
+    },
+    "friend_request": {
+        "it": {"title": "👋 Richiesta di amicizia", "body": "{name} vuole essere tuo amico"},
+        "en": {"title": "👋 Friend request", "body": "{name} wants to be your friend"},
+        "es": {"title": "👋 Solicitud de amistad", "body": "{name} quiere ser tu amigo"},
+    },
+    "friend_accepted": {
+        "it": {"title": "🎉 Amicizia accettata", "body": "{name} ha accettato la tua richiesta"},
+        "en": {"title": "🎉 Friendship accepted", "body": "{name} accepted your request"},
+        "es": {"title": "🎉 Amistad aceptada", "body": "{name} aceptó tu solicitud"},
+    },
+    "weekly_goal_done": {
+        "it": {"title": "🎯 Obiettivo settimanale raggiunto!", "body": "Hai completato {km} km questa settimana. Bravo!"},
+        "en": {"title": "🎯 Weekly goal achieved!", "body": "You completed {km} km this week. Great job!"},
+        "es": {"title": "🎯 ¡Objetivo semanal logrado!", "body": "Has completado {km} km esta semana. ¡Bien hecho!"},
+    },
+    "plan_completed": {
+        "it": {"title": "✅ Piano completato!", "body": "Hai finito il piano \"{plan}\". Complimenti!"},
+        "en": {"title": "✅ Plan completed!", "body": "You finished the plan \"{plan}\". Congrats!"},
+        "es": {"title": "✅ ¡Plan completado!", "body": "Has terminado el plan \"{plan}\". ¡Felicidades!"},
+    },
+    "comment_received": {
+        "it": {"title": "💬 Nuovo commento", "body": "{name} ha commentato la tua corsa"},
+        "en": {"title": "💬 New comment", "body": "{name} commented on your run"},
+        "es": {"title": "💬 Nuevo comentario", "body": "{name} comentó tu carrera"},
+    },
+    "like_received": {
+        "it": {"title": "❤️ Nuovo apprezzamento", "body": "A {name} è piaciuta la tua corsa"},
+        "en": {"title": "❤️ New like", "body": "{name} liked your run"},
+        "es": {"title": "❤️ Nuevo me gusta", "body": "A {name} le gustó tu carrera"},
+    },
+    "race_predictor_ready": {
+        "it": {"title": "🏁 Predizione gara pronta", "body": "Scopri il tuo tempo stimato per la prossima gara"},
+        "en": {"title": "🏁 Race prediction ready", "body": "Check your estimated time for the next race"},
+        "es": {"title": "🏁 Predicción de carrera lista", "body": "Descubre tu tiempo estimado para la próxima carrera"},
+    },
+}
+
+
+def _normalize_locale(loc: Optional[str]) -> str:
+    """Coerce arbitrary locale strings (e.g. 'it-IT', 'EN_GB') to one of supported codes."""
+    if not loc:
+        return "it"
+    code = str(loc).split("-")[0].split("_")[0].lower()
+    return code if code in ("it", "en", "es") else "it"
+
+
+async def send_localized_push(
+    user_id: str,
+    template_key: str,
+    params: Optional[dict] = None,
+    data: Optional[dict] = None,
+    fallback_locale: str = "it",
+) -> dict:
+    """Send a localized push to a single user. Uses the user's stored locale preference.
+    `template_key` must be a key in NOTIFICATION_TEMPLATES.
+    `params` are substituted into the title/body via str.format(**params)."""
+    tpl_set = NOTIFICATION_TEMPLATES.get(template_key)
+    if not tpl_set:
+        logger.warning(f"Unknown notification template: {template_key}")
+        return {"ok": False, "reason": "unknown_template"}
+    fresh = await db.users.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "push_tokens": 1, "locale": 1},
+    )
+    if not fresh:
+        return {"ok": False, "reason": "user_not_found"}
+    tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
+    if not tokens:
+        return {"ok": False, "reason": "no_tokens"}
+    user_locale = _normalize_locale(fresh.get("locale") or fallback_locale)
+    tpl = tpl_set.get(user_locale) or tpl_set.get("it") or {}
+    safe_params = params or {}
+    try:
+        title = tpl.get("title", "").format(**safe_params)
+        body = tpl.get("body", "").format(**safe_params)
+    except (KeyError, IndexError) as e:
+        logger.warning(f"Notification format error for {template_key}: {e}")
+        title = tpl.get("title", "RunHub")
+        body = tpl.get("body", "")
+    payload_data = {"type": template_key, **(data or {})}
+    return await send_expo_push(tokens, title, body, data=payload_data)
+
+
 class RegisterTokenIn(BaseModel):
     token: str
     platform: Optional[str] = None
 
 class TestNotifyIn(BaseModel):
-    title: str = "Test Notification"
-    body: str = "Questa e' una notifica di test da RunHub"
+    title: Optional[str] = None  # If provided, override; else use localized template
+    body: Optional[str] = None
+
+class UpdateLocaleIn(BaseModel):
+    locale: str  # "it" | "en" | "es"
+
+@api_router.put("/users/me/locale")
+async def update_user_locale(data: UpdateLocaleIn, user: dict = Depends(get_current_user)):
+    """Persist user's preferred app language. Used by localized push notifications."""
+    loc = _normalize_locale(data.locale)
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"locale": loc, "locale_updated_at": datetime.now(timezone.utc)}}
+    )
+    return {"ok": True, "locale": loc}
 
 @api_router.post("/notifications/register")
 async def notifications_register(data: RegisterTokenIn, user: dict = Depends(get_current_user)):
@@ -967,12 +1082,24 @@ async def notifications_unregister(data: RegisterTokenIn, user: dict = Depends(g
 
 @api_router.post("/notifications/test")
 async def notifications_test(data: TestNotifyIn, user: dict = Depends(get_current_user)):
-    fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "push_tokens": 1})
-    tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
-    if not tokens:
+    """Send a localized test notification. If `title`/`body` are provided, they override the template."""
+    # If user passed explicit title/body, use them directly (legacy behavior).
+    if data.title or data.body:
+        fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "push_tokens": 1, "locale": 1})
+        tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
+        if not tokens:
+            raise HTTPException(status_code=400, detail="Nessun push token registrato. Apri l'app su un dispositivo nativo per registrarne uno.")
+        return await send_expo_push(
+            tokens,
+            data.title or "Test RunHub",
+            data.body or "Notifica di test",
+            data={"type": "test"},
+        )
+    # Otherwise: send localized template based on user locale.
+    res = await send_localized_push(user["user_id"], "test")
+    if not res.get("ok") and res.get("reason") == "no_tokens":
         raise HTTPException(status_code=400, detail="Nessun push token registrato. Apri l'app su un dispositivo nativo per registrarne uno.")
-    result = await send_expo_push(tokens, data.title, data.body, data={"type": "test"})
-    return result
+    return res
 
 @api_router.get("/stats/routes")
 async def stats_all_routes(user: dict = Depends(get_current_user), limit: int = 100):
@@ -1495,21 +1622,84 @@ async def get_plan(plan_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.post("/plans/ai-generate")
 async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require_tier("performance"))):
-    system_msg = (
-        "Sei un allenatore professionista di running. Devi generare un piano di allenamento personalizzato "
-        "in formato JSON rigoroso. Rispondi SOLO con JSON valido, senza testo aggiuntivo, senza markdown. "
-        "Struttura richiesta: {\"title\":str,\"description\":str,\"workouts\":["
-        "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
-        "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
-        "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
-        "Genera almeno 6 workout distribuiti sulle settimane indicate. Includi sempre warmup all'inizio e stretching alla fine. "
-        "Includi almeno un workout con ginnastica da camera (gymnastics) e stretching dedicato."
-    )
-    prompt = (
-        f"Crea un piano di running per un livello {data.level}. "
-        f"Obiettivo: {data.goal}. Durata: {data.duration_weeks} settimane, "
-        f"{data.days_per_week} sessioni a settimana, ~{data.available_minutes} minuti per sessione. "
-        f"Note utente: {data.notes or 'nessuna'}."
+    # Determine output language: explicit request locale takes precedence over user preference.
+    user_locale = (data.locale or user.get("locale") or "it").lower()
+    if user_locale not in ("it", "en", "es"):
+        user_locale = "it"
+
+    # Multilingual system + prompt templates. Output JSON keys stay in English (internal),
+    # but "title", "description", and step "description" must be in the user language.
+    AI_TEMPLATES = {
+        "it": {
+            "system": (
+                "Sei un allenatore professionista di running. Devi generare un piano di allenamento personalizzato "
+                "in formato JSON rigoroso. Rispondi SOLO con JSON valido, senza testo aggiuntivo, senza markdown. "
+                "IMPORTANTE: tutti i testi visibili all'utente (campi \"title\", \"description\") DEVONO essere in ITALIANO. "
+                "Struttura richiesta: {\"title\":str,\"description\":str,\"workouts\":["
+                "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
+                "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
+                "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
+                "Genera almeno 6 workout distribuiti sulle settimane indicate. Includi sempre warmup all'inizio e stretching alla fine. "
+                "Includi almeno un workout con ginnastica da camera (gymnastics) e stretching dedicato."
+            ),
+            "prompt_tpl": (
+                "Crea un piano di running per un livello {level}. "
+                "Obiettivo: {goal}. Durata: {weeks} settimane, "
+                "{days} sessioni a settimana, ~{minutes} minuti per sessione. "
+                "Note utente: {notes}."
+            ),
+            "no_notes": "nessuna",
+        },
+        "en": {
+            "system": (
+                "You are a professional running coach. You must generate a personalized training plan "
+                "in strict JSON format. Reply ONLY with valid JSON, no extra text, no markdown. "
+                "IMPORTANT: all user-facing text (\"title\", \"description\" fields) MUST be in ENGLISH. "
+                "Required schema: {\"title\":str,\"description\":str,\"workouts\":["
+                "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
+                "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
+                "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
+                "Generate at least 6 workouts spread over the requested weeks. Always include a warmup at the start and stretching at the end. "
+                "Include at least one workout with bodyweight gymnastics and dedicated stretching."
+            ),
+            "prompt_tpl": (
+                "Create a running plan for a {level} level athlete. "
+                "Goal: {goal}. Duration: {weeks} weeks, "
+                "{days} sessions per week, ~{minutes} minutes per session. "
+                "User notes: {notes}."
+            ),
+            "no_notes": "none",
+        },
+        "es": {
+            "system": (
+                "Eres un entrenador profesional de running. Debes generar un plan de entrenamiento personalizado "
+                "en formato JSON estricto. Responde SOLO con JSON válido, sin texto adicional, sin markdown. "
+                "IMPORTANTE: todos los textos visibles al usuario (campos \"title\", \"description\") DEBEN estar en ESPAÑOL. "
+                "Esquema requerido: {\"title\":str,\"description\":str,\"workouts\":["
+                "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
+                "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
+                "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
+                "Genera al menos 6 entrenamientos distribuidos en las semanas indicadas. Incluye siempre calentamiento al inicio y estiramientos al final. "
+                "Incluye al menos un entrenamiento con gimnasia en casa (gymnastics) y estiramientos dedicados."
+            ),
+            "prompt_tpl": (
+                "Crea un plan de running para un nivel {level}. "
+                "Objetivo: {goal}. Duración: {weeks} semanas, "
+                "{days} sesiones por semana, ~{minutes} minutos por sesión. "
+                "Notas del usuario: {notes}."
+            ),
+            "no_notes": "ninguna",
+        },
+    }
+    tpl = AI_TEMPLATES.get(user_locale, AI_TEMPLATES["it"])
+    system_msg = tpl["system"]
+    prompt = tpl["prompt_tpl"].format(
+        level=data.level,
+        goal=data.goal,
+        weeks=data.duration_weeks,
+        days=data.days_per_week,
+        minutes=data.available_minutes,
+        notes=data.notes or tpl["no_notes"],
     )
     try:
         # Prefer direct Anthropic API (most reliable, no proxy 502s).
