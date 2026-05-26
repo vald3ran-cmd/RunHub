@@ -88,7 +88,7 @@ export default function Home() {
       if (nw) {
         setNextWorkout({
           id: nw.id || nw.workout_id,
-          title: nw.title || nw.name || nw.type || 'Allenamento',
+          title: nw.title || nw.name || nw.type || t('home.fallback_workout_title'),
           type: nw.type,
           distance_km: nw.distance_km,
           scheduled_for: nw.scheduled_for,

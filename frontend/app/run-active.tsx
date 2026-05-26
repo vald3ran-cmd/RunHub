@@ -295,7 +295,7 @@ export default function RunActive() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setHasLocationPermission(false);
-          setGpsError('Permesso GPS negato — cronometro attivo senza tracciamento');
+          setGpsError(t('run.gps_denied_native'));
         } else {
           setHasLocationPermission(true);
           setGpsError('');
