@@ -1622,13 +1622,87 @@ async def get_plan(plan_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.post("/plans/ai-generate")
 async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require_tier("performance"))):
+    """Start an AI plan generation as a background job.
+    Returns immediately with {job_id, status: 'pending'} so the client can poll
+    GET /api/plans/ai-generate/status/{job_id} without hitting ingress timeouts.
+    """
     # Determine output language: explicit request locale takes precedence over user preference.
     user_locale = (data.locale or user.get("locale") or "it").lower()
     if user_locale not in ("it", "en", "es"):
         user_locale = "it"
 
-    # Multilingual system + prompt templates. Output JSON keys stay in English (internal),
-    # but "title", "description", and step "description" must be in the user language.
+    job_id = f"aij_{uuid.uuid4().hex[:12]}"
+    job_doc = {
+        "job_id": job_id,
+        "user_id": user["user_id"],
+        "status": "pending",  # pending → running → done | error
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "locale": user_locale,
+        "request": {
+            "level": data.level,
+            "goal": data.goal,
+            "days_per_week": data.days_per_week,
+            "duration_weeks": data.duration_weeks,
+            "available_minutes": data.available_minutes,
+            "notes": data.notes,
+        },
+        "plan_id": None,
+        "error_detail": None,
+        "error_code": None,
+    }
+    await db.ai_jobs.insert_one(dict(job_doc))
+    # Spawn background task. We don't await it.
+    asyncio.create_task(_run_ai_generation(job_id, user, data, user_locale))
+    # 202 Accepted: client should poll status endpoint.
+    job_doc.pop("_id", None)
+    return {"job_id": job_id, "status": "pending", "polling_url": f"/api/plans/ai-generate/status/{job_id}"}
+
+
+@api_router.get("/plans/ai-generate/status/{job_id}")
+async def ai_generate_status(job_id: str, user: dict = Depends(get_current_user)):
+    """Poll the status of an AI plan generation job.
+    Returns {status: 'pending'|'running'|'done'|'error', plan_id?, error_detail?}.
+    Only the job owner can read it."""
+    job = await db.ai_jobs.find_one({"job_id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job non trovato")
+    if job.get("user_id") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Non sei il proprietario di questo job")
+    # Compute elapsed seconds (useful for UI progress estimation)
+    try:
+        created = job.get("created_at")
+        if isinstance(created, datetime):
+            elapsed_s = int((datetime.now(timezone.utc) - created).total_seconds())
+        else:
+            elapsed_s = 0
+    except Exception:
+        elapsed_s = 0
+    return {
+        "job_id": job_id,
+        "status": job.get("status", "unknown"),
+        "plan_id": job.get("plan_id"),
+        "error_detail": job.get("error_detail"),
+        "error_code": job.get("error_code"),
+        "elapsed_seconds": elapsed_s,
+        # Estimated total time for UI progress bar (typical Claude call ~70-90s)
+        "estimated_total_seconds": 90,
+    }
+
+
+async def _run_ai_generation(job_id: str, user: dict, data: AIGenerateRequest, user_locale: str):
+    """Background task: runs Claude, parses JSON, persists plan, updates job status.
+    Errors are captured and saved to the job doc (no HTTPException raised here)."""
+    try:
+        await db.ai_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "running", "updated_at": datetime.now(timezone.utc)}}
+        )
+    except Exception as e:
+        logger.error(f"[AI Job {job_id}] failed to mark running: {e}")
+        return
+
+    # Build language-specific system + prompt templates (same as before)
     AI_TEMPLATES = {
         "it": {
             "system": (
@@ -1649,6 +1723,7 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                 "Note utente: {notes}."
             ),
             "no_notes": "nessuna",
+            "default_title": "Piano AI — {goal}",
         },
         "en": {
             "system": (
@@ -1669,6 +1744,7 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                 "User notes: {notes}."
             ),
             "no_notes": "none",
+            "default_title": "AI Plan — {goal}",
         },
         "es": {
             "system": (
@@ -1689,6 +1765,7 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                 "Notas del usuario: {notes}."
             ),
             "no_notes": "ninguna",
+            "default_title": "Plan IA — {goal}",
         },
     }
     tpl = AI_TEMPLATES.get(user_locale, AI_TEMPLATES["it"])
@@ -1701,15 +1778,26 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
         minutes=data.available_minutes,
         notes=data.notes or tpl["no_notes"],
     )
+
+    async def _mark_error(code: int, detail: str):
+        try:
+            await db.ai_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "status": "error",
+                    "error_code": code,
+                    "error_detail": detail[:500],
+                    "updated_at": datetime.now(timezone.utc),
+                }}
+            )
+        except Exception as e:
+            logger.error(f"[AI Job {job_id}] failed to mark error: {e}")
+
     try:
-        # Prefer direct Anthropic API (most reliable, no proxy 502s).
-        # Fallback to Emergent proxy via LlmChat if no Anthropic key.
+        # Call Claude (Anthropic direct or Emergent proxy fallback).
         if ANTHROPIC_API_KEY and ANTHROPIC_API_KEY.startswith("sk-ant-"):
             try:
                 anthro = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
-                # JSON prefill technique: by ending assistant turn with "{",
-                # we force Claude to continue from there, guaranteeing the
-                # response starts as valid JSON (no markdown, no preamble).
                 msg = await asyncio.wait_for(
                     anthro.messages.create(
                         model="claude-sonnet-4-5-20250929",
@@ -1720,13 +1808,12 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                             {"role": "assistant", "content": "{"},
                         ],
                     ),
-                    timeout=120.0,
+                    timeout=180.0,
                 )
-                # Re-prepend the "{" we forced as prefill, since the response
-                # only contains what Claude generated AFTER the prefill.
                 resp = "{" + (msg.content[0].text if msg.content else "")
             except asyncio.TimeoutError:
-                raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                await _mark_error(504, "L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                return
         elif EMERGENT_LLM_KEY and EMERGENT_INTEGRATIONS_AVAILABLE:
             try:
                 chat = LlmChat(
@@ -1735,34 +1822,27 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                     system_message=system_msg,
                 ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_params(max_tokens=8192)
                 user_msg = UserMessage(text=prompt)
-                resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=90.0)
+                resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=180.0)
             except asyncio.TimeoutError:
-                raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                await _mark_error(504, "L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                return
         else:
-            raise HTTPException(status_code=503, detail="AI Coach non configurato. Contatta il supporto.")
-        # JSON parsing with prefill technique: response should already start with "{".
-        # Strip any defensive markdown fencing (rare with prefill but possible).
+            await _mark_error(503, "AI Coach non configurato. Contatta il supporto.")
+            return
+
+        # JSON parsing with prefill technique + truncation recovery.
         cleaned = resp.strip()
         if cleaned.startswith("```"):
             cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned)
             cleaned = re.sub(r'\n?```\s*$', '', cleaned)
-        # If response was truncated (missing closing brace), try to recover
-        # by finding the deepest valid balanced subset.
         try:
             parsed = json.loads(cleaned)
         except json.JSONDecodeError as first_err:
-            # Try to find the largest valid JSON prefix by balancing braces
-            depth = 0
-            in_str = False
-            esc = False
-            last_valid = -1
+            depth = 0; in_str = False; esc = False; last_valid = -1
             for i, ch in enumerate(cleaned):
-                if esc:
-                    esc = False; continue
-                if ch == "\\":
-                    esc = True; continue
-                if ch == '"':
-                    in_str = not in_str; continue
+                if esc: esc = False; continue
+                if ch == "\\": esc = True; continue
+                if ch == '"': in_str = not in_str; continue
                 if in_str: continue
                 if ch == "{": depth += 1
                 elif ch == "}":
@@ -1770,55 +1850,63 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                     if depth == 0: last_valid = i
             if last_valid > 0:
                 truncated = cleaned[:last_valid + 1]
-                logger.warning(f"AI JSON was truncated, recovering at char {last_valid}/{len(cleaned)}")
-                parsed = json.loads(truncated)
+                logger.warning(f"[AI Job {job_id}] JSON truncated, recovering at char {last_valid}/{len(cleaned)}")
+                try:
+                    parsed = json.loads(truncated)
+                except Exception as e2:
+                    logger.error(f"[AI Job {job_id}] JSON parse failed after recovery: {e2}")
+                    await _mark_error(502, "Risposta AI non valida. Riprova.")
+                    return
             else:
-                # Cannot recover - log full response (truncated to 2000 chars) and re-raise
-                logger.error(f"AI JSON parse error: {first_err}. Response (first 2000 chars): {cleaned[:2000]}")
-                raise first_err
-    except HTTPException:
-        raise
-    except json.JSONDecodeError as e:
-        logger.error(f"AI JSON parse error: {e}")
-        raise HTTPException(status_code=502, detail="Risposta AI non valida. Riprova.")
-    except Exception as e:
-        logger.error(f"AI generate error: {e}")
-        msg = str(e)
-        if "Budget has been exceeded" in msg or "budget" in msg.lower() and "exceed" in msg.lower():
-            raise HTTPException(status_code=503, detail="Servizio AI esaurito: credito LLM terminato. Il team è stato notificato.")
-        if "502" in msg or "BadGateway" in msg:
-            raise HTTPException(status_code=503, detail="Servizio AI momentaneamente non disponibile. Riprova tra qualche minuto.")
-        raise HTTPException(status_code=500, detail=f"Errore generazione AI: {msg[:200]}")
+                logger.error(f"[AI Job {job_id}] AI JSON parse error: {first_err}. Response head: {cleaned[:500]}")
+                await _mark_error(502, "Risposta AI non valida. Riprova.")
+                return
 
-    # Build plan document
-    workouts = []
-    for i, w in enumerate(parsed.get("workouts", []), start=1):
-        steps = [WorkoutStep(**s).dict() for s in w.get("steps", [])]
-        workouts.append({
-            "workout_id": f"wk_{uuid.uuid4().hex[:10]}",
-            "title": w.get("title", f"Workout {i}"),
-            "day": w.get("day", i),
-            "estimated_duration_min": int(w.get("estimated_duration_min", data.available_minutes)),
-            "estimated_distance_km": float(w.get("estimated_distance_km", 5.0)),
-            "steps": steps,
-        })
-    plan = {
-        "plan_id": f"pl_{uuid.uuid4().hex[:10]}",
-        "title": parsed.get("title", f"Piano AI — {data.goal}"),
-        "description": parsed.get("description", data.goal),
-        "level": data.level,
-        "duration_weeks": data.duration_weeks,
-        "workouts_per_week": data.days_per_week,
-        "is_premium": True,
-        "is_ai_generated": True,
-        "created_by": user["user_id"],
-        "workouts": workouts,
-        "image_url": "https://images.unsplash.com/photo-1775225218390-34a8c5135110?w=800",
-        "created_at": datetime.now(timezone.utc),
-    }
-    await db.plans.insert_one(dict(plan))
-    plan.pop("_id", None)
-    return plan
+        # Build plan document and persist.
+        workouts = []
+        for i, w in enumerate(parsed.get("workouts", []), start=1):
+            steps = [WorkoutStep(**s).dict() for s in w.get("steps", [])]
+            workouts.append({
+                "workout_id": f"wk_{uuid.uuid4().hex[:10]}",
+                "title": w.get("title", f"Workout {i}"),
+                "day": w.get("day", i),
+                "estimated_duration_min": int(w.get("estimated_duration_min", data.available_minutes)),
+                "estimated_distance_km": float(w.get("estimated_distance_km", 5.0)),
+                "steps": steps,
+            })
+        plan = {
+            "plan_id": f"pl_{uuid.uuid4().hex[:10]}",
+            "title": parsed.get("title", tpl["default_title"].format(goal=data.goal)),
+            "description": parsed.get("description", data.goal),
+            "level": data.level,
+            "duration_weeks": data.duration_weeks,
+            "workouts_per_week": data.days_per_week,
+            "is_premium": True,
+            "is_ai_generated": True,
+            "created_by": user["user_id"],
+            "workouts": workouts,
+            "image_url": "https://images.unsplash.com/photo-1775225218390-34a8c5135110?w=800",
+            "created_at": datetime.now(timezone.utc),
+        }
+        await db.plans.insert_one(dict(plan))
+        await db.ai_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {
+                "status": "done",
+                "plan_id": plan["plan_id"],
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+        logger.info(f"[AI Job {job_id}] done → plan_id={plan['plan_id']}")
+    except Exception as e:
+        logger.error(f"[AI Job {job_id}] unexpected error: {e}")
+        msg = str(e)
+        if "Budget has been exceeded" in msg or ("budget" in msg.lower() and "exceed" in msg.lower()):
+            await _mark_error(503, "Servizio AI esaurito: credito LLM terminato. Il team è stato notificato.")
+        elif "502" in msg or "BadGateway" in msg:
+            await _mark_error(503, "Servizio AI momentaneamente non disponibile. Riprova tra qualche minuto.")
+        else:
+            await _mark_error(500, f"Errore generazione AI: {msg[:200]}")
 
 # ----------------- Workouts / Sessions -----------------
 @api_router.post("/workouts/complete")

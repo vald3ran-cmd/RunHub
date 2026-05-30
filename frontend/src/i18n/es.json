@@ -711,7 +711,16 @@
     "generate_failed": "Generación fallida",
     "level_beginner": "PRINCIPIANTE",
     "level_intermediate": "INTERMEDIO",
-    "level_expert": "EXPERTO"
+    "level_expert": "EXPERTO",
+    "progress_starting": "Iniciando AI Coach…",
+    "progress_thinking": "Pensando en tu plan…",
+    "progress_designing": "Diseñando los entrenamientos…",
+    "progress_finalizing": "Finalizando el plan…",
+    "progress_almost": "¡Casi listo…!",
+    "eta_seconds": "Estimado: {{s}}s restantes",
+    "do_not_close": "No cierres la app, solo espera unos segundos.",
+    "cancel_generation": "Cancelar generación",
+    "timeout_long": "La generación tardó demasiado. Inténtalo de nuevo."
   },
   "admin": {
     "title": "PANEL DE ADMIN",

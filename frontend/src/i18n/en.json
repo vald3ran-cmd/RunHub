@@ -711,7 +711,16 @@
     "generate_failed": "Generation failed",
     "level_beginner": "BEGINNER",
     "level_intermediate": "INTERMEDIATE",
-    "level_expert": "EXPERT"
+    "level_expert": "EXPERT",
+    "progress_starting": "Starting AI Coach…",
+    "progress_thinking": "Thinking about your plan…",
+    "progress_designing": "Designing the workouts…",
+    "progress_finalizing": "Finalizing the plan…",
+    "progress_almost": "Almost there…",
+    "eta_seconds": "Estimated: {{s}}s remaining",
+    "do_not_close": "Don't close the app, just wait a few seconds.",
+    "cancel_generation": "Cancel generation",
+    "timeout_long": "Generation took too long. Please try again."
   },
   "admin": {
     "title": "ADMIN PANEL",
