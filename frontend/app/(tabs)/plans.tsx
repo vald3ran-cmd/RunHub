@@ -140,6 +140,7 @@ export default function Plans() {
             plan={item}
             highlight={index === 0 && tab === 'forYou'}
             t={t}
+            locale={locale}
             onPress={() => router.push({ pathname: '/plan/[id]', params: { id: item.plan_id } })}
           />
         )}
