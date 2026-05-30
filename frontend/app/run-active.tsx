@@ -246,7 +246,7 @@ export default function RunActive() {
       if (Platform.OS === 'web') {
         if (typeof navigator === 'undefined' || !navigator.geolocation) {
           setHasLocationPermission(false);
-          setGpsError('GPS non disponibile nel browser');
+          setGpsError(t('run.gps_browser_unavailable'));
         } else {
           const inIframe = typeof window !== 'undefined' && window.self !== window.top;
           // Try to get first position — triggers browser permission prompt
@@ -277,12 +277,12 @@ export default function RunActive() {
               setHasLocationPermission(false);
               if (err.code === err.PERMISSION_DENIED) {
                 setGpsError(inIframe
-                  ? 'Permesso bloccato. Apri la preview in una nuova scheda del browser.'
-                  : 'Permesso negato. Controlla le impostazioni del browser.');
+                  ? t('run.gps_blocked_iframe')
+                  : t('run.gps_permission_browser'));
               } else if (err.code === err.POSITION_UNAVAILABLE) {
-                setGpsError('Posizione non disponibile. Sei in un luogo con segnale GPS?');
+                setGpsError(t('run.gps_position_unavailable'));
               } else if (err.code === err.TIMEOUT) {
-                setGpsError('Timeout GPS. Prova a riprovare.');
+                setGpsError(t('run.gps_timeout'));
               } else {
                 setGpsError(err.message || t('run.ui_gps_error'));
               }
@@ -295,7 +295,7 @@ export default function RunActive() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setHasLocationPermission(false);
-          setGpsError('Permesso GPS negato — cronometro attivo senza tracciamento');
+          setGpsError(t('run.gps_denied_native'));
         } else {
           setHasLocationPermission(true);
           setGpsError('');
@@ -378,7 +378,7 @@ export default function RunActive() {
         (err) => {
           setHasLocationPermission(false);
           setGpsError(err.code === err.PERMISSION_DENIED && inIframe
-            ? 'Permesso bloccato. Apri la preview in una nuova scheda del browser.'
+            ? t('run.gps_blocked_iframe')
             : err.message || t('run.ui_gps_error'));
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -400,7 +400,7 @@ export default function RunActive() {
           );
         } else {
           setHasLocationPermission(false);
-          setGpsError('Permesso negato. Controlla le impostazioni del device.');
+          setGpsError(t('run.gps_denied_device'));
         }
       } catch (e: any) {
         setHasLocationPermission(false);
@@ -417,7 +417,7 @@ export default function RunActive() {
           console.log('[GPS] Initial permission state:', res.state);
           if (res.state === 'denied') {
             setHasLocationPermission(false);
-            setGpsError('Permesso GPS negato in precedenza. Click icona 🔒 accanto all\'URL → Posizione → Consenti → ricarica la pagina.');
+            setGpsError(t('run.gps_denied_prior'));
           }
         })
         .catch(() => {});
@@ -469,7 +469,7 @@ export default function RunActive() {
       });
       if (data.newly_awarded_badges && data.newly_awarded_badges.length > 0) {
         const names = data.newly_awarded_badges.join(', ');
-        Alert.alert('🏆 Nuovo Achievement!', `Hai sbloccato: ${names}`, [{ text: 'Fantastico!' }]);
+        Alert.alert(t('run.new_achievement_title'), t('run.new_achievement_msg', { names }), [{ text: t('run.awesome') }]);
       }
       // Determine destination: if Personal Best -> /new-record, else workout summary
       const newPb = data?.new_pb;
@@ -491,18 +491,18 @@ export default function RunActive() {
           value = `${min}:${String(sec).padStart(2, '0')}`;
         }
         const titleMap: Record<string, string> = {
-          'best_pace': 'Nuovo Passo Record',
-          'longest_distance': 'Distanza Record',
-          'longest_duration': 'Tempo Record',
+          'best_pace': t('run.pb_new_pace_title'),
+          'longest_distance': t('run.pb_new_distance_title'),
+          'longest_duration': t('run.pb_new_duration_title'),
         };
         const labelMap: Record<string, string> = {
-          'best_pace': 'Miglior passo medio',
-          'longest_distance': 'Più lungo di sempre',
-          'longest_duration': 'Più a lungo di sempre',
+          'best_pace': t('run.pb_best_pace_label'),
+          'longest_distance': t('run.pb_longest_distance_label'),
+          'longest_duration': t('run.pb_longest_duration_label'),
         };
         return {
-          title: titleMap[newPb.type] || 'Nuovo Record',
-          label: labelMap[newPb.type] || 'Personal Best',
+          title: titleMap[newPb.type] || t('run.pb_new_default_title'),
+          label: labelMap[newPb.type] || t('run.pb_default_label'),
           value,
           unit,
           session_id: data.session_id,
@@ -541,7 +541,7 @@ export default function RunActive() {
         }
       }
     } catch (e: any) {
-      Alert.alert('Errore', 'Salvataggio fallito');
+      Alert.alert(t('common.error'), t('run.save_failed'));
     }
   };
 
@@ -786,9 +786,9 @@ export default function RunActive() {
               }]} />
               <Text style={styles.gpsStatusText}>
                 {hasLocationPermission === true
-                  ? 'IN ATTESA SEGNALE GPS...'
+                  ? t('run.gps_waiting_signal')
                   : hasLocationPermission === false
-                  ? 'GPS NON ATTIVO'
+                  ? t('run.gps_not_active')
                   : t('run.ui_gps_init')}
               </Text>
             </View>
@@ -796,7 +796,7 @@ export default function RunActive() {
             {hasLocationPermission !== true ? (
               <TouchableOpacity style={styles.retryBtn} onPress={retryGps} testID="retry-gps-button">
                 <Ionicons name="location" size={18} color="#fff" />
-                <Text style={styles.retryText}>ATTIVA GPS</Text>
+                <Text style={styles.retryText}>{t('run.activate_gps')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>

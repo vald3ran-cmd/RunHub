@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { colors, spacing, radius } from '../src/theme';
+import { useT } from '../src/i18n';
 
 export default function GpsTest() {
   const router = useRouter();
+  const { t } = useT();
   const [logs, setLogs] = useState<string[]>([]);
   const [info, setInfo] = useState<Record<string, string>>({});
 
@@ -17,83 +19,81 @@ export default function GpsTest() {
 
   useEffect(() => {
     const i: Record<string, string> = {};
-    i['Platform'] = Platform.OS;
-    i['Platform Version'] = String(Platform.Version || 'n/a');
+    i[t('gps_test.label_platform')] = Platform.OS;
+    i[t('gps_test.label_platform_version')] = String(Platform.Version || 'n/a');
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined') {
-        i['URL'] = window.location.href;
-        i['Protocol'] = window.location.protocol;
-        i['In iframe?'] = (window.self !== window.top) ? 'SI (problema!)' : 'NO';
-        i['Secure context'] = String((window as any).isSecureContext);
+        i[t('gps_test.label_url')] = window.location.href;
+        i[t('gps_test.label_protocol')] = window.location.protocol;
+        i[t('gps_test.label_iframe')] = (window.self !== window.top) ? t('gps_test.iframe_yes') : t('gps_test.iframe_no');
+        i[t('gps_test.label_secure')] = String((window as any).isSecureContext);
       }
       if (typeof navigator !== 'undefined') {
-        i['UserAgent'] = (navigator.userAgent || 'n/a').slice(0, 80);
-        i['geolocation API'] = navigator.geolocation ? 'DISPONIBILE' : 'MANCANTE';
-        i['permissions API'] = (navigator as any).permissions ? 'DISPONIBILE' : 'MANCANTE';
+        i[t('gps_test.label_useragent')] = (navigator.userAgent || 'n/a').slice(0, 80);
+        i[t('gps_test.label_geo_api')] = navigator.geolocation ? t('gps_test.geo_available') : t('gps_test.geo_missing');
+        i[t('gps_test.label_perm_api')] = (navigator as any).permissions ? t('gps_test.geo_available') : t('gps_test.geo_missing');
       }
     } else {
-      i['Mode'] = 'NATIVO (Expo Go o build)';
-      i['expo-location'] = 'Usa API nativa iOS/Android';
+      i[t('gps_test.label_mode')] = t('gps_test.mode_native');
+      i[t('gps_test.label_expo_loc')] = t('gps_test.native_api');
     }
     setInfo(i);
-    log('Componente montato');
+    log(t('gps_test.mounted'));
 
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
       (navigator as any).permissions.query({ name: 'geolocation' })
         .then((res: any) => {
-          log(`Stato permesso iniziale: ${res.state}`);
-          setInfo(prev => ({ ...prev, 'Stato permesso': res.state }));
+          log(t('gps_test.initial_perm', { state: res.state }));
+          setInfo(prev => ({ ...prev, [t('gps_test.label_perm_state')]: res.state }));
         })
-        .catch((e: any) => log(`Errore query permesso: ${e.message}`));
+        .catch((e: any) => log(t('gps_test.err_query', { msg: e.message })));
     } else if (Platform.OS !== 'web') {
-      // Check current permission status on native
       Location.getForegroundPermissionsAsync().then(res => {
-        log(`Stato permesso iniziale: ${res.status} (canAskAgain=${res.canAskAgain})`);
-        setInfo(prev => ({ ...prev, 'Stato permesso': res.status, 'Pos. richiederlo?': String(res.canAskAgain) }));
-      }).catch(e => log(`Errore check permesso: ${e?.message}`));
+        log(t('gps_test.initial_perm_native', { status: res.status, canAskAgain: String(res.canAskAgain) }));
+        setInfo(prev => ({ ...prev, [t('gps_test.label_perm_state')]: res.status, [t('gps_test.label_can_ask')]: String(res.canAskAgain) }));
+      }).catch(e => log(t('gps_test.err_check', { msg: e?.message })));
     }
   }, []);
 
   const testGps = async () => {
-    log('--- TEST GPS CLICCATO ---');
+    log(t('gps_test.test_clicked'));
     try {
       if (Platform.OS === 'web') {
         if (typeof navigator === 'undefined' || !navigator.geolocation) {
-          log('ERRORE: navigator.geolocation non disponibile'); return;
+          log(t('gps_test.err_geo_unavailable')); return;
         }
-        log('Chiamata navigator.geolocation.getCurrentPosition...');
-        const t = setTimeout(() => log('ATTENZIONE: 15 sec passati, nessuna risposta.'), 15000);
+        log(t('gps_test.calling_getposition'));
+        const to = setTimeout(() => log(t('gps_test.warn_timeout')), 15000);
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            clearTimeout(t);
-            log(`SUCCESSO: lat=${pos.coords.latitude.toFixed(5)}, lng=${pos.coords.longitude.toFixed(5)}`);
-            log(`Accuracy: ${pos.coords.accuracy.toFixed(0)}m`);
+            clearTimeout(to);
+            log(t('gps_test.success_pos', { lat: pos.coords.latitude.toFixed(5), lng: pos.coords.longitude.toFixed(5) }));
+            log(t('gps_test.accuracy', { value: pos.coords.accuracy.toFixed(0) }));
           },
           (err) => {
-            clearTimeout(t);
-            log(`ERRORE code=${err.code}: ${err.message}`);
-            if (err.code === 1) log('(PERMISSION_DENIED — utente ha negato o bloccato)');
-            if (err.code === 2) log('(POSITION_UNAVAILABLE)');
-            if (err.code === 3) log('(TIMEOUT)');
+            clearTimeout(to);
+            log(t('gps_test.err_code', { code: err.code, msg: err.message }));
+            if (err.code === 1) log(t('gps_test.err_denied'));
+            if (err.code === 2) log(t('gps_test.err_unavail'));
+            if (err.code === 3) log(t('gps_test.err_timeout'));
           },
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       } else {
-        // Native (iOS/Android)
-        log('Chiamata Location.requestForegroundPermissionsAsync...');
+        log(t('gps_test.calling_native'));
         const perm = await Location.requestForegroundPermissionsAsync();
-        log(`Permesso: status=${perm.status}, canAskAgain=${perm.canAskAgain}`);
+        log(t('gps_test.perm_status', { status: perm.status, canAskAgain: String(perm.canAskAgain) }));
         if (perm.status !== 'granted') {
-          log('NON CONCESSO — vai in Impostazioni iOS → Privacy → Localizzazione → Expo Go → Consenti');
+          log(t('gps_test.not_granted'));
           return;
         }
-        log('Chiamata Location.getCurrentPositionAsync...');
+        log(t('gps_test.calling_getpos'));
         const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        log(`SUCCESSO: lat=${pos.coords.latitude.toFixed(5)}, lng=${pos.coords.longitude.toFixed(5)}`);
-        log(`Accuracy: ${pos.coords.accuracy?.toFixed(0) || '?'}m`);
+        log(t('gps_test.success_pos', { lat: pos.coords.latitude.toFixed(5), lng: pos.coords.longitude.toFixed(5) }));
+        log(t('gps_test.accuracy', { value: pos.coords.accuracy?.toFixed(0) || '?' }));
       }
     } catch (e: any) {
-      log(`EXCEPTION: ${e?.message || String(e)}`);
+      log(t('gps_test.exception', { msg: e?.message || String(e) }));
     }
   };
 
@@ -105,11 +105,11 @@ export default function GpsTest() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>TEST GPS</Text>
+        <Text style={styles.title}>{t('gps_test.title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}>
-        <Text style={styles.sectionTitle}>INFO AMBIENTE</Text>
+        <Text style={styles.sectionTitle}>{t('gps_test.env_info')}</Text>
         <View style={styles.card}>
           {Object.entries(info).map(([k, v]) => (
             <View key={k} style={styles.row}>
@@ -121,19 +121,19 @@ export default function GpsTest() {
 
         <TouchableOpacity style={styles.btn} onPress={testGps} testID="gps-test-button">
           <Ionicons name="location" size={20} color="#fff" />
-          <Text style={styles.btnText}>TESTA GPS ORA</Text>
+          <Text style={styles.btnText}>{t('gps_test.test_now')}</Text>
         </TouchableOpacity>
 
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
           <TouchableOpacity style={styles.smallBtn} onPress={clearLogs}>
-            <Text style={styles.smallBtnText}>PULISCI LOG</Text>
+            <Text style={styles.smallBtnText}>{t('gps_test.clear_log')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>LOG IN TEMPO REALE</Text>
+        <Text style={styles.sectionTitle}>{t('gps_test.live_log')}</Text>
         <View style={styles.logBox}>
           {logs.length === 0 ? (
-            <Text style={styles.emptyLog}>Click &quot;TESTA GPS ORA&quot; per iniziare.</Text>
+            <Text style={styles.emptyLog}>{t('gps_test.click_to_start')}</Text>
           ) : logs.map((l, i) => (
             <Text key={i} style={styles.logLine}>{l}</Text>
           ))}

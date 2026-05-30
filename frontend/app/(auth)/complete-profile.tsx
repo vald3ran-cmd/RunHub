@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { useAuth } from '../../src/auth';
 import { colors, spacing, radius } from '../../src/theme';
+import { useT } from '../../src/i18n';
 
 // Versioni dei documenti legali attualmente pubblicati (incrementare quando cambiano)
 const TERMS_VERSION = '2026-04-21';
@@ -33,6 +34,7 @@ function calcAge(day: string, month: string, year: string): number | null {
 
 export default function CompleteProfile() {
   const { user, completeProfile, logout } = useAuth();
+  const { t } = useT();
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobYear, setDobYear] = useState('');
@@ -51,26 +53,26 @@ export default function CompleteProfile() {
     useCallback(() => {
       const onBackPress = () => {
         Alert.alert(
-          'Uscire senza completare?',
-          'Per usare RunHub devi completare il profilo. Vuoi disconnetterti e usare un altro metodo?',
+          t('complete_profile.quit_title'),
+          t('complete_profile.quit_msg'),
           [
-            { text: 'Annulla', style: 'cancel' },
-            { text: 'Disconnetti', style: 'destructive', onPress: async () => { await logout(); } },
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('complete_profile.logout_action'), style: 'destructive', onPress: async () => { await logout(); } },
           ]
         );
         return true;
       };
       const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => sub.remove();
-    }, [logout])
+    }, [logout, t])
   );
 
   const onSubmit = async () => {
     setError('');
-    if (age === null) { setError('Inserisci una data di nascita valida'); return; }
-    if (age < MIN_AGE_YEARS) { setError(`Devi avere almeno ${MIN_AGE_YEARS} anni per usare RunHub`); return; }
-    if (!acceptedLegal) { setError('Devi accettare Termini e Privacy per continuare'); return; }
-    if (!acceptedAge) { setError(`Devi confermare di avere almeno ${MIN_AGE_YEARS} anni`); return; }
+    if (age === null) { setError(t('complete_profile.invalid_dob')); return; }
+    if (age < MIN_AGE_YEARS) { setError(t('complete_profile.min_age_error', { age: MIN_AGE_YEARS })); return; }
+    if (!acceptedLegal) { setError(t('complete_profile.accept_terms_error')); return; }
+    if (!acceptedAge) { setError(t('complete_profile.confirm_age_error', { age: MIN_AGE_YEARS })); return; }
 
     setLoading(true);
     try {
@@ -86,7 +88,7 @@ export default function CompleteProfile() {
       // Il routing in _layout.tsx reindirizzerà in base a onboarding_completed
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      setError(typeof d === 'string' ? d : 'Salvataggio fallito. Riprova.');
+      setError(typeof d === 'string' ? d : t('complete_profile.save_failed_retry'));
     } finally {
       setLoading(false);
     }
@@ -94,11 +96,11 @@ export default function CompleteProfile() {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Disconnettere?',
-      'I dati del tuo account social resteranno collegati. Potrai rifare login in qualsiasi momento.',
+      t('complete_profile.disconnect_title'),
+      t('complete_profile.disconnect_msg'),
       [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Disconnetti', style: 'destructive', onPress: async () => { await logout(); } },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('complete_profile.logout_action'), style: 'destructive', onPress: async () => { await logout(); } },
       ]
     );
   };
@@ -110,15 +112,15 @@ export default function CompleteProfile() {
           <View style={styles.headerBadge}>
             <Ionicons name="shield-checkmark" size={28} color={colors.primary} />
           </View>
-          <Text style={styles.title}>COMPLETA IL TUO PROFILO</Text>
+          <Text style={styles.title}>{t('complete_profile.title')}</Text>
           <Text style={styles.subtitle}>
-            Ciao {user?.name || 'atleta'}! Per conformità GDPR e policy italiane, abbiamo bisogno di 2 informazioni veloci prima di continuare.
+            {t('complete_profile.subtitle', { name: user?.name || t('complete_profile.default_athlete') })}
           </Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           {/* Data di nascita */}
-          <Text style={styles.label}>Data di nascita</Text>
+          <Text style={styles.label}>{t('complete_profile.dob')}</Text>
           <View style={styles.dobRow}>
             <TextInput
               style={[styles.dobInput, { flex: 1 }]}
@@ -141,7 +143,7 @@ export default function CompleteProfile() {
           </View>
           {age !== null && (
             <Text style={[styles.ageHint, !ageValid && { color: colors.primary }]}>
-              {ageValid ? `✓ Età: ${age} anni` : `❌ Devi avere almeno ${MIN_AGE_YEARS} anni (hai ${age})`}
+              {ageValid ? t('complete_profile.age_ok', { age }) : t('complete_profile.age_too_young', { min: MIN_AGE_YEARS, age })}
             </Text>
           )}
 
@@ -157,15 +159,15 @@ export default function CompleteProfile() {
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedLegal(!acceptedLegal)}>
-              Ho letto e accetto i{' '}
+              {t('complete_profile.read_accept_pre')}
               <Text style={styles.consentLink} onPress={(e: any) => { e?.stopPropagation?.(); router.push('/terms'); }}>
-                Termini di Servizio
+                {t('complete_profile.accept_terms_link')}
               </Text>
-              {' '}e la{' '}
+              {t('complete_profile.read_accept_and')}
               <Text style={styles.consentLink} onPress={(e: any) => { e?.stopPropagation?.(); router.push('/privacy'); }}>
-                Privacy Policy
+                {t('complete_profile.accept_privacy_link')}
               </Text>
-              .
+              {t('complete_profile.read_accept_end')}
             </Text>
           </View>
 
@@ -181,7 +183,7 @@ export default function CompleteProfile() {
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedAge(!acceptedAge)}>
-              Confermo di avere almeno <Text style={{ fontWeight: '700' }}>{MIN_AGE_YEARS} anni</Text>.
+              {t('complete_profile.confirm_age', { years: MIN_AGE_YEARS })}
             </Text>
           </View>
 
@@ -192,16 +194,15 @@ export default function CompleteProfile() {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>CONTINUA</Text>}
+              : <Text style={styles.buttonText}>{t('complete_profile.continue_upper')}</Text>}
           </TouchableOpacity>
 
           <Text style={styles.gdprFooter}>
-            I tuoi dati sono trattati secondo il GDPR. Puoi esportarli o cancellare l'account in qualsiasi
-            momento dalla sezione <Text style={{ fontWeight: '700' }}>Account & Privacy</Text>.
+            {t('complete_profile.gdpr_footer')}
           </Text>
 
           <TouchableOpacity onPress={handleLogout} style={styles.logoutLink}>
-            <Text style={styles.logoutLinkText}>Annulla e disconnetti</Text>
+            <Text style={styles.logoutLinkText}>{t('complete_profile.cancel_disconnect')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

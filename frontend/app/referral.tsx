@@ -28,7 +28,7 @@ export default function ReferralScreen() {
       const r = await getMyReferral();
       setData(r);
     } catch (e: any) {
-      const detail = e?.response?.data?.detail || 'Errore caricamento referral';
+      const detail = e?.response?.data?.detail || t('referral.load_error');
       Alert.alert(t('common.error'), detail);
     } finally {
       setLoading(false);

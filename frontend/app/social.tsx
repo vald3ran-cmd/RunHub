@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
+import { useT } from '../src/i18n';
 
 type FeedItem = {
   session_id: string;
@@ -46,6 +47,7 @@ type Metric = 'km' | 'runs' | 'calories';
 
 export default function SocialScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [tab, setTab] = useState<Tab>('feed');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -134,11 +136,11 @@ export default function SocialScreen() {
   const sendRequest = async (email: string) => {
     try {
       await api.post('/social/friends/request', { email });
-      Alert.alert('Inviata', 'Richiesta di amicizia inviata');
+      Alert.alert(t('common.request_sent'), t('social.send_request_sent_msg'));
       setAddModal(false); setSearchQ(''); setSearchRes([]);
       await loadFriends();
     } catch (e: any) {
-      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile inviare la richiesta');
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('social.send_request_error'));
     }
   };
 
@@ -147,14 +149,14 @@ export default function SocialScreen() {
       await api.post(`/social/friends/respond/${friendshipId}?action=${action}`);
       await loadFriends();
     } catch (e: any) {
-      Alert.alert('Errore', e?.response?.data?.detail || 'Operazione non riuscita');
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('social.respond_error'));
     }
   };
 
   const unfriend = (f: Friend) => {
-    Alert.alert('Rimuovere amico?', f.name, [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Rimuovi', style: 'destructive', onPress: async () => {
+    Alert.alert(t('social.remove_friend_title'), f.name, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('social.remove'), style: 'destructive', onPress: async () => {
         try { await api.delete(`/social/friends/${f.user_id}`); await loadFriends(); } catch {}
       }},
     ]);
@@ -164,22 +166,22 @@ export default function SocialScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={28} color={colors.textPrimary} /></TouchableOpacity>
-        <Text style={styles.title}>COMMUNITY</Text>
+        <Text style={styles.title}>{t('social.title')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <View style={styles.segment}>
-        {(['feed', 'friends', 'leaderboard'] as Tab[]).map(t => (
-          <TouchableOpacity key={t} testID={`tab-${t}`}
-            style={[styles.segBtn, tab === t && styles.segBtnActive]}
-            onPress={() => setTab(t)}>
+        {(['feed', 'friends', 'leaderboard'] as Tab[]).map(tk => (
+          <TouchableOpacity key={tk} testID={`tab-${tk}`}
+            style={[styles.segBtn, tab === tk && styles.segBtnActive]}
+            onPress={() => setTab(tk)}>
             <Ionicons
-              name={t === 'feed' ? 'newspaper' : t === 'friends' ? 'people' : 'trophy'}
+              name={tk === 'feed' ? 'newspaper' : tk === 'friends' ? 'people' : 'trophy'}
               size={16}
-              color={tab === t ? '#fff' : colors.textSecondary}
+              color={tab === tk ? '#fff' : colors.textSecondary}
             />
-            <Text style={[styles.segText, tab === t && styles.segTextActive]}>
-              {t === 'feed' ? 'FEED' : t === 'friends' ? 'AMICI' : 'CLASSIFICA'}
+            <Text style={[styles.segText, tab === tk && styles.segTextActive]}>
+              {tk === 'feed' ? t('social.tab_feed') : tk === 'friends' ? t('social.tab_friends') : t('social.tab_leaderboard')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -194,10 +196,10 @@ export default function SocialScreen() {
           feed.length === 0 ? (
             <View style={styles.emptyBox}>
               <Ionicons name="newspaper-outline" size={48} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>Nessuna attivita'</Text>
-              <Text style={styles.emptyText}>Aggiungi amici per vedere le loro corse qui</Text>
+              <Text style={styles.emptyTitle}>{t('social.feed_empty_title')}</Text>
+              <Text style={styles.emptyText}>{t('social.feed_empty_msg')}</Text>
               <TouchableOpacity style={styles.emptyBtn} onPress={() => setTab('friends')}>
-                <Text style={styles.emptyBtnText}>TROVA AMICI</Text>
+                <Text style={styles.emptyBtnText}>{t('social.find_friends')}</Text>
               </TouchableOpacity>
             </View>
           ) : feed.map(item => (
@@ -209,12 +211,12 @@ export default function SocialScreen() {
           <>
             <TouchableOpacity testID="add-friend-btn" style={styles.addBtn} onPress={() => setAddModal(true)}>
               <Ionicons name="person-add" size={18} color="#fff" />
-              <Text style={styles.addBtnText}>AGGIUNGI AMICO</Text>
+              <Text style={styles.addBtnText}>{t('social.add_friend')}</Text>
             </TouchableOpacity>
 
             {incoming.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>RICHIESTE IN ARRIVO</Text>
+                <Text style={styles.sectionTitle}>{t('social.incoming_requests')}</Text>
                 {incoming.map(r => (
                   <View key={r.friendship_id} style={styles.reqCard}>
                     <View style={styles.avatar}><Text style={styles.avatarText}>{r.from?.name?.[0]?.toUpperCase()}</Text></View>
@@ -235,7 +237,7 @@ export default function SocialScreen() {
 
             {outgoing.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>RICHIESTE INVIATE</Text>
+                <Text style={styles.sectionTitle}>{t('social.outgoing_requests')}</Text>
                 {outgoing.map(r => (
                   <View key={r.friendship_id} style={styles.reqCard}>
                     <View style={[styles.avatar, { backgroundColor: colors.textMuted }]}><Text style={styles.avatarText}>{r.to?.name?.[0]?.toUpperCase()}</Text></View>
@@ -243,21 +245,21 @@ export default function SocialScreen() {
                       <Text style={styles.friendName}>{r.to?.name}</Text>
                       <Text style={styles.friendEmail}>{r.to?.email}</Text>
                     </View>
-                    <Text style={styles.pendingTag}>IN ATTESA</Text>
+                    <Text style={styles.pendingTag}>{t('social.pending')}</Text>
                   </View>
                 ))}
               </>
             )}
 
-            <Text style={styles.sectionTitle}>AMICI ({friends.length})</Text>
+            <Text style={styles.sectionTitle}>{t('social.friends_count', { n: friends.length })}</Text>
             {friends.length === 0 ? (
-              <Text style={styles.emptyText}>Nessun amico ancora. Aggiungine uno per iniziare!</Text>
+              <Text style={styles.emptyText}>{t('social.no_friends')}</Text>
             ) : friends.map(f => (
               <View key={f.user_id} style={styles.friendCard}>
                 <View style={styles.avatar}><Text style={styles.avatarText}>{f.name?.[0]?.toUpperCase()}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.friendName}>{f.name}</Text>
-                  <Text style={styles.friendStats}>{f.total_km.toFixed(1)} km · {f.total_runs} corse</Text>
+                  <Text style={styles.friendStats}>{f.total_km.toFixed(1)} km · {f.total_runs} {t('social.runs_short')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => unfriend(f)} style={styles.iconBtn}>
                   <Ionicons name="person-remove" size={18} color={colors.primary} />
@@ -273,7 +275,7 @@ export default function SocialScreen() {
               {(['weekly', 'monthly', 'all'] as Period[]).map(p => (
                 <TouchableOpacity key={p} style={[styles.chip, period === p && styles.chipActive]} onPress={() => setPeriod(p)}>
                   <Text style={[styles.chipText, period === p && styles.chipTextActive]}>
-                    {p === 'weekly' ? 'SETTIMANA' : p === 'monthly' ? 'MESE' : 'TUTTI'}
+                    {p === 'weekly' ? t('social.period_weekly') : p === 'monthly' ? t('social.period_monthly') : t('social.period_all')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -282,20 +284,20 @@ export default function SocialScreen() {
               {(['km', 'runs', 'calories'] as Metric[]).map(m => (
                 <TouchableOpacity key={m} style={[styles.chip, metric === m && styles.chipActive]} onPress={() => setMetric(m)}>
                   <Text style={[styles.chipText, metric === m && styles.chipTextActive]}>
-                    {m === 'km' ? 'KM' : m === 'runs' ? 'CORSE' : 'KCAL'}
+                    {m === 'km' ? t('social.metric_km') : m === 'runs' ? t('social.metric_runs') : t('social.metric_kcal')}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
             {board.length === 0 ? (
-              <Text style={styles.emptyText}>Nessun dato per questo periodo.</Text>
+              <Text style={styles.emptyText}>{t('social.leaderboard_empty')}</Text>
             ) : board.map(e => (
               <View key={e.user_id} style={[styles.boardRow, e.is_me && styles.boardRowMe]}>
                 <View style={[styles.rankPill, e.rank === 1 && { backgroundColor: '#F59E0B' }, e.rank === 2 && { backgroundColor: '#A1A1AA' }, e.rank === 3 && { backgroundColor: '#CD7F32' }]}>
                   <Text style={styles.rankText}>{e.rank}</Text>
                 </View>
                 <View style={styles.avatar}><Text style={styles.avatarText}>{e.name?.[0]?.toUpperCase()}</Text></View>
-                <Text style={[styles.friendName, { flex: 1 }]} numberOfLines={1}>{e.name}{e.is_me ? ' (tu)' : ''}</Text>
+                <Text style={[styles.friendName, { flex: 1 }]} numberOfLines={1}>{e.name}{e.is_me ? t('social.me_suffix') : ''}</Text>
                 <Text style={styles.boardValue}>
                   {metric === 'km' ? `${e.value.toFixed(1)} km` : metric === 'runs' ? `${e.value}` : `${e.value} kcal`}
                 </Text>
@@ -311,11 +313,11 @@ export default function SocialScreen() {
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setAddModal(false)} />
           <View style={styles.modalCard}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Aggiungi un amico</Text>
+            <Text style={styles.modalTitle}>{t('social.add_modal_title')}</Text>
             <TextInput
               testID="search-friend-input"
               value={searchQ} onChangeText={doSearch}
-              placeholder="Cerca per email o nome"
+              placeholder={t('social.search_placeholder')}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               autoCapitalize="none" autoCorrect={false}
@@ -324,7 +326,7 @@ export default function SocialScreen() {
               data={searchRes}
               keyExtractor={i => i.user_id}
               style={{ maxHeight: 280 }}
-              ListEmptyComponent={searchQ.length >= 2 ? <Text style={[styles.emptyText, { padding: spacing.md }]}>Nessun risultato</Text> : null}
+              ListEmptyComponent={searchQ.length >= 2 ? <Text style={[styles.emptyText, { padding: spacing.md }]}>{t('social.no_results')}</Text> : null}
               renderItem={({ item }) => (
                 <View style={styles.searchRow}>
                   <View style={styles.avatar}><Text style={styles.avatarText}>{item.name?.[0]?.toUpperCase()}</Text></View>
@@ -333,9 +335,9 @@ export default function SocialScreen() {
                     <Text style={styles.friendEmail}>{item.email}</Text>
                   </View>
                   {item.relation === 'friend' ? (
-                    <Text style={styles.pendingTag}>AMICI</Text>
+                    <Text style={styles.pendingTag}>{t('social.friend_relation')}</Text>
                   ) : item.relation === 'pending' ? (
-                    <Text style={styles.pendingTag}>IN ATTESA</Text>
+                    <Text style={styles.pendingTag}>{t('social.pending')}</Text>
                   ) : (
                     <TouchableOpacity style={styles.smallAddBtn} onPress={() => sendRequest(item.email)}>
                       <Ionicons name="person-add" size={14} color="#fff" />
@@ -345,7 +347,7 @@ export default function SocialScreen() {
               )}
             />
             <TouchableOpacity style={styles.modalClose} onPress={() => { setAddModal(false); setSearchQ(''); setSearchRes([]); }}>
-              <Text style={styles.modalCloseText}>CHIUDI</Text>
+              <Text style={styles.modalCloseText}>{t('social.close')}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -410,6 +412,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function CommentsModal({ item, onClose }: { item: FeedItem; onClose: () => void }) {
+  const { t } = useT();
   const [comments, setComments] = useState<any[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -425,14 +428,14 @@ function CommentsModal({ item, onClose }: { item: FeedItem; onClose: () => void 
   useFocusEffect(useCallback(() => { load(); }, []));
 
   const send = async () => {
-    const t = text.trim(); if (!t) return;
+    const txt = text.trim(); if (!txt) return;
     setSending(true);
     try {
-      await api.post(`/social/workouts/${item.session_id}/comments`, { text: t });
+      await api.post(`/social/workouts/${item.session_id}/comments`, { text: txt });
       setText('');
       await load();
     } catch (e: any) {
-      Alert.alert('Errore', e?.response?.data?.detail || 'Commento non inviato');
+      Alert.alert(t('common.error'), e?.response?.data?.detail || t('social.comment_send_error'));
     } finally { setSending(false); }
   };
 
@@ -442,13 +445,13 @@ function CommentsModal({ item, onClose }: { item: FeedItem; onClose: () => void 
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.modalCard, { maxHeight: '80%' }]}>
           <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Commenti</Text>
+          <Text style={styles.modalTitle}>{t('social.comments_title')}</Text>
           {loading ? <ActivityIndicator color={colors.primary} /> :
             <FlatList
               data={comments}
               keyExtractor={c => c.comment_id}
               style={{ maxHeight: 380 }}
-              ListEmptyComponent={<Text style={[styles.emptyText, { padding: spacing.md }]}>Nessun commento. Inizia tu!</Text>}
+              ListEmptyComponent={<Text style={[styles.emptyText, { padding: spacing.md }]}>{t('social.comments_empty')}</Text>}
               renderItem={({ item: c }) => (
                 <View style={styles.commentRow}>
                   <View style={styles.avatarSm}><Text style={styles.avatarText}>{(c.user_name || 'R')[0]?.toUpperCase()}</Text></View>
@@ -464,7 +467,7 @@ function CommentsModal({ item, onClose }: { item: FeedItem; onClose: () => void 
             <TextInput
               testID="comment-input"
               value={text} onChangeText={setText}
-              placeholder="Scrivi un commento..."
+              placeholder={t('social.comment_placeholder')}
               placeholderTextColor={colors.textMuted}
               style={[styles.input, { flex: 1 }]}
               multiline maxLength={500}

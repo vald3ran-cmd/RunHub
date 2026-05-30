@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
+import { useT } from '../src/i18n';
 
 type Athlete = {
   athlete_id: string; name: string; email: string; status: string; created_at: string;
@@ -15,6 +16,7 @@ type Athlete = {
 
 export default function CoachDashboard() {
   const router = useRouter();
+  const { t } = useT();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
@@ -28,13 +30,13 @@ export default function CoachDashboard() {
       setAthletes(data);
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      if (typeof d === 'string') Alert.alert('Accesso negato', d);
+      if (typeof d === 'string') Alert.alert(t('common.access_denied'), d);
     } finally { setLoading(false); }
   };
   useFocusEffect(useCallback(() => { load(); }, []));
 
   const addAthlete = async () => {
-    if (!name.trim() || !email.trim()) { Alert.alert('Errore', 'Compila tutti i campi'); return; }
+    if (!name.trim() || !email.trim()) { Alert.alert(t('common.error'), t('common.fill_all_fields')); return; }
     setSaving(true);
     try {
       await api.post('/coach/athletes', { name: name.trim(), email: email.trim().toLowerCase() });
@@ -42,14 +44,14 @@ export default function CoachDashboard() {
       await load();
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      Alert.alert('Errore', typeof d === 'string' ? d : 'Aggiunta fallita');
+      Alert.alert(t('common.error'), typeof d === 'string' ? d : t('common.add_failed'));
     } finally { setSaving(false); }
   };
 
   const removeAthlete = (a: Athlete) => {
-    Alert.alert('Rimuovere atleta?', `${a.name} (${a.email})`, [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Rimuovi', style: 'destructive', onPress: async () => {
+    Alert.alert(t('coach.remove_athlete_title'), `${a.name} (${a.email})`, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.remove'), style: 'destructive', onPress: async () => {
         try { await api.delete(`/coach/athletes/${a.athlete_id}`); await load(); } catch {}
       }},
     ]);
@@ -62,8 +64,8 @@ export default function CoachDashboard() {
           <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>COACH DASHBOARD</Text>
-          <Text style={styles.sub}>I tuoi atleti · {athletes.length}/10</Text>
+          <Text style={styles.title}>{t('coach.title')}</Text>
+          <Text style={styles.sub}>{t('coach.your_athletes', { n: athletes.length })}</Text>
         </View>
         <TouchableOpacity
           testID="add-athlete-button"
@@ -78,8 +80,8 @@ export default function CoachDashboard() {
           {athletes.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="people" size={48} color={colors.textMuted} />
-              <Text style={styles.emptyText}>Nessun atleta ancora.</Text>
-              <Text style={styles.emptySub}>Aggiungi fino a 10 atleti per monitorarne i progressi.</Text>
+              <Text style={styles.emptyText}>{t('coach.empty_title')}</Text>
+              <Text style={styles.emptySub}>{t('coach.empty_sub')}</Text>
             </View>
           ) : (
             athletes.map(a => (
@@ -91,7 +93,7 @@ export default function CoachDashboard() {
                   <Text style={styles.cardName}>{a.name}</Text>
                   <Text style={styles.cardEmail}>{a.email}</Text>
                   <View style={[styles.statusBadge, { backgroundColor: a.status === 'linked' ? colors.success : colors.warning }]}>
-                    <Text style={styles.statusText}>{a.status === 'linked' ? 'COLLEGATO' : 'INVITATO'}</Text>
+                    <Text style={styles.statusText}>{a.status === 'linked' ? t('coach.status_linked') : t('coach.status_invited')}</Text>
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => removeAthlete(a)} testID={`remove-athlete-${a.athlete_id}`}>
@@ -106,13 +108,13 @@ export default function CoachDashboard() {
       <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>AGGIUNGI ATLETA</Text>
-            <Text style={styles.label}>NOME</Text>
+            <Text style={styles.modalTitle}>{t('coach.add_modal_title')}</Text>
+            <Text style={styles.label}>{t('coach.field_name')}</Text>
             <TextInput
               testID="athlete-name-input"
               style={styles.input} value={name} onChangeText={setName}
             />
-            <Text style={styles.label}>EMAIL</Text>
+            <Text style={styles.label}>{t('coach.field_email')}</Text>
             <TextInput
               testID="athlete-email-input"
               style={styles.input} value={email} onChangeText={setEmail}
@@ -120,13 +122,13 @@ export default function CoachDashboard() {
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAdd(false)}>
-                <Text style={styles.cancelText}>ANNULLA</Text>
+                <Text style={styles.cancelText}>{t('common.cancel_upper')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="submit-add-athlete"
                 style={styles.saveBtn} onPress={addAthlete} disabled={saving}
               >
-                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>AGGIUNGI</Text>}
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>{t('common.add_upper')}</Text>}
               </TouchableOpacity>
             </View>
           </View>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "RunHub",
     "slug": "runhub",
-    "version": "1.4.4",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "runhub",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "71",
+      "buildNumber": "73",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -141,7 +141,8 @@
           "RNMapboxMapsImpl": "mapbox"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

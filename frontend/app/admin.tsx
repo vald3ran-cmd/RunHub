@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
+import { useT } from '../src/i18n';
 
 type AdminUser = {
   user_id: string; email: string; name: string; level: string;
@@ -16,6 +17,7 @@ type AdminUser = {
 
 export default function AdminPanel() {
   const router = useRouter();
+  const { t } = useT();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,24 +28,24 @@ export default function AdminPanel() {
       setUsers(data);
     } catch (e: any) {
       const d = e?.response?.data?.detail;
-      Alert.alert('Errore', typeof d === 'string' ? d : 'Caricamento fallito');
+      Alert.alert(t('common.error'), typeof d === 'string' ? d : t('common.load_failed'));
     } finally { setLoading(false); }
   };
   useFocusEffect(useCallback(() => { load(); }, []));
 
   const remove = (u: AdminUser) => {
     Alert.alert(
-      'Eliminare account?',
-      `${u.name} (${u.email})\n\nQuesta azione cancellera\' l'utente e tutti i suoi dati (corse, piani, badge).`,
+      t('admin.delete_account_title'),
+      t('admin.delete_account_msg', { name: u.name, email: u.email }),
       [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Elimina', style: 'destructive', onPress: async () => {
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), style: 'destructive', onPress: async () => {
           try {
             await api.delete(`/admin/users/${u.user_id}`);
             await load();
           } catch (e: any) {
             const d = e?.response?.data?.detail;
-            Alert.alert('Errore', typeof d === 'string' ? d : 'Eliminazione fallita');
+            Alert.alert(t('common.error'), typeof d === 'string' ? d : t('common.delete_failed'));
           }
         }}
       ]
@@ -64,8 +66,8 @@ export default function AdminPanel() {
           <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>ADMIN PANEL</Text>
-          <Text style={styles.sub}>{users.length} utenti totali</Text>
+          <Text style={styles.title}>{t('admin.title')}</Text>
+          <Text style={styles.sub}>{t('admin.total_users', { n: users.length })}</Text>
         </View>
       </View>
       {loading ? (
@@ -85,7 +87,7 @@ export default function AdminPanel() {
                   <Text style={styles.name} numberOfLines={1}>{u.name}</Text>
                   {u.role === 'admin' ? (
                     <View style={styles.adminBadge}>
-                      <Text style={styles.adminText}>ADMIN</Text>
+                      <Text style={styles.adminText}>{t('admin.role_admin')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -94,7 +96,7 @@ export default function AdminPanel() {
                   <View style={[styles.tierBadge, { backgroundColor: tierColor(u.tier) }]}>
                     <Text style={styles.tierText}>{(u.tier || 'free').toUpperCase()}</Text>
                   </View>
-                  <Text style={styles.metaText}>{u.workout_count} corse</Text>
+                  <Text style={styles.metaText}>{t('admin.runs_count', { n: u.workout_count })}</Text>
                 </View>
               </View>
               {u.role !== 'admin' ? (

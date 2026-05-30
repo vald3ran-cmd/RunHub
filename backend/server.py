@@ -522,6 +522,7 @@ class AIGenerateRequest(BaseModel):
     duration_weeks: int = 4
     available_minutes: int = 45
     notes: Optional[str] = None
+    locale: Optional[str] = "it"  # User-preferred language: it/en/es
 
 class SessionLocation(BaseModel):
     lat: float
@@ -939,13 +940,127 @@ async def delete_my_account(user: dict = Depends(get_current_user)):
 
 # Notification endpoints (register/unregister push tokens, send test)
 
+# ----------------- Backend i18n templates for notifications -----------------
+# Used by send_localized_push() and any future backend-driven notification.
+NOTIFICATION_TEMPLATES = {
+    "test": {
+        "it": {"title": "Test RunHub", "body": "Questa è una notifica di test da RunHub"},
+        "en": {"title": "Test RunHub", "body": "This is a test notification from RunHub"},
+        "es": {"title": "Test RunHub", "body": "Esta es una notificación de prueba de RunHub"},
+    },
+    "badge_unlocked": {
+        "it": {"title": "🏆 Nuovo badge sbloccato!", "body": "Hai sbloccato: {name}"},
+        "en": {"title": "🏆 New badge unlocked!", "body": "You unlocked: {name}"},
+        "es": {"title": "🏆 ¡Nueva insignia desbloqueada!", "body": "Has desbloqueado: {name}"},
+    },
+    "workout_reminder": {
+        "it": {"title": "🏃 È ora di correre!", "body": "Il tuo allenamento ti aspetta su RunHub"},
+        "en": {"title": "🏃 Time to run!", "body": "Your workout is waiting on RunHub"},
+        "es": {"title": "🏃 ¡Hora de correr!", "body": "Tu entrenamiento te espera en RunHub"},
+    },
+    "friend_request": {
+        "it": {"title": "👋 Richiesta di amicizia", "body": "{name} vuole essere tuo amico"},
+        "en": {"title": "👋 Friend request", "body": "{name} wants to be your friend"},
+        "es": {"title": "👋 Solicitud de amistad", "body": "{name} quiere ser tu amigo"},
+    },
+    "friend_accepted": {
+        "it": {"title": "🎉 Amicizia accettata", "body": "{name} ha accettato la tua richiesta"},
+        "en": {"title": "🎉 Friendship accepted", "body": "{name} accepted your request"},
+        "es": {"title": "🎉 Amistad aceptada", "body": "{name} aceptó tu solicitud"},
+    },
+    "weekly_goal_done": {
+        "it": {"title": "🎯 Obiettivo settimanale raggiunto!", "body": "Hai completato {km} km questa settimana. Bravo!"},
+        "en": {"title": "🎯 Weekly goal achieved!", "body": "You completed {km} km this week. Great job!"},
+        "es": {"title": "🎯 ¡Objetivo semanal logrado!", "body": "Has completado {km} km esta semana. ¡Bien hecho!"},
+    },
+    "plan_completed": {
+        "it": {"title": "✅ Piano completato!", "body": "Hai finito il piano \"{plan}\". Complimenti!"},
+        "en": {"title": "✅ Plan completed!", "body": "You finished the plan \"{plan}\". Congrats!"},
+        "es": {"title": "✅ ¡Plan completado!", "body": "Has terminado el plan \"{plan}\". ¡Felicidades!"},
+    },
+    "comment_received": {
+        "it": {"title": "💬 Nuovo commento", "body": "{name} ha commentato la tua corsa"},
+        "en": {"title": "💬 New comment", "body": "{name} commented on your run"},
+        "es": {"title": "💬 Nuevo comentario", "body": "{name} comentó tu carrera"},
+    },
+    "like_received": {
+        "it": {"title": "❤️ Nuovo apprezzamento", "body": "A {name} è piaciuta la tua corsa"},
+        "en": {"title": "❤️ New like", "body": "{name} liked your run"},
+        "es": {"title": "❤️ Nuevo me gusta", "body": "A {name} le gustó tu carrera"},
+    },
+    "race_predictor_ready": {
+        "it": {"title": "🏁 Predizione gara pronta", "body": "Scopri il tuo tempo stimato per la prossima gara"},
+        "en": {"title": "🏁 Race prediction ready", "body": "Check your estimated time for the next race"},
+        "es": {"title": "🏁 Predicción de carrera lista", "body": "Descubre tu tiempo estimado para la próxima carrera"},
+    },
+}
+
+
+def _normalize_locale(loc: Optional[str]) -> str:
+    """Coerce arbitrary locale strings (e.g. 'it-IT', 'EN_GB') to one of supported codes."""
+    if not loc:
+        return "it"
+    code = str(loc).split("-")[0].split("_")[0].lower()
+    return code if code in ("it", "en", "es") else "it"
+
+
+async def send_localized_push(
+    user_id: str,
+    template_key: str,
+    params: Optional[dict] = None,
+    data: Optional[dict] = None,
+    fallback_locale: str = "it",
+) -> dict:
+    """Send a localized push to a single user. Uses the user's stored locale preference.
+    `template_key` must be a key in NOTIFICATION_TEMPLATES.
+    `params` are substituted into the title/body via str.format(**params)."""
+    tpl_set = NOTIFICATION_TEMPLATES.get(template_key)
+    if not tpl_set:
+        logger.warning(f"Unknown notification template: {template_key}")
+        return {"ok": False, "reason": "unknown_template"}
+    fresh = await db.users.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "push_tokens": 1, "locale": 1},
+    )
+    if not fresh:
+        return {"ok": False, "reason": "user_not_found"}
+    tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
+    if not tokens:
+        return {"ok": False, "reason": "no_tokens"}
+    user_locale = _normalize_locale(fresh.get("locale") or fallback_locale)
+    tpl = tpl_set.get(user_locale) or tpl_set.get("it") or {}
+    safe_params = params or {}
+    try:
+        title = tpl.get("title", "").format(**safe_params)
+        body = tpl.get("body", "").format(**safe_params)
+    except (KeyError, IndexError) as e:
+        logger.warning(f"Notification format error for {template_key}: {e}")
+        title = tpl.get("title", "RunHub")
+        body = tpl.get("body", "")
+    payload_data = {"type": template_key, **(data or {})}
+    return await send_expo_push(tokens, title, body, data=payload_data)
+
+
 class RegisterTokenIn(BaseModel):
     token: str
     platform: Optional[str] = None
 
 class TestNotifyIn(BaseModel):
-    title: str = "Test Notification"
-    body: str = "Questa e' una notifica di test da RunHub"
+    title: Optional[str] = None  # If provided, override; else use localized template
+    body: Optional[str] = None
+
+class UpdateLocaleIn(BaseModel):
+    locale: str  # "it" | "en" | "es"
+
+@api_router.put("/users/me/locale")
+async def update_user_locale(data: UpdateLocaleIn, user: dict = Depends(get_current_user)):
+    """Persist user's preferred app language. Used by localized push notifications."""
+    loc = _normalize_locale(data.locale)
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"locale": loc, "locale_updated_at": datetime.now(timezone.utc)}}
+    )
+    return {"ok": True, "locale": loc}
 
 @api_router.post("/notifications/register")
 async def notifications_register(data: RegisterTokenIn, user: dict = Depends(get_current_user)):
@@ -967,12 +1082,24 @@ async def notifications_unregister(data: RegisterTokenIn, user: dict = Depends(g
 
 @api_router.post("/notifications/test")
 async def notifications_test(data: TestNotifyIn, user: dict = Depends(get_current_user)):
-    fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "push_tokens": 1})
-    tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
-    if not tokens:
+    """Send a localized test notification. If `title`/`body` are provided, they override the template."""
+    # If user passed explicit title/body, use them directly (legacy behavior).
+    if data.title or data.body:
+        fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "push_tokens": 1, "locale": 1})
+        tokens = [t["token"] for t in (fresh.get("push_tokens") or []) if t.get("token")]
+        if not tokens:
+            raise HTTPException(status_code=400, detail="Nessun push token registrato. Apri l'app su un dispositivo nativo per registrarne uno.")
+        return await send_expo_push(
+            tokens,
+            data.title or "Test RunHub",
+            data.body or "Notifica di test",
+            data={"type": "test"},
+        )
+    # Otherwise: send localized template based on user locale.
+    res = await send_localized_push(user["user_id"], "test")
+    if not res.get("ok") and res.get("reason") == "no_tokens":
         raise HTTPException(status_code=400, detail="Nessun push token registrato. Apri l'app su un dispositivo nativo per registrarne uno.")
-    result = await send_expo_push(tokens, data.title, data.body, data={"type": "test"})
-    return result
+    return res
 
 @api_router.get("/stats/routes")
 async def stats_all_routes(user: dict = Depends(get_current_user), limit: int = 100):
@@ -1495,31 +1622,182 @@ async def get_plan(plan_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.post("/plans/ai-generate")
 async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require_tier("performance"))):
-    system_msg = (
-        "Sei un allenatore professionista di running. Devi generare un piano di allenamento personalizzato "
-        "in formato JSON rigoroso. Rispondi SOLO con JSON valido, senza testo aggiuntivo, senza markdown. "
-        "Struttura richiesta: {\"title\":str,\"description\":str,\"workouts\":["
-        "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
-        "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
-        "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
-        "Genera almeno 6 workout distribuiti sulle settimane indicate. Includi sempre warmup all'inizio e stretching alla fine. "
-        "Includi almeno un workout con ginnastica da camera (gymnastics) e stretching dedicato."
-    )
-    prompt = (
-        f"Crea un piano di running per un livello {data.level}. "
-        f"Obiettivo: {data.goal}. Durata: {data.duration_weeks} settimane, "
-        f"{data.days_per_week} sessioni a settimana, ~{data.available_minutes} minuti per sessione. "
-        f"Note utente: {data.notes or 'nessuna'}."
-    )
+    """Start an AI plan generation as a background job.
+    Returns immediately with {job_id, status: 'pending'} so the client can poll
+    GET /api/plans/ai-generate/status/{job_id} without hitting ingress timeouts.
+    """
+    # Determine output language: explicit request locale takes precedence over user preference.
+    user_locale = (data.locale or user.get("locale") or "it").lower()
+    if user_locale not in ("it", "en", "es"):
+        user_locale = "it"
+
+    job_id = f"aij_{uuid.uuid4().hex[:12]}"
+    job_doc = {
+        "job_id": job_id,
+        "user_id": user["user_id"],
+        "status": "pending",  # pending → running → done | error
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "locale": user_locale,
+        "request": {
+            "level": data.level,
+            "goal": data.goal,
+            "days_per_week": data.days_per_week,
+            "duration_weeks": data.duration_weeks,
+            "available_minutes": data.available_minutes,
+            "notes": data.notes,
+        },
+        "plan_id": None,
+        "error_detail": None,
+        "error_code": None,
+    }
+    await db.ai_jobs.insert_one(dict(job_doc))
+    # Spawn background task. We don't await it.
+    asyncio.create_task(_run_ai_generation(job_id, user, data, user_locale))
+    # 202 Accepted: client should poll status endpoint.
+    job_doc.pop("_id", None)
+    return {"job_id": job_id, "status": "pending", "polling_url": f"/api/plans/ai-generate/status/{job_id}"}
+
+
+@api_router.get("/plans/ai-generate/status/{job_id}")
+async def ai_generate_status(job_id: str, user: dict = Depends(get_current_user)):
+    """Poll the status of an AI plan generation job.
+    Returns {status: 'pending'|'running'|'done'|'error', plan_id?, error_detail?}.
+    Only the job owner can read it."""
+    job = await db.ai_jobs.find_one({"job_id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job non trovato")
+    if job.get("user_id") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Non sei il proprietario di questo job")
+    # Compute elapsed seconds (useful for UI progress estimation)
     try:
-        # Prefer direct Anthropic API (most reliable, no proxy 502s).
-        # Fallback to Emergent proxy via LlmChat if no Anthropic key.
+        created = job.get("created_at")
+        if isinstance(created, datetime):
+            elapsed_s = int((datetime.now(timezone.utc) - created).total_seconds())
+        else:
+            elapsed_s = 0
+    except Exception:
+        elapsed_s = 0
+    return {
+        "job_id": job_id,
+        "status": job.get("status", "unknown"),
+        "plan_id": job.get("plan_id"),
+        "error_detail": job.get("error_detail"),
+        "error_code": job.get("error_code"),
+        "elapsed_seconds": elapsed_s,
+        # Estimated total time for UI progress bar (typical Claude call ~70-90s)
+        "estimated_total_seconds": 90,
+    }
+
+
+async def _run_ai_generation(job_id: str, user: dict, data: AIGenerateRequest, user_locale: str):
+    """Background task: runs Claude, parses JSON, persists plan, updates job status.
+    Errors are captured and saved to the job doc (no HTTPException raised here)."""
+    try:
+        await db.ai_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "running", "updated_at": datetime.now(timezone.utc)}}
+        )
+    except Exception as e:
+        logger.error(f"[AI Job {job_id}] failed to mark running: {e}")
+        return
+
+    # Build language-specific system + prompt templates (same as before)
+    AI_TEMPLATES = {
+        "it": {
+            "system": (
+                "Sei un allenatore professionista di running. Devi generare un piano di allenamento personalizzato "
+                "in formato JSON rigoroso. Rispondi SOLO con JSON valido, senza testo aggiuntivo, senza markdown. "
+                "IMPORTANTE: tutti i testi visibili all'utente (campi \"title\", \"description\") DEVONO essere in ITALIANO. "
+                "Struttura richiesta: {\"title\":str,\"description\":str,\"workouts\":["
+                "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
+                "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
+                "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
+                "Genera almeno 6 workout distribuiti sulle settimane indicate. Includi sempre warmup all'inizio e stretching alla fine. "
+                "Includi almeno un workout con ginnastica da camera (gymnastics) e stretching dedicato."
+            ),
+            "prompt_tpl": (
+                "Crea un piano di running per un livello {level}. "
+                "Obiettivo: {goal}. Durata: {weeks} settimane, "
+                "{days} sessioni a settimana, ~{minutes} minuti per sessione. "
+                "Note utente: {notes}."
+            ),
+            "no_notes": "nessuna",
+            "default_title": "Piano AI — {goal}",
+        },
+        "en": {
+            "system": (
+                "You are a professional running coach. You must generate a personalized training plan "
+                "in strict JSON format. Reply ONLY with valid JSON, no extra text, no markdown. "
+                "IMPORTANT: all user-facing text (\"title\", \"description\" fields) MUST be in ENGLISH. "
+                "Required schema: {\"title\":str,\"description\":str,\"workouts\":["
+                "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
+                "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
+                "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
+                "Generate at least 6 workouts spread over the requested weeks. Always include a warmup at the start and stretching at the end. "
+                "Include at least one workout with bodyweight gymnastics and dedicated stretching."
+            ),
+            "prompt_tpl": (
+                "Create a running plan for a {level} level athlete. "
+                "Goal: {goal}. Duration: {weeks} weeks, "
+                "{days} sessions per week, ~{minutes} minutes per session. "
+                "User notes: {notes}."
+            ),
+            "no_notes": "none",
+            "default_title": "AI Plan — {goal}",
+        },
+        "es": {
+            "system": (
+                "Eres un entrenador profesional de running. Debes generar un plan de entrenamiento personalizado "
+                "en formato JSON estricto. Responde SOLO con JSON válido, sin texto adicional, sin markdown. "
+                "IMPORTANTE: todos los textos visibles al usuario (campos \"title\", \"description\") DEBEN estar en ESPAÑOL. "
+                "Esquema requerido: {\"title\":str,\"description\":str,\"workouts\":["
+                "{\"title\":str,\"day\":int,\"estimated_duration_min\":int,\"estimated_distance_km\":float,"
+                "\"steps\":[{\"type\":\"warmup|run|recovery|sprint|walk|stretching|gymnastics\","
+                "\"duration_seconds\":int,\"description\":str,\"target_pace\":str|null}]}]}. "
+                "Genera al menos 6 entrenamientos distribuidos en las semanas indicadas. Incluye siempre calentamiento al inicio y estiramientos al final. "
+                "Incluye al menos un entrenamiento con gimnasia en casa (gymnastics) y estiramientos dedicados."
+            ),
+            "prompt_tpl": (
+                "Crea un plan de running para un nivel {level}. "
+                "Objetivo: {goal}. Duración: {weeks} semanas, "
+                "{days} sesiones por semana, ~{minutes} minutos por sesión. "
+                "Notas del usuario: {notes}."
+            ),
+            "no_notes": "ninguna",
+            "default_title": "Plan IA — {goal}",
+        },
+    }
+    tpl = AI_TEMPLATES.get(user_locale, AI_TEMPLATES["it"])
+    system_msg = tpl["system"]
+    prompt = tpl["prompt_tpl"].format(
+        level=data.level,
+        goal=data.goal,
+        weeks=data.duration_weeks,
+        days=data.days_per_week,
+        minutes=data.available_minutes,
+        notes=data.notes or tpl["no_notes"],
+    )
+
+    async def _mark_error(code: int, detail: str):
+        try:
+            await db.ai_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "status": "error",
+                    "error_code": code,
+                    "error_detail": detail[:500],
+                    "updated_at": datetime.now(timezone.utc),
+                }}
+            )
+        except Exception as e:
+            logger.error(f"[AI Job {job_id}] failed to mark error: {e}")
+
+    try:
+        # Call Claude (Anthropic direct or Emergent proxy fallback).
         if ANTHROPIC_API_KEY and ANTHROPIC_API_KEY.startswith("sk-ant-"):
             try:
                 anthro = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
-                # JSON prefill technique: by ending assistant turn with "{",
-                # we force Claude to continue from there, guaranteeing the
-                # response starts as valid JSON (no markdown, no preamble).
                 msg = await asyncio.wait_for(
                     anthro.messages.create(
                         model="claude-sonnet-4-5-20250929",
@@ -1530,13 +1808,12 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                             {"role": "assistant", "content": "{"},
                         ],
                     ),
-                    timeout=120.0,
+                    timeout=180.0,
                 )
-                # Re-prepend the "{" we forced as prefill, since the response
-                # only contains what Claude generated AFTER the prefill.
                 resp = "{" + (msg.content[0].text if msg.content else "")
             except asyncio.TimeoutError:
-                raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                await _mark_error(504, "L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                return
         elif EMERGENT_LLM_KEY and EMERGENT_INTEGRATIONS_AVAILABLE:
             try:
                 chat = LlmChat(
@@ -1545,34 +1822,27 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                     system_message=system_msg,
                 ).with_model("anthropic", "claude-sonnet-4-5-20250929").with_params(max_tokens=8192)
                 user_msg = UserMessage(text=prompt)
-                resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=90.0)
+                resp = await asyncio.wait_for(chat.send_message(user_msg), timeout=180.0)
             except asyncio.TimeoutError:
-                raise HTTPException(status_code=504, detail="L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                await _mark_error(504, "L'AI sta impiegando troppo tempo. Riprova tra qualche istante.")
+                return
         else:
-            raise HTTPException(status_code=503, detail="AI Coach non configurato. Contatta il supporto.")
-        # JSON parsing with prefill technique: response should already start with "{".
-        # Strip any defensive markdown fencing (rare with prefill but possible).
+            await _mark_error(503, "AI Coach non configurato. Contatta il supporto.")
+            return
+
+        # JSON parsing with prefill technique + truncation recovery.
         cleaned = resp.strip()
         if cleaned.startswith("```"):
             cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned)
             cleaned = re.sub(r'\n?```\s*$', '', cleaned)
-        # If response was truncated (missing closing brace), try to recover
-        # by finding the deepest valid balanced subset.
         try:
             parsed = json.loads(cleaned)
         except json.JSONDecodeError as first_err:
-            # Try to find the largest valid JSON prefix by balancing braces
-            depth = 0
-            in_str = False
-            esc = False
-            last_valid = -1
+            depth = 0; in_str = False; esc = False; last_valid = -1
             for i, ch in enumerate(cleaned):
-                if esc:
-                    esc = False; continue
-                if ch == "\\":
-                    esc = True; continue
-                if ch == '"':
-                    in_str = not in_str; continue
+                if esc: esc = False; continue
+                if ch == "\\": esc = True; continue
+                if ch == '"': in_str = not in_str; continue
                 if in_str: continue
                 if ch == "{": depth += 1
                 elif ch == "}":
@@ -1580,55 +1850,63 @@ async def ai_generate_plan(data: AIGenerateRequest, user: dict = Depends(require
                     if depth == 0: last_valid = i
             if last_valid > 0:
                 truncated = cleaned[:last_valid + 1]
-                logger.warning(f"AI JSON was truncated, recovering at char {last_valid}/{len(cleaned)}")
-                parsed = json.loads(truncated)
+                logger.warning(f"[AI Job {job_id}] JSON truncated, recovering at char {last_valid}/{len(cleaned)}")
+                try:
+                    parsed = json.loads(truncated)
+                except Exception as e2:
+                    logger.error(f"[AI Job {job_id}] JSON parse failed after recovery: {e2}")
+                    await _mark_error(502, "Risposta AI non valida. Riprova.")
+                    return
             else:
-                # Cannot recover - log full response (truncated to 2000 chars) and re-raise
-                logger.error(f"AI JSON parse error: {first_err}. Response (first 2000 chars): {cleaned[:2000]}")
-                raise first_err
-    except HTTPException:
-        raise
-    except json.JSONDecodeError as e:
-        logger.error(f"AI JSON parse error: {e}")
-        raise HTTPException(status_code=502, detail="Risposta AI non valida. Riprova.")
-    except Exception as e:
-        logger.error(f"AI generate error: {e}")
-        msg = str(e)
-        if "Budget has been exceeded" in msg or "budget" in msg.lower() and "exceed" in msg.lower():
-            raise HTTPException(status_code=503, detail="Servizio AI esaurito: credito LLM terminato. Il team è stato notificato.")
-        if "502" in msg or "BadGateway" in msg:
-            raise HTTPException(status_code=503, detail="Servizio AI momentaneamente non disponibile. Riprova tra qualche minuto.")
-        raise HTTPException(status_code=500, detail=f"Errore generazione AI: {msg[:200]}")
+                logger.error(f"[AI Job {job_id}] AI JSON parse error: {first_err}. Response head: {cleaned[:500]}")
+                await _mark_error(502, "Risposta AI non valida. Riprova.")
+                return
 
-    # Build plan document
-    workouts = []
-    for i, w in enumerate(parsed.get("workouts", []), start=1):
-        steps = [WorkoutStep(**s).dict() for s in w.get("steps", [])]
-        workouts.append({
-            "workout_id": f"wk_{uuid.uuid4().hex[:10]}",
-            "title": w.get("title", f"Workout {i}"),
-            "day": w.get("day", i),
-            "estimated_duration_min": int(w.get("estimated_duration_min", data.available_minutes)),
-            "estimated_distance_km": float(w.get("estimated_distance_km", 5.0)),
-            "steps": steps,
-        })
-    plan = {
-        "plan_id": f"pl_{uuid.uuid4().hex[:10]}",
-        "title": parsed.get("title", f"Piano AI — {data.goal}"),
-        "description": parsed.get("description", data.goal),
-        "level": data.level,
-        "duration_weeks": data.duration_weeks,
-        "workouts_per_week": data.days_per_week,
-        "is_premium": True,
-        "is_ai_generated": True,
-        "created_by": user["user_id"],
-        "workouts": workouts,
-        "image_url": "https://images.unsplash.com/photo-1775225218390-34a8c5135110?w=800",
-        "created_at": datetime.now(timezone.utc),
-    }
-    await db.plans.insert_one(dict(plan))
-    plan.pop("_id", None)
-    return plan
+        # Build plan document and persist.
+        workouts = []
+        for i, w in enumerate(parsed.get("workouts", []), start=1):
+            steps = [WorkoutStep(**s).dict() for s in w.get("steps", [])]
+            workouts.append({
+                "workout_id": f"wk_{uuid.uuid4().hex[:10]}",
+                "title": w.get("title", f"Workout {i}"),
+                "day": w.get("day", i),
+                "estimated_duration_min": int(w.get("estimated_duration_min", data.available_minutes)),
+                "estimated_distance_km": float(w.get("estimated_distance_km", 5.0)),
+                "steps": steps,
+            })
+        plan = {
+            "plan_id": f"pl_{uuid.uuid4().hex[:10]}",
+            "title": parsed.get("title", tpl["default_title"].format(goal=data.goal)),
+            "description": parsed.get("description", data.goal),
+            "level": data.level,
+            "duration_weeks": data.duration_weeks,
+            "workouts_per_week": data.days_per_week,
+            "is_premium": True,
+            "is_ai_generated": True,
+            "created_by": user["user_id"],
+            "workouts": workouts,
+            "image_url": "https://images.unsplash.com/photo-1775225218390-34a8c5135110?w=800",
+            "created_at": datetime.now(timezone.utc),
+        }
+        await db.plans.insert_one(dict(plan))
+        await db.ai_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {
+                "status": "done",
+                "plan_id": plan["plan_id"],
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+        logger.info(f"[AI Job {job_id}] done → plan_id={plan['plan_id']}")
+    except Exception as e:
+        logger.error(f"[AI Job {job_id}] unexpected error: {e}")
+        msg = str(e)
+        if "Budget has been exceeded" in msg or ("budget" in msg.lower() and "exceed" in msg.lower()):
+            await _mark_error(503, "Servizio AI esaurito: credito LLM terminato. Il team è stato notificato.")
+        elif "502" in msg or "BadGateway" in msg:
+            await _mark_error(503, "Servizio AI momentaneamente non disponibile. Riprova tra qualche minuto.")
+        else:
+            await _mark_error(500, f"Errore generazione AI: {msg[:200]}")
 
 # ----------------- Workouts / Sessions -----------------
 @api_router.post("/workouts/complete")

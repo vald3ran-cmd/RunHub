@@ -390,22 +390,22 @@ export default function Profile() {
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Modifica traguardi (km)</Text>
-            <Text style={styles.inputLabel}>GIORNALIERO</Text>
+            <Text style={styles.modalTitle}>{t('profile.goals_modal_title')}</Text>
+            <Text style={styles.inputLabel}>{t('profile.goals_daily')}</Text>
             <TextInput
               testID="goals-daily-input"
               style={styles.input} keyboardType="numeric"
               value={goals.daily_km} onChangeText={(v) => setGoals(g => ({ ...g, daily_km: v }))}
               placeholderTextColor={colors.textMuted}
             />
-            <Text style={styles.inputLabel}>SETTIMANALE</Text>
+            <Text style={styles.inputLabel}>{t('profile.goals_weekly')}</Text>
             <TextInput
               testID="goals-weekly-input"
               style={styles.input} keyboardType="numeric"
               value={goals.weekly_km} onChangeText={(v) => setGoals(g => ({ ...g, weekly_km: v }))}
               placeholderTextColor={colors.textMuted}
             />
-            <Text style={styles.inputLabel}>MENSILE</Text>
+            <Text style={styles.inputLabel}>{t('profile.goals_monthly')}</Text>
             <TextInput
               testID="goals-monthly-input"
               style={styles.input} keyboardType="numeric"
@@ -414,13 +414,13 @@ export default function Profile() {
             />
             <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoals(false)} activeOpacity={0.85}>
-                <Text style={styles.cancelText}>ANNULLA</Text>
+                <Text style={styles.cancelText}>{t('common.cancel_upper')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="save-goals-button"
                 style={styles.saveBtn} onPress={saveGoals} disabled={saving} activeOpacity={0.85}
               >
-                <Text style={styles.saveText}>{saving ? 'SALVO...' : 'SALVA'}</Text>
+                <Text style={styles.saveText}>{saving ? t('common.saving_upper') : t('common.save_upper')}</Text>
               </TouchableOpacity>
             </View>
           </View>

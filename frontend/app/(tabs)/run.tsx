@@ -6,27 +6,29 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType } from '../../src/theme';
 import { MapPin, Bug, ChevronRight, Zap, Footprints, Bike, Activity } from 'lucide-react-native';
+import { useT } from '../../src/i18n';
 
 type Mode = ActivityType;
 
-const ACTIVITIES: { type: Mode; title: string; subtitle: string; Icon: any }[] = [
-  { type: 'run',  title: 'Corsa',     subtitle: 'Traccia distanza, tempo e passo con GPS',          Icon: Activity },
-  { type: 'walk', title: 'Camminata', subtitle: 'Conta passi, calorie e distanza in modo dolce',    Icon: Footprints },
-  { type: 'bike', title: 'Bici',      subtitle: 'Monitora velocità media e dislivello del percorso', Icon: Bike },
-];
-
 export default function RunTab() {
   const router = useRouter();
+  const { t } = useT();
   const [mode, setMode] = useState<Mode>('run');
+
+  const ACTIVITIES: { type: Mode; title: string; subtitle: string; Icon: any }[] = [
+    { type: 'run',  title: t('run.activity_run_title'),  subtitle: t('run.activity_run_sub'),  Icon: Activity },
+    { type: 'walk', title: t('run.activity_walk_title'), subtitle: t('run.activity_walk_sub'), Icon: Footprints },
+    { type: 'bike', title: t('run.activity_bike_title'), subtitle: t('run.activity_bike_sub'), Icon: Bike },
+  ];
 
   const current = ACTIVITIES.find((a) => a.type === mode)!;
   const meta = activityMeta[mode];
 
   const startActivity = () => {
     const titleMap: Record<Mode, string> = {
-      run: 'Corsa libera',
-      walk: 'Camminata libera',
-      bike: 'Pedalata libera',
+      run: t('run.free_run'),
+      walk: t('run.walk_free'),
+      bike: t('run.bike_free'),
     };
     router.push({
       pathname: '/run-active',
@@ -42,10 +44,10 @@ export default function RunTab() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>ALLENAMENTO LIBERO</Text>
-          <Text style={styles.title}>Scegli l'attività</Text>
+          <Text style={styles.eyebrow}>{t('run.tab_eyebrow')}</Text>
+          <Text style={styles.title}>{t('run.tab_title')}</Text>
           <Text style={styles.subtitle}>
-            Seleziona il tipo di allenamento e parti, senza un piano predefinito.
+            {t('run.tab_subtitle')}
           </Text>
         </View>
 
@@ -90,7 +92,7 @@ export default function RunTab() {
           <View style={styles.infoRow}>
             <MapPin size={16} color={meta.color} strokeWidth={2.2} />
             <Text style={styles.infoText}>
-              Servirà il permesso di localizzazione per tracciare il percorso.
+              {t('run.location_info')}
             </Text>
           </View>
         </View>
@@ -103,7 +105,7 @@ export default function RunTab() {
           activeOpacity={0.9}
         >
           <Zap size={20} color="#fff" strokeWidth={2.4} fill="#fff" />
-          <Text style={styles.startBtnText}>AVVIA {meta.label}</Text>
+          <Text style={styles.startBtnText}>{t('run.start_with', { name: meta.label })}</Text>
         </TouchableOpacity>
 
         {/* Diagnostica GPS */}
@@ -113,7 +115,7 @@ export default function RunTab() {
           onPress={() => router.push('/gps-test')}
         >
           <Bug size={14} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={styles.diagText}>Diagnostica GPS</Text>
+          <Text style={styles.diagText}>{t('run.gps_diagnostic')}</Text>
           <ChevronRight size={14} color={colors.textSecondary} strokeWidth={2.2} />
         </TouchableOpacity>
       </ScrollView>
