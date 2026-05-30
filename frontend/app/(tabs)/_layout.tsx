@@ -1,10 +1,35 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
-import { colors, shadows } from '../../src/theme';
-import {
-  HomeIcon, PlansIcon, RunIcon, HistoryIcon, ProfileIcon,
-} from '../../src/icons/BrandIcons';
+import { View, StyleSheet, Platform, Image, ImageSourcePropType } from 'react-native';
+import { colors } from '../../src/theme';
 import { useT } from '../../src/i18n';
+
+// Custom PNG tab icons (designed by user). They have transparent BG
+// and use white + orange outline. Active/inactive states use opacity.
+const ICONS = {
+  home:    require('../../assets/icons/tab/tab-home.png'),
+  plans:   require('../../assets/icons/tab/tab-plans.png'),
+  run:     require('../../assets/icons/tab/tab-run.png'),
+  history: require('../../assets/icons/tab/tab-history.png'),
+  profile: require('../../assets/icons/tab/tab-profile.png'),
+} as const;
+
+type TabKey = keyof typeof ICONS;
+
+function TabIcon({ source, focused, size = 30 }: { source: ImageSourcePropType; focused: boolean; size?: number }) {
+  return (
+    <Image
+      source={source}
+      resizeMode="contain"
+      style={{
+        width: size,
+        height: size,
+        opacity: focused ? 1 : 0.7,
+        // Slight upscale on focused tab for visual feedback
+        transform: [{ scale: focused ? 1.08 : 1 }],
+      }}
+    />
+  );
+}
 
 export default function TabsLayout() {
   const { t } = useT();
@@ -34,23 +59,28 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: t('tabs.home'),
-          tabBarIcon: ({ color }) => <HomeIcon size={22} color={color} strokeWidth={2.2} />,
+          tabBarIcon: ({ focused }) => <TabIcon source={ICONS.home} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="plans"
         options={{
           title: t('tabs.plans'),
-          tabBarIcon: ({ color }) => <PlansIcon size={22} color={color} strokeWidth={2.2} />,
+          tabBarIcon: ({ focused }) => <TabIcon source={ICONS.plans} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="run"
         options={{
+          // Center "FAB-style" tab: bigger, with branded orange circle behind
           title: '',
-          tabBarIcon: () => (
-            <View style={styles.runIcon}>
-              <RunIcon size={26} color="#FFFFFF" strokeWidth={2.2} />
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.runIcon, focused && styles.runIconFocused]}>
+              <Image
+                source={ICONS.run}
+                resizeMode="contain"
+                style={styles.runIconImg}
+              />
             </View>
           ),
         }}
@@ -59,14 +89,14 @@ export default function TabsLayout() {
         name="history"
         options={{
           title: t('tabs.history'),
-          tabBarIcon: ({ color }) => <HistoryIcon size={22} color={color} strokeWidth={2.2} />,
+          tabBarIcon: ({ focused }) => <TabIcon source={ICONS.history} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t('tabs.profile'),
-          tabBarIcon: ({ color }) => <ProfileIcon size={22} color={color} strokeWidth={2.2} />,
+          tabBarIcon: ({ focused }) => <TabIcon source={ICONS.profile} focused={focused} />,
         }}
       />
     </Tabs>
@@ -89,5 +119,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 14,
     elevation: 8,
+  },
+  runIconFocused: {
+    shadowOpacity: 0.7,
+    shadowRadius: 18,
+  },
+  runIconImg: {
+    width: 32,
+    height: 32,
   },
 });
