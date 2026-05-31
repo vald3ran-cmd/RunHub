@@ -1082,5 +1082,25 @@
     "apple_not_interactive": "Apple Sign-In richiede interazione utente. Apri l'app e riprova.",
     "apple_invalid_response": "Risposta Apple non valida. Riprova tra poco.",
     "apple_id_token_missing": "ID token mancante dalla risposta Google"
+  },
+  "predefined_plans": {
+    "pl_beginner_5k_title": "Principiante — Corri 5K",
+    "pl_beginner_5k_desc": "Da zero al tuo primo 5K in 4 settimane. Alternanza corsa/camminata con riscaldamento e stretching.",
+    "pl_intermediate_10k_title": "Intermedio — 10K Performance",
+    "pl_intermediate_10k_desc": "Migliora tempi e resistenza per un 10K sotto i 55 minuti. Include sessioni di ripetute e lunghi.",
+    "pl_expert_half_title": "Esperto — Mezza Maratona",
+    "pl_expert_half_desc": "Programma avanzato per completare una mezza maratona in meno di 1h45. Ripetute lunghe e corsa progressiva.",
+    "pl_5k_sub30_title": "5K sotto 30 minuti",
+    "pl_5k_sub30_desc": "Piano 4 settimane per sfondare il muro dei 30 minuti sui 5K con tempo run e ripetute brevi.",
+    "pl_10k_competitivo_title": "10K Competitivo",
+    "pl_10k_competitivo_desc": "8 settimane per correre 10K sotto 45 minuti. Soglia, VO2max, lunghi qualitativi.",
+    "pl_mezza_performance_title": "Mezza Maratona Performance",
+    "pl_mezza_performance_desc": "10 settimane per battere il tuo record sulla mezza. Lunghi progressivi, soglia estesa, gara simulata.",
+    "pl_maratona_title": "Maratona — 16 settimane",
+    "pl_maratona_desc": "Programma completo per finire la tua prima maratona. Costruzione progressiva fino a 32K di lungo.",
+    "pl_trail_title": "Trail Running — Montagna",
+    "pl_trail_desc": "6 settimane per prepararsi a una gara trail. Focus su salite, discese tecniche, forza gambe.",
+    "pl_progressione_10_title": "Regola del +10% — Sicurezza",
+    "pl_progressione_10_desc": "4 settimane di carico progressivo sicuro (+10%/settimana). Previene infortuni e costruisce base aerobica."
   }
 }

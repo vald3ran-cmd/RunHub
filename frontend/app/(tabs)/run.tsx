@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType } from '../../src/theme';
+import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType, getActivityLabel } from '../../src/theme';
 import { MapPin, Bug, ChevronRight, Zap, Footprints, Bike, Activity } from 'lucide-react-native';
 import { useT } from '../../src/i18n';
 
@@ -105,7 +105,7 @@ export default function RunTab() {
           activeOpacity={0.9}
         >
           <Zap size={20} color="#fff" strokeWidth={2.4} fill="#fff" />
-          <Text style={styles.startBtnText}>{t('run.start_with', { name: meta.label })}</Text>
+          <Text style={styles.startBtnText}>{t('run.start_with', { name: getActivityLabel(mode, t) })}</Text>
         </TouchableOpacity>
 
         {/* Diagnostica GPS */}

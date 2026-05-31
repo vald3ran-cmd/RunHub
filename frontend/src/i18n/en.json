@@ -1082,5 +1082,25 @@
     "apple_not_interactive": "Apple Sign-In requires user interaction. Open the app and retry.",
     "apple_invalid_response": "Invalid Apple response. Retry shortly.",
     "apple_id_token_missing": "Missing ID token from Google response"
+  },
+  "predefined_plans": {
+    "pl_beginner_5k_title": "Beginner — Run 5K",
+    "pl_beginner_5k_desc": "From zero to your first 5K in 4 weeks. Run/walk alternation with warmup and stretching.",
+    "pl_intermediate_10k_title": "Intermediate — 10K Performance",
+    "pl_intermediate_10k_desc": "Improve times and stamina for a sub-55 10K. Includes intervals and long runs.",
+    "pl_expert_half_title": "Expert — Half Marathon",
+    "pl_expert_half_desc": "Advanced program to complete a half marathon in under 1h45. Long intervals and progressive runs.",
+    "pl_5k_sub30_title": "Sub-30 5K",
+    "pl_5k_sub30_desc": "4-week plan to break the 30-minute barrier on 5K with tempo runs and short intervals.",
+    "pl_10k_competitivo_title": "Competitive 10K",
+    "pl_10k_competitivo_desc": "8 weeks to run a sub-45 10K. Threshold, VO2max, quality long runs.",
+    "pl_mezza_performance_title": "Half Marathon Performance",
+    "pl_mezza_performance_desc": "10 weeks to beat your half marathon PR. Progressive long runs, extended threshold, simulated race.",
+    "pl_maratona_title": "Marathon — 16 weeks",
+    "pl_maratona_desc": "Complete program to finish your first marathon. Progressive build-up to 32K long runs.",
+    "pl_trail_title": "Trail Running — Mountain",
+    "pl_trail_desc": "6 weeks to prepare for a trail race. Focus on climbs, technical descents, leg strength.",
+    "pl_progressione_10_title": "+10% Rule — Safety",
+    "pl_progressione_10_desc": "4 weeks of safe progressive loading (+10%/week). Prevents injuries and builds aerobic base."
   }
 }
