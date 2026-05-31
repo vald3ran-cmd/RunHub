@@ -5,7 +5,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../src/api';
-import { colors, spacing, radius, fonts, activityMeta, ActivityType } from '../../src/theme';
+import { colors, spacing, radius, fonts, activityMeta, ActivityType, getActivityLabel } from '../../src/theme';
 import { RunIcon, WalkIcon, BikeIcon } from '../../src/icons/BrandIcons';
 import { Footprints, ChevronRight } from 'lucide-react-native';
 import { useT } from '../../src/i18n';
@@ -80,7 +80,7 @@ export default function History() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemTitle} numberOfLines={1}>{translateSessionTitle(item.title, t)}</Text>
                 <Text style={styles.itemMeta}>
-                  {formatDate(item.completed_at, locale)} · {meta.shortLabel}
+                  {formatDate(item.completed_at, locale)} · {getActivityLabel(type, t, true)}
                 </Text>
               </View>
               <View style={styles.itemStats}>

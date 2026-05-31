@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
-import { useT } from '../src/i18n';
+import { useT, t as gt } from '../src/i18n';
 
 type FeedItem = {
   session_id: string;
@@ -383,10 +383,10 @@ function FeedCard({ item, onLike, onComments }: { item: FeedItem; onLike: () => 
       </View>
       <Text style={styles.feedTitle}>{item.title}</Text>
       <View style={styles.feedStats}>
-        <Stat label="KM" value={item.distance_km.toFixed(2)} />
-        <Stat label="TEMPO" value={fmt(item.duration_seconds)} />
-        <Stat label="PACE" value={item.avg_pace_min_per_km || '-'} />
-        <Stat label="KCAL" value={`${Math.round(item.calories || 0)}`} />
+        <Stat label={gt('social.feed_km_label')} value={item.distance_km.toFixed(2)} />
+        <Stat label={gt('social.feed_time_label')} value={fmt(item.duration_seconds)} />
+        <Stat label={gt('social.feed_pace_label')} value={item.avg_pace_min_per_km || '-'} />
+        <Stat label={gt('social.feed_kcal_label')} value={`${Math.round(item.calories || 0)}`} />
       </View>
       <View style={styles.feedActions}>
         <TouchableOpacity testID={`like-${item.session_id}`} style={styles.actionBtn} onPress={onLike}>

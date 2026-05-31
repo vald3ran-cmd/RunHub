@@ -238,7 +238,8 @@
     "register_placeholder": "e.g. RHABCD23",
     "register_with": "You're joining with {{name}}'s invite",
     "redeem_success": "Code applied! Complete your first run to activate the bonus.",
-    "load_error": "Error loading referral"
+    "load_error": "Error loading referral",
+    "month_chip": "1 month"
   },
   "settings": {
     "language": "Language",
@@ -470,14 +471,14 @@
     "elite_f6": "Exclusive plans"
   },
   "dashboard": {
-    "title": "Stats",
+    "title": "Progress",
     "card_distance": "DISTANCE",
     "card_activity": "ACTIVITY",
     "card_pace_avg": "AVG PACE",
     "workouts": "Workouts",
     "personal_best": "PERSONAL BEST",
     "pb_empty": "No record yet",
-    "km_max": "km max",
+    "km_max": "MAX KM",
     "time_max": "max time",
     "pace_best": "best pace",
     "period_all": "ALL",
@@ -485,7 +486,14 @@
     "cmp_30": "previous 30 days",
     "cmp_90": "previous 90 days",
     "cmp_1y": "previous year",
-    "cmp_default": "previous period"
+    "cmp_default": "previous period",
+    "range_7d": "7D",
+    "range_30d": "30D",
+    "range_90d": "90D",
+    "range_1y": "1Y",
+    "range_all": "ALL",
+    "activity": "ACTIVITY",
+    "max_time": "MAX TIME"
   },
   "workout_detail": {
     "session_not_found": "Session not found",
@@ -584,7 +592,13 @@
     "early_bird": "Early Bird",
     "early_bird_desc": "Run before 7:00 AM",
     "night_owl": "Night Owl",
-    "night_owl_desc": "Run after 10:00 PM"
+    "night_owl_desc": "Run after 10:00 PM",
+    "first_run": "First Run",
+    "first_run_desc": "Complete your first run",
+    "five_runs": "5 Runs",
+    "five_runs_desc": "Complete 5 runs",
+    "ten_runs": "10 Runs",
+    "ten_runs_desc": "Complete 10 runs"
   },
   "badges": {
     "title": "ACHIEVEMENTS",
@@ -630,7 +644,11 @@
     "comments_empty": "No comments. Be the first!",
     "comment_placeholder": "Write a comment...",
     "comment_send_error": "Comment not sent",
-    "unfriend_title": "Remove friend?"
+    "unfriend_title": "Remove friend?",
+    "feed_time_label": "TIME",
+    "feed_km_label": "KM",
+    "feed_pace_label": "PACE",
+    "feed_kcal_label": "KCAL"
   },
   "account": {
     "title": "Account & Privacy",
@@ -943,5 +961,90 @@
     "sec10_p": "We may update this Privacy Policy. For substantial changes we will notify you via email and in-app at least 30 days before they take effect.",
     "sec11_h": "11. Contact",
     "sec11_p": "For any question about the Privacy Policy or your data:\n• Support and DPO: support@apprunhub.com\n• Info: info@apprunhub.com"
+  },
+  "heatmap": {
+    "title": "YOUR MAP",
+    "runs_label": "RUNS",
+    "km_total_label": "TOTAL KM",
+    "legend": "LEGEND",
+    "last_run": "Last run",
+    "recent_5": "Recent (last 5)",
+    "history_10": "History (last 10)",
+    "no_runs_yet": "No runs yet",
+    "no_runs_sub": "Complete a run with GPS active to see it here",
+    "start_a_run": "START A RUN",
+    "older": "Older"
+  },
+  "activity": {
+    "run": "RUN",
+    "walk": "WALK",
+    "bike": "BIKE",
+    "run_short": "Run",
+    "walk_short": "Walk",
+    "bike_short": "Bike"
+  },
+  "plan_detail": {
+    "not_found": "Plan not found",
+    "locked": "PLAN LOCKED",
+    "locked_sub": "Subscribe to Starter or higher to start this plan. In the meantime, you can do a free run from the Home.",
+    "home": "HOME",
+    "upgrade": "UPGRADE",
+    "workouts": "WORKOUTS",
+    "meta": "{{weeks}} weeks · {{sessions}} sessions/week",
+    "level_beginner": "BEGINNER",
+    "level_intermediate": "INTERMEDIATE",
+    "level_expert": "EXPERT",
+    "min": "min"
+  },
+  "run_active": {
+    "distance_km_label": "DISTANCE · KM",
+    "time_label": "TIME",
+    "kcal_label": "KCAL",
+    "elevation_label": "ELEVATION · M",
+    "last_km_label": "LAST KM"
+  },
+  "wearables_labels": {
+    "km": "KM",
+    "kcal": "KCAL",
+    "bpm": "BPM"
+  },
+  "ads": {
+    "banner_title": "Upgrade to Starter — say goodbye to ads",
+    "banner_sub": "€4.99/month · first 7 days free",
+    "badge": "AD",
+    "skip_in": "SKIP IN {{s}}s",
+    "skip_now": "SKIP ✕",
+    "video_placeholder": "AD VIDEO",
+    "simulation": "Placeholder simulation · native build will use AdMob",
+    "tired_title": "Tired of ads?",
+    "tired_sub": "Upgrade to Starter to remove all ads"
+  },
+  "heatmap_web": {
+    "title": "🗺️ Map available on mobile",
+    "sub": "Install the app on iOS or Android to view the heatmap of your runs."
+  },
+  "avatar_picker": {
+    "operation_failed": "Operation failed",
+    "take_photo": "Take a photo",
+    "choose_gallery": "Choose from gallery",
+    "remove_current": "Remove current photo",
+    "permission_denied_title": "Permission denied",
+    "permission_denied_msg": "To pick a profile photo, allow gallery access in Settings.",
+    "permission_camera_title": "Camera permission denied",
+    "permission_camera_msg": "To take a profile photo, allow camera access in Settings.",
+    "manipulator_failed": "Image processing failed",
+    "profile_photo": "Profile photo",
+    "choose_source": "Choose a source",
+    "take": "Take",
+    "gallery": "Gallery",
+    "remove": "Remove"
+  },
+  "social_auth": {
+    "unavailable_title": "Not available",
+    "google_unavailable": "Google login works only in the native build (not in Expo Go).",
+    "apple_unavailable": "Apple login works only on iOS in a native build."
+  },
+  "wearables_native": {
+    "unavailable_msg": "Wearables work only in a native build (not in Expo Go)."
   }
 }

@@ -5,7 +5,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../src/api';
-import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType } from '../../src/theme';
+import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType, getActivityLabel } from '../../src/theme';
 import { RouteMap } from '../../src/RouteMap';
 import { RunIcon, WalkIcon, BikeIcon, BoltIcon } from '../../src/icons/BrandIcons';
 import { AnimatedCounter } from '../../src/uiPolish';
@@ -87,7 +87,7 @@ export default function WorkoutDetail() {
     try {
       const paceStr = pace ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}/km` : '';
       const emoji = activityType === 'walk' ? '🚶' : activityType === 'bike' ? '🚴' : '🏃';
-      const msg = `${t('workout_detail.share_msg_intro', { emoji, activity: activity.shortLabel.toLowerCase() })}\n\n` +
+      const msg = `${t('workout_detail.share_msg_intro', { emoji, activity: getActivityLabel(activityType, t, true).toLowerCase() })}\n\n` +
         `📍 ${session.distance_km.toFixed(2)} km\n` +
         `⏱️ ${formatTime(session.duration_seconds)}\n` +
         (paceStr ? `⚡ ${t('workout_detail.share_msg_pace', { pace: paceStr })}\n` : '') +
@@ -123,7 +123,7 @@ export default function WorkoutDetail() {
             <View style={styles.cardHeader}>
               <View style={[styles.activityBadge, { backgroundColor: activity.color }]}>
                 <ActIcon size={16} color="#fff" strokeWidth={2.4} />
-                <Text style={styles.activityBadgeText}>{activity.label}</Text>
+                <Text style={styles.activityBadgeText}>{getActivityLabel(activityType, t)}</Text>
               </View>
               <Text style={styles.cardBrand}>RunHub</Text>
             </View>

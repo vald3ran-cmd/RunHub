@@ -1,5 +1,6 @@
 import { Platform, Alert } from 'react-native';
 import Constants from 'expo-constants';
+import { t } from './i18n';
 
 const isExpoGo = Constants.appOwnership === 'expo';
 const available = !isExpoGo && Platform.OS !== 'web';
@@ -195,7 +196,7 @@ async function fetchHealthConnectStats(): Promise<WearableStats | null> {
 // ---- Public API ----
 export async function connectWearable(): Promise<{ ok: boolean; platform: string; reason?: string }> {
   if (!available) {
-    Alert.alert('Non disponibile', 'I wearables funzionano solo in build nativa (non in Expo Go).');
+    Alert.alert(t('social_auth.unavailable_title'), t('wearables_native.unavailable_msg'));
     return { ok: false, platform: Platform.OS, reason: 'expo_go_or_web' };
   }
   if (Platform.OS === 'ios') {

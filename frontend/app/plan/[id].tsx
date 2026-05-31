@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Lock, Home, Play, Sparkles, Star } from 'lucide-react-native';
 import { api } from '../../src/api';
-import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels } from '../../src/theme';
+import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, getStepTypeLabel } from '../../src/theme';
+import { useT } from '../../src/i18n';
 
 export default function PlanDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useT();
   const [plan, setPlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,7 @@ export default function PlanDetail() {
     return <View style={styles.loader}><ActivityIndicator color={colors.primary} size="large" /></View>;
   }
   if (!plan) {
-    return <View style={styles.loader}><Text style={{ color: colors.textSecondary }}>Piano non trovato</Text></View>;
+    return <View style={styles.loader}><Text style={{ color: colors.textSecondary }}>{t('plan_detail.not_found')}</Text></View>;
   }
 
   const openWorkout = (w: any) => {
@@ -49,7 +51,7 @@ export default function PlanDetail() {
   };
 
   const levelLabel = (l: string) =>
-    l === 'beginner' ? 'PRINCIPIANTE' : l === 'intermediate' ? 'INTERMEDIO' : 'ESPERTO';
+    l === 'beginner' ? t('plan_detail.level_beginner') : l === 'intermediate' ? t('plan_detail.level_intermediate') : t('plan_detail.level_expert');
   const levelColor = (l: string) =>
     l === 'beginner' ? colors.success : l === 'intermediate' ? colors.warning : colors.primary;
 
@@ -90,7 +92,7 @@ export default function PlanDetail() {
               </View>
               <Text style={styles.heroTitle}>{plan.title.toUpperCase()}</Text>
               <Text style={styles.heroMeta}>
-                {plan.duration_weeks} settimane · {plan.workouts_per_week} sessioni/sett.
+                {t('plan_detail.meta', { weeks: plan.duration_weeks, sessions: plan.workouts_per_week })}
               </Text>
             </View>
           </SafeAreaView>
@@ -106,9 +108,9 @@ export default function PlanDetail() {
           <View style={styles.lockBox}>
             <View style={styles.lockIcon}><Lock size={20} color="#fff" strokeWidth={2.4} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.lockTitle}>PIANO BLOCCATO</Text>
+              <Text style={styles.lockTitle}>{t('plan_detail.locked')}</Text>
               <Text style={styles.lockSub}>
-                Abbonati a Starter o superiore per avviare questo piano. Intanto puoi fare un run libero dalla Home.
+                {t('plan_detail.locked_sub')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
                 <TouchableOpacity
@@ -118,14 +120,14 @@ export default function PlanDetail() {
                   activeOpacity={0.85}
                 >
                   <Home size={14} color={colors.textPrimary} strokeWidth={2.4} />
-                  <Text style={styles.homeBtnText}>HOME</Text>
+                  <Text style={styles.homeBtnText}>{t('plan_detail.home')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.lockBtn}
                   onPress={() => router.push('/premium')}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.lockBtnText}>UPGRADE</Text>
+                  <Text style={styles.lockBtnText}>{t('plan_detail.upgrade')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -135,7 +137,7 @@ export default function PlanDetail() {
         {/* Allenamenti list */}
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionDot} />
-          <Text style={styles.sectionHeaderText}>ALLENAMENTI</Text>
+          <Text style={styles.sectionHeaderText}>{t('plan_detail.workouts')}</Text>
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
@@ -154,13 +156,13 @@ export default function PlanDetail() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.workoutTitle} numberOfLines={1}>{w.title}</Text>
                 <Text style={styles.workoutMeta} numberOfLines={1}>
-                  {w.estimated_duration_min} min · {w.estimated_distance_km} km
+                  {w.estimated_duration_min} {t('plan_detail.min')} · {w.estimated_distance_km} km
                 </Text>
                 <View style={styles.stepChips}>
-                  {uniqueTypes(w.steps).slice(0, 4).map((t: string) => (
-                    <View key={t} style={[styles.chip, { backgroundColor: (stepTypeColors[t] || colors.primary) + '22' }]}>
-                      <Text style={[styles.chipText, { color: stepTypeColors[t] || colors.primary }]}>
-                        {stepTypeLabels[t] || t}
+                  {uniqueTypes(w.steps).slice(0, 4).map((stepType: string) => (
+                    <View key={stepType} style={[styles.chip, { backgroundColor: (stepTypeColors[stepType] || colors.primary) + '22' }]}>
+                      <Text style={[styles.chipText, { color: stepTypeColors[stepType] || colors.primary }]}>
+                        {getStepTypeLabel(stepType, t)}
                       </Text>
                     </View>
                   ))}

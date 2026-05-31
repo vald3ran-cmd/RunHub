@@ -6,9 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { colors, spacing, radius } from '../src/theme';
 import { HeatmapView } from '../src/Heatmap';
+import { useT } from '../src/i18n';
 
 export default function HeatmapScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [routes, setRoutes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ export default function HeatmapScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>LA TUA MAPPA</Text>
+        <Text style={styles.title}>{t('heatmap.title')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -39,11 +41,11 @@ export default function HeatmapScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{totalRuns}</Text>
-            <Text style={styles.statLabel}>CORSE</Text>
+            <Text style={styles.statLabel}>{t('heatmap.runs_label')}</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{totalKm.toFixed(1)}</Text>
-            <Text style={styles.statLabel}>KM TOTALI</Text>
+            <Text style={styles.statLabel}>{t('heatmap.km_total_label')}</Text>
           </View>
         </View>
 
@@ -54,32 +56,32 @@ export default function HeatmapScreen() {
         ) : routes.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="map-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Nessuna corsa ancora</Text>
-            <Text style={styles.emptyText}>Completa una corsa con GPS attivo per vederla qui</Text>
+            <Text style={styles.emptyTitle}>{t('heatmap.no_runs_yet')}</Text>
+            <Text style={styles.emptyText}>{t('heatmap.no_runs_sub')}</Text>
             <TouchableOpacity style={styles.emptyBtn} onPress={() => router.replace('/(tabs)/run')}>
-              <Text style={styles.emptyBtnText}>INIZIA UN RUN</Text>
+              <Text style={styles.emptyBtnText}>{t('heatmap.start_a_run')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
             <HeatmapView routes={routes} height={460} />
             <View style={styles.legend}>
-              <Text style={styles.legendTitle}>LEGENDA</Text>
+              <Text style={styles.legendTitle}>{t('heatmap.legend')}</Text>
               <View style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
-                <Text style={styles.legendText}>Ultima corsa</Text>
+                <Text style={styles.legendText}>{t('heatmap.last_run')}</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
-                <Text style={styles.legendText}>Recenti (ultime 5)</Text>
+                <Text style={styles.legendText}>{t('heatmap.recent_5')}</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: '#FFD60A' }]} />
-                <Text style={styles.legendText}>Storia (ultime 10)</Text>
+                <Text style={styles.legendText}>{t('heatmap.history_10')}</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: 'rgba(255, 149, 0, 0.55)' }]} />
-                <Text style={styles.legendText}>Piu' vecchie</Text>
+                <Text style={styles.legendText}>{t('heatmap.older')}</Text>
               </View>
             </View>
           </>

@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, radius, spacing } from './theme';
+import { useT } from './i18n';
 
 type Props = { routes?: any[]; height?: number };
 
 export function HeatmapView({ height = 400 }: Props) {
+  const { t } = useT();
   return (
     <View style={[styles.box, { height }]}>
-      <Text style={styles.title}>🗺️ Mappa disponibile su mobile</Text>
-      <Text style={styles.text}>Installa l'app su iOS o Android per visualizzare la heatmap delle tue corse.</Text>
+      <Text style={styles.title}>{t('heatmap_web.title')}</Text>
+      <Text style={styles.text}>{t('heatmap_web.sub')}</Text>
     </View>
   );
 }

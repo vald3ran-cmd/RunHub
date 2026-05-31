@@ -7,6 +7,15 @@ import { colors, spacing, radius } from './theme';
 import { useAuth } from './auth';
 import { isAdMobAvailable } from './adMobConfig';
 import { RealBannerAd } from './adMobReal';
+import { useT } from './i18n';
+
+// ============ HOOK: tier-based ad visibility ============
+// Returns true only for the Free tier — other tiers don't see ads.
+export function useShouldShowAds(): boolean {
+  const { user } = useAuth();
+  const tier = user?.tier || (user?.is_premium ? 'performance' : 'free');
+  return tier === 'free';
+}
 
 // ============ BANNER AD (Free tier) ============
 // If native AdMob is available -> real Google banner.
@@ -26,14 +35,15 @@ export function AdBanner() {
 }
 
 export function UpsellBanner() {
+  const { t } = useT();
   return (
     <View style={bannerStyles.container} testID="ad-banner-upsell">
       <View style={bannerStyles.badge}>
         <Text style={bannerStyles.badgeText}>AD</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={bannerStyles.title}>Passa a Starter — addio pubblicita\'</Text>
-        <Text style={bannerStyles.sub}>€4.99/mese · primi 7 giorni gratis</Text>
+        <Text style={bannerStyles.title}>{t('ads.banner_title')}</Text>
+        <Text style={bannerStyles.sub}>{t('ads.banner_sub')}</Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
     </View>
@@ -66,6 +76,7 @@ type InterstitialProps = {
 };
 
 export function InterstitialAd({ visible, onClose, skipAfter = 5 }: InterstitialProps) {
+  const { t } = useT();
   const [countdown, setCountdown] = useState(skipAfter);
 
   useEffect(() => {
@@ -80,7 +91,7 @@ export function InterstitialAd({ visible, onClose, skipAfter = 5 }: Interstitial
     <View style={adStyles.container} pointerEvents="auto">
       <View style={adStyles.header}>
         <View style={adStyles.adBadge}>
-          <Text style={adStyles.adBadgeText}>ANNUNCIO</Text>
+          <Text style={adStyles.adBadgeText}>{t('ads.badge')}</Text>
         </View>
         <TouchableOpacity
           testID="skip-ad-button"
@@ -89,7 +100,7 @@ export function InterstitialAd({ visible, onClose, skipAfter = 5 }: Interstitial
           disabled={countdown > 0}
         >
           <Text style={adStyles.skipText}>
-            {countdown > 0 ? `SALTA TRA ${countdown}s` : 'SALTA ✕'}
+            {countdown > 0 ? t('ads.skip_in', { s: countdown }) : t('ads.skip_now')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -97,17 +108,17 @@ export function InterstitialAd({ visible, onClose, skipAfter = 5 }: Interstitial
       <View style={adStyles.content}>
         <View style={adStyles.videoBox}>
           <Ionicons name="play-circle" size={80} color="rgba(255,255,255,0.35)" />
-          <Text style={adStyles.videoPlaceholder}>VIDEO PUBBLICITARIO</Text>
+          <Text style={adStyles.videoPlaceholder}>{t('ads.video_placeholder')}</Text>
           <ActivityIndicator color="rgba(255,255,255,0.5)" style={{ marginTop: spacing.md }} />
         </View>
-        <Text style={adStyles.brandTag}>Simulazione placeholder · su build nativa sara\' AdMob</Text>
+        <Text style={adStyles.brandTag}>{t('ads.simulation')}</Text>
       </View>
 
       <View style={adStyles.upgradeBox}>
         <Ionicons name="star" size={20} color={colors.primary} />
         <View style={{ flex: 1 }}>
-          <Text style={adStyles.upgradeTitle}>Stanco della pubblicita\'?</Text>
-          <Text style={adStyles.upgradeSub}>Passa a Starter per rimuovere tutti gli annunci</Text>
+          <Text style={adStyles.upgradeTitle}>{t('ads.tired_title')}</Text>
+          <Text style={adStyles.upgradeSub}>{t('ads.tired_sub')}</Text>
         </View>
       </View>
     </View>
@@ -128,23 +139,16 @@ const adStyles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
   videoBox: {
     width: '100%', aspectRatio: 16 / 9, backgroundColor: '#1a1a1a',
-    justifyContent: 'center', alignItems: 'center', borderRadius: radius.lg,
-    borderWidth: 1, borderColor: '#2a2a2a',
+    borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center',
   },
-  videoPlaceholder: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '800', letterSpacing: 3, marginTop: spacing.sm },
-  brandTag: { color: colors.textMuted, fontSize: 10, marginTop: spacing.lg, fontStyle: 'italic' },
+  videoPlaceholder: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginTop: spacing.md },
+  brandTag: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: spacing.md, textAlign: 'center' },
   upgradeBox: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, padding: spacing.md, margin: spacing.lg,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.primary,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, margin: spacing.lg,
+    padding: spacing.md, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.primary,
   },
-  upgradeTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  upgradeTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '800' },
   upgradeSub: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
 });
-
-// ============ Helper hook ============
-export function useShouldShowAds() {
-  const { user } = useAuth();
-  const tier = user?.tier || (user?.is_premium ? 'performance' : 'free');
-  return tier === 'free';
-}

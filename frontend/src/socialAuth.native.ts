@@ -1,6 +1,7 @@
 import { Platform, Alert } from 'react-native';
 import { api } from './api';
 import { isSocialAuthAvailable, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from './socialAuthConfig';
+import { t } from './i18n';
 
 // Lazy-loaded modules
 type GoogleSignInMod = any;
@@ -72,7 +73,7 @@ export async function isAppleAuthAvailable(): Promise<boolean> {
 export async function signInWithGoogle(): Promise<{ token: string; user: any } | null> {
   const mod = loadGoogle();
   if (!mod) {
-    Alert.alert('Non disponibile', 'Il login con Google funziona solo nella build nativa (non in Expo Go).');
+    Alert.alert(t('social_auth.unavailable_title'), t('social_auth.google_unavailable'));
     return null;
   }
   configureGoogleSignIn();
@@ -90,7 +91,7 @@ export async function signInWithGoogle(): Promise<{ token: string; user: any } |
     // User cancelled — silent
     if (code === mod.statusCodes?.SIGN_IN_CANCELLED || code === '-5') return null;
     console.error('[SocialAuth] Google sign in error', e);
-    Alert.alert('Accesso Google fallito', e?.message || 'Riprova piu\' tardi');
+    Alert.alert(t('common.error') || 'Errore', e?.message || t('common.retry'));
     return null;
   }
 }
@@ -107,7 +108,7 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
 
   const mod = loadApple();
   if (!mod) {
-    Alert.alert('Non disponibile', 'Il login con Apple funziona solo su iOS in build nativa.');
+    Alert.alert(t('social_auth.unavailable_title'), t('social_auth.apple_unavailable'));
     return null;
   }
   // Pre-flight: verify the entitlement is actually present at runtime.

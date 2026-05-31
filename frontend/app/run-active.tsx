@@ -9,7 +9,7 @@ import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
-import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, activityMeta, ActivityType } from '../src/theme';
+import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, activityMeta, ActivityType, getActivityLabel, getStepTypeLabel } from '../src/theme';
 import { RouteMap } from '../src/RouteMap';
 import { InterstitialAd, useShouldShowAds } from '../src/Ads';
 import { interstitialManager } from '../src/adMobReal';
@@ -656,8 +656,8 @@ export default function RunActive() {
         {hasSteps && currentStep ? (
           <View style={styles.stepBadgeRow}>
             <Text style={[styles.stepBadge, { color: stepColor }]}>
-              {(stepTypeLabels[currentStep.type] || currentStep.type).toUpperCase()}
-              {currentStep.target_pace ? `  ·  TARGET ${currentStep.target_pace}` : ''}
+              {getStepTypeLabel(currentStep.type, t)}
+              {currentStep.target_pace ? `  ·  ${t('run.target_prefix')} ${currentStep.target_pace}` : ''}
             </Text>
             {paceState !== 'unknown' ? (
               <View style={[styles.paceChip, {
@@ -674,7 +674,7 @@ export default function RunActive() {
           </View>
         ) : (
           <Text style={[styles.stepBadge, { color: stepColor }]}>
-            {activity.label} {autoPaused ? '· AUTO-PAUSA' : isPaused ? '· IN PAUSA' : '· LIVE'}
+            {getActivityLabel(activityType, t)} {autoPaused ? `· ${t('run.auto_pause_status')}` : isPaused ? `· ${t('run.paused_status')}` : `· ${t('run.live_status')}`}
           </Text>
         )}
         <View style={styles.heroRow}>
@@ -706,21 +706,21 @@ export default function RunActive() {
 
         {/* Stats grid — 2 rows x up to 4 cols */}
         <View style={styles.statsGrid}>
-          <StatItem value={distance.toFixed(2)} label="DISTANZA · KM" />
-          <StatItem value={formatTime(elapsed)} label="TEMPO" />
+          <StatItem value={distance.toFixed(2)} label={t('run_active.distance_km_label')} />
+          <StatItem value={formatTime(elapsed)} label={t('run_active.time_label')} />
           <StatItem value={speedDisplay} label={speedLabel} valueColor={paceColor} />
-          <StatItem value={String(liveCalories)} label="KCAL" />
+          <StatItem value={String(liveCalories)} label={t('run_active.kcal_label')} />
         </View>
         {/* Secondary row: elevation + last km */}
         {(elevationGain > 0 || splits.length > 0) ? (
           <View style={styles.statsGridSecondary}>
             {elevationGain > 0 ? (
-              <StatItem value={`${elevationGain}`} label="DISLIVELLO · M" small />
+              <StatItem value={`${elevationGain}`} label={t('run_active.elevation_label')} small />
             ) : null}
             {splits.length > 0 ? (
               <StatItem
                 value={formatPace(splits[splits.length - 1].paceMinPerKm)}
-                label={`ULTIMO KM (${splits.length})`}
+                label={`${t('run_active.last_km_label')} (${splits.length})`}
                 small
               />
             ) : null}

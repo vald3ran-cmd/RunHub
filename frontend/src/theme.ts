@@ -154,3 +154,35 @@ export const stepTypeLabels: Record<string, string> = {
   stretching: 'STRETCHING',
   gymnastics: 'GINNASTICA',
 };
+
+// ─────────────────────────────────────────────────────────────
+// i18n-aware label helpers — call these inside components that
+// already use useT() so labels re-render on locale change.
+// `t` is the function returned by useT() (or the global t() from i18n).
+// ─────────────────────────────────────────────────────────────
+export function getActivityLabel(
+  type: ActivityType,
+  t: (k: string, o?: any) => string,
+  short: boolean = false,
+): string {
+  const key = `activity.${type}${short ? '_short' : ''}`;
+  const v = t(key);
+  if (typeof v === 'string' && v.startsWith('activity.')) {
+    return short ? (activityMeta[type]?.shortLabel ?? type) : (activityMeta[type]?.label ?? type.toUpperCase());
+  }
+  return v;
+}
+
+export function getStepTypeLabel(
+  type: string,
+  t: (k: string, o?: any) => string,
+): string {
+  const key = `run.step_${type}`;
+  const v = t(key);
+  if (typeof v === 'string' && v.startsWith('run.step_')) {
+    return stepTypeLabels[type] || type.toUpperCase();
+  }
+  // Existing run.step_* are usually capitalized lowercase ("Corsa"). For
+  // chips/headers we want the SCREAMING CASE form, so uppercase it.
+  return v.toUpperCase();
+}

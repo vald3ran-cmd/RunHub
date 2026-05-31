@@ -5,7 +5,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../src/api';
-import { colors, spacing, radius, fonts, activityMeta, ActivityType } from '../src/theme';
+import { colors, spacing, radius, fonts, activityMeta, ActivityType, getActivityLabel } from '../src/theme';
 import { BarChart, Sparkline } from '../src/MiniCharts';
 import { AnimatedCounter, Skeleton } from '../src/uiPolish';
 import { RunIcon, WalkIcon, BikeIcon } from '../src/icons/BrandIcons';
@@ -72,21 +72,25 @@ export default function DashboardScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2.4} />
         </TouchableOpacity>
-        <Text style={styles.title}>Progressi</Text>
+        <Text style={styles.title}>{t('dashboard.title')}</Text>
       </View>
 
       {/* Period pill selector */}
       <View style={styles.periodBar}>
-        {PERIODS.map((p) => (
-          <TouchableOpacity
-            key={p}
-            style={[styles.periodPill, period === p && styles.periodPillActive]}
-            onPress={() => setPeriod(p)}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.periodText, period === p && styles.periodTextActive]}>{p}</Text>
-          </TouchableOpacity>
-        ))}
+        {PERIODS.map((p) => {
+          const labelKey = p === '7G' ? 'dashboard.range_7d' : p === '30G' ? 'dashboard.range_30d' :
+                           p === '90G' ? 'dashboard.range_90d' : p === '1A' ? 'dashboard.range_1y' : 'dashboard.range_all';
+          return (
+            <TouchableOpacity
+              key={p}
+              style={[styles.periodPill, period === p && styles.periodPillActive]}
+              onPress={() => setPeriod(p)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.periodText, period === p && styles.periodTextActive]}>{t(labelKey)}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <ScrollView
@@ -172,7 +176,7 @@ export default function DashboardScreen() {
                  <BikeIcon size={20} color={meta.color} />}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.pbActivity}>{meta.label}</Text>
+                <Text style={styles.pbActivity}>{getActivityLabel(type, t)}</Text>
                 <Text style={styles.pbEmpty}>{t('dashboard.pb_empty')}</Text>
               </View>
             </View>
@@ -185,7 +189,7 @@ export default function DashboardScreen() {
                  <BikeIcon size={20} color={meta.color} />}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.pbActivity}>{meta.label}</Text>
+                <Text style={styles.pbActivity}>{getActivityLabel(type, t)}</Text>
                 <View style={styles.pbRow}>
                   {pb.longest_distance ? (
                     <View style={styles.pbStat}>

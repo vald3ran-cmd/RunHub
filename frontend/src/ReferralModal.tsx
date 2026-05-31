@@ -65,7 +65,7 @@ export function ReferralModal() {
           <View style={styles.benefitsRow}>
             <View style={styles.benefitChip}>
               <Ionicons name="gift-outline" size={16} color={colors.primary} />
-              <Text style={styles.benefitText}>1 {t('common.continue').toLowerCase() === 'continue' ? 'month' : 'mese'}</Text>
+              <Text style={styles.benefitText}>{t('referral.month_chip')}</Text>
             </View>
             <View style={styles.benefitChip}>
               <Ionicons name="flash-outline" size={16} color={colors.primary} />

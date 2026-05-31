@@ -238,7 +238,8 @@
     "register_placeholder": "Ej. RHABCD23",
     "register_with": "Te unes con la invitación de {{name}}",
     "redeem_success": "¡Código aplicado! Completa tu primera carrera para activar el bono.",
-    "load_error": "Error al cargar referral"
+    "load_error": "Error al cargar referral",
+    "month_chip": "1 mes"
   },
   "settings": {
     "language": "Idioma",
@@ -470,14 +471,14 @@
     "elite_f6": "Planes exclusivos"
   },
   "dashboard": {
-    "title": "Estadísticas",
+    "title": "Progreso",
     "card_distance": "DISTANCIA",
     "card_activity": "ACTIVIDAD",
     "card_pace_avg": "RITMO MEDIO",
     "workouts": "Entrenamientos",
-    "personal_best": "PERSONAL BEST",
+    "personal_best": "RÉCORD PERSONAL",
     "pb_empty": "Aún sin récord",
-    "km_max": "km máx",
+    "km_max": "KM MÁX",
     "time_max": "tiempo máx",
     "pace_best": "mejor ritmo",
     "period_all": "TODO",
@@ -485,7 +486,14 @@
     "cmp_30": "30 días anteriores",
     "cmp_90": "90 días anteriores",
     "cmp_1y": "año anterior",
-    "cmp_default": "período anterior"
+    "cmp_default": "período anterior",
+    "range_7d": "7D",
+    "range_30d": "30D",
+    "range_90d": "90D",
+    "range_1y": "1A",
+    "range_all": "TODO",
+    "activity": "ACTIVIDAD",
+    "max_time": "TIEMPO MÁX"
   },
   "workout_detail": {
     "session_not_found": "Sesión no encontrada",
@@ -584,7 +592,13 @@
     "early_bird": "Madrugador",
     "early_bird_desc": "Corre antes de las 7:00",
     "night_owl": "Búho Nocturno",
-    "night_owl_desc": "Corre después de las 22:00"
+    "night_owl_desc": "Corre después de las 22:00",
+    "first_run": "Primera Carrera",
+    "first_run_desc": "Completa tu primera carrera",
+    "five_runs": "5 Carreras",
+    "five_runs_desc": "Completa 5 carreras",
+    "ten_runs": "10 Carreras",
+    "ten_runs_desc": "Completa 10 carreras"
   },
   "badges": {
     "title": "LOGROS",
@@ -630,7 +644,11 @@
     "comments_empty": "Sin comentarios. ¡Sé el primero!",
     "comment_placeholder": "Escribe un comentario...",
     "comment_send_error": "Comentario no enviado",
-    "unfriend_title": "¿Quitar amigo?"
+    "unfriend_title": "¿Quitar amigo?",
+    "feed_time_label": "TIEMPO",
+    "feed_km_label": "KM",
+    "feed_pace_label": "RITMO",
+    "feed_kcal_label": "KCAL"
   },
   "account": {
     "title": "Cuenta y Privacidad",
@@ -943,5 +961,90 @@
     "sec10_p": "Podemos actualizar esta Política de Privacidad. Para cambios sustanciales te notificaremos por email y en la app al menos 30 días antes de su entrada en vigor.",
     "sec11_h": "11. Contacto",
     "sec11_p": "Para cualquier consulta sobre la Política de Privacidad o tus datos:\n• Soporte y DPO: support@apprunhub.com\n• Info: info@apprunhub.com"
+  },
+  "heatmap": {
+    "title": "TU MAPA",
+    "runs_label": "CARRERAS",
+    "km_total_label": "KM TOTALES",
+    "legend": "LEYENDA",
+    "last_run": "Última carrera",
+    "recent_5": "Recientes (últimas 5)",
+    "history_10": "Historial (últimas 10)",
+    "no_runs_yet": "Aún no hay carreras",
+    "no_runs_sub": "Completa una carrera con GPS activo para verla aquí",
+    "start_a_run": "INICIAR UNA CARRERA",
+    "older": "Más antiguas"
+  },
+  "activity": {
+    "run": "CARRERA",
+    "walk": "CAMINATA",
+    "bike": "BICI",
+    "run_short": "Carrera",
+    "walk_short": "Caminata",
+    "bike_short": "Bici"
+  },
+  "plan_detail": {
+    "not_found": "Plan no encontrado",
+    "locked": "PLAN BLOQUEADO",
+    "locked_sub": "Suscríbete a Starter o superior para iniciar este plan. Mientras tanto, puedes hacer una carrera libre desde el Inicio.",
+    "home": "INICIO",
+    "upgrade": "MEJORAR",
+    "workouts": "ENTRENAMIENTOS",
+    "meta": "{{weeks}} semanas · {{sessions}} sesiones/sem.",
+    "level_beginner": "PRINCIPIANTE",
+    "level_intermediate": "INTERMEDIO",
+    "level_expert": "EXPERTO",
+    "min": "min"
+  },
+  "run_active": {
+    "distance_km_label": "DISTANCIA · KM",
+    "time_label": "TIEMPO",
+    "kcal_label": "KCAL",
+    "elevation_label": "DESNIVEL · M",
+    "last_km_label": "ÚLTIMO KM"
+  },
+  "wearables_labels": {
+    "km": "KM",
+    "kcal": "KCAL",
+    "bpm": "BPM"
+  },
+  "ads": {
+    "banner_title": "Pasa a Starter — adiós a los anuncios",
+    "banner_sub": "€4.99/mes · primeros 7 días gratis",
+    "badge": "ANUNCIO",
+    "skip_in": "OMITIR EN {{s}}s",
+    "skip_now": "OMITIR ✕",
+    "video_placeholder": "VIDEO PUBLICITARIO",
+    "simulation": "Simulación de marcador · la build nativa usará AdMob",
+    "tired_title": "¿Cansado de los anuncios?",
+    "tired_sub": "Pasa a Starter para eliminar todos los anuncios"
+  },
+  "heatmap_web": {
+    "title": "🗺️ Mapa disponible en móvil",
+    "sub": "Instala la app en iOS o Android para ver el mapa de calor de tus carreras."
+  },
+  "avatar_picker": {
+    "operation_failed": "Operación fallida",
+    "take_photo": "Tomar una foto",
+    "choose_gallery": "Elegir de la galería",
+    "remove_current": "Eliminar foto actual",
+    "permission_denied_title": "Permiso denegado",
+    "permission_denied_msg": "Para elegir una foto de perfil, habilita el acceso a la galería en Ajustes.",
+    "permission_camera_title": "Permiso de cámara denegado",
+    "permission_camera_msg": "Para tomar una foto de perfil, habilita el acceso a la cámara en Ajustes.",
+    "manipulator_failed": "Procesamiento de imagen fallido",
+    "profile_photo": "Foto de perfil",
+    "choose_source": "Elige una fuente",
+    "take": "Tomar",
+    "gallery": "Galería",
+    "remove": "Quitar"
+  },
+  "social_auth": {
+    "unavailable_title": "No disponible",
+    "google_unavailable": "El inicio con Google funciona solo en la build nativa (no en Expo Go).",
+    "apple_unavailable": "El inicio con Apple funciona solo en iOS en build nativa."
+  },
+  "wearables_native": {
+    "unavailable_msg": "Los wearables funcionan solo en build nativa (no en Expo Go)."
   }
 }

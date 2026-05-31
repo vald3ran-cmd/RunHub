@@ -3,6 +3,7 @@ import { Platform, Alert, ActionSheetIOS } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { api } from './api';
+import { t } from './i18n';
 
 const AVATAR_SIZE = 512; // px (square)
 const AVATAR_QUALITY = 0.78;
@@ -11,8 +12,8 @@ async function pickFromLibrary(): Promise<string | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
     Alert.alert(
-      'Permesso negato',
-      'Per scegliere una foto profilo abilita l\'accesso alla galleria nelle Impostazioni.',
+      t('avatar_picker.permission_denied_title'),
+      t('avatar_picker.permission_denied_msg'),
     );
     return null;
   }
@@ -30,8 +31,8 @@ async function takeFromCamera(): Promise<string | null> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) {
     Alert.alert(
-      'Permesso fotocamera negato',
-      'Per scattare una foto profilo abilita l\'accesso alla fotocamera nelle Impostazioni.',
+      t('avatar_picker.permission_camera_title'),
+      t('avatar_picker.permission_camera_msg'),
     );
     return null;
   }
@@ -51,7 +52,7 @@ async function processImage(uri: string): Promise<string> {
     [{ resize: { width: AVATAR_SIZE, height: AVATAR_SIZE } }],
     { compress: AVATAR_QUALITY, format: ImageManipulator.SaveFormat.JPEG, base64: true },
   );
-  if (!out.base64) throw new Error('Manipulator non ha restituito base64');
+  if (!out.base64) throw new Error(t('avatar_picker.manipulator_failed'));
   return `data:image/jpeg;base64,${out.base64}`;
 }
 
@@ -93,14 +94,14 @@ export function chooseAndUploadAvatar(opts: {
       onDone(b64);
     } catch (e: any) {
       onProgress?.('error');
-      Alert.alert('Errore', e?.response?.data?.detail || e?.message || 'Operazione non riuscita');
+      Alert.alert(t('common.error'), e?.response?.data?.detail || e?.message || t('avatar_picker.operation_failed'));
     }
   };
 
   if (Platform.OS === 'ios') {
     const options = hasExisting
-      ? ['Scatta una foto', 'Scegli dalla galleria', 'Rimuovi foto attuale', 'Annulla']
-      : ['Scatta una foto', 'Scegli dalla galleria', 'Annulla'];
+      ? [t('avatar_picker.take_photo'), t('avatar_picker.choose_gallery'), t('avatar_picker.remove_current'), t('common.cancel')]
+      : [t('avatar_picker.take_photo'), t('avatar_picker.choose_gallery'), t('common.cancel')];
     const cancelButtonIndex = options.length - 1;
     const destructiveButtonIndex = hasExisting ? 2 : undefined;
     ActionSheetIOS.showActionSheetWithOptions(
@@ -114,13 +115,13 @@ export function chooseAndUploadAvatar(opts: {
   } else {
     // Android / Web fallback: simple alert with buttons
     const buttons: any[] = [
-      { text: 'Scatta', onPress: () => handlePick('camera') },
-      { text: 'Galleria', onPress: () => handlePick('library') },
+      { text: t('avatar_picker.take'), onPress: () => handlePick('camera') },
+      { text: t('avatar_picker.gallery'), onPress: () => handlePick('library') },
     ];
     if (hasExisting) {
-      buttons.push({ text: 'Rimuovi', style: 'destructive' as const, onPress: () => handlePick('remove') });
+      buttons.push({ text: t('avatar_picker.remove'), style: 'destructive' as const, onPress: () => handlePick('remove') });
     }
-    buttons.push({ text: 'Annulla', style: 'cancel' as const });
-    Alert.alert('Foto profilo', 'Scegli una sorgente', buttons);
+    buttons.push({ text: t('common.cancel'), style: 'cancel' as const });
+    Alert.alert(t('avatar_picker.profile_photo'), t('avatar_picker.choose_source'), buttons);
   }
 }
