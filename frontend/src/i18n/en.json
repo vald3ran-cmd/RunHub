@@ -42,7 +42,9 @@
     "operation_failed": "Operation failed",
     "unable_send_request": "Unable to send request",
     "unable_load_details": "Unable to load details",
-    "fill_all_fields": "Fill in all fields"
+    "fill_all_fields": "Fill in all fields",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
   },
   "tabs": {
     "home": "Home",
@@ -785,7 +787,15 @@
     "add_friend_upper": "ADD FRIEND",
     "stat_km_total": "total km",
     "stat_workouts": "workouts",
-    "stat_badges": "badges"
+    "stat_badges": "badges",
+    "headline_1": "Sweating now: {{N}} RunHubbers 💦",
+    "headline_2": "Track free? {{N}} RunHubbers out there now 🏃‍♂️",
+    "headline_3": "{{N}} RunHubbers crushing km near you 🔥",
+    "headline_4": "{{N}} RunHubbers on the loose nearby 👟",
+    "headline_5": "{{N}} runners burning calories nearby 🚀",
+    "empty_1": "Be the first in the area today! ⚡",
+    "empty_2": "Track empty nearby. Open the dance 🎯",
+    "empty_3": "No RunHubbers in sight. Show them who you are! 💪"
   },
   "wearables": {
     "title": "WEARABLES",
@@ -1046,5 +1056,31 @@
   },
   "wearables_native": {
     "unavailable_msg": "Wearables work only in a native build (not in Expo Go)."
+  },
+  "race_predictor": {
+    "vo2_low": "Good aerobic base, room for improvement",
+    "vo2_medium": "Solid cardio fitness — intermediate level",
+    "vo2_good": "Excellent level — advanced runner",
+    "vo2_elite": "Outstanding — elite level"
+  },
+  "notifications_local": {
+    "channel_default": "RunHub Notifications",
+    "channel_workout": "Workout reminder",
+    "workout_reminder_title": "Time to run! 🏃",
+    "workout_reminder_body": "You have a workout scheduled today. Don't miss it!"
+  },
+  "paywall_debug": {
+    "no_offer_received": "no offer received"
+  },
+  "social_auth_errors": {
+    "apple_failed_title": "Apple sign-in failed",
+    "google_failed_title": "Google sign-in failed",
+    "try_again_later": "Try again later",
+    "server_unreachable": "Server unreachable. Retry in 30 seconds.",
+    "apple_missing_config": "Apple Sign-In configuration missing in this build. Retry after the update.",
+    "apple_not_handled": "Apple Sign-In did not complete the request. Check your connection and retry.",
+    "apple_not_interactive": "Apple Sign-In requires user interaction. Open the app and retry.",
+    "apple_invalid_response": "Invalid Apple response. Retry shortly.",
+    "apple_id_token_missing": "Missing ID token from Google response"
   }
 }

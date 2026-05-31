@@ -42,7 +42,9 @@
     "operation_failed": "Operazione non riuscita",
     "unable_send_request": "Impossibile inviare la richiesta",
     "unable_load_details": "Impossibile caricare i dettagli",
-    "fill_all_fields": "Compila tutti i campi"
+    "fill_all_fields": "Compila tutti i campi",
+    "today": "Oggi",
+    "tomorrow": "Domani"
   },
   "tabs": {
     "home": "Home",
@@ -785,7 +787,15 @@
     "add_friend_upper": "AGGIUNGI AMICO",
     "stat_km_total": "km totali",
     "stat_workouts": "allenamenti",
-    "stat_badges": "badge"
+    "stat_badges": "badge",
+    "headline_1": "Stanno sudando: {{N}} RunHubber 💦",
+    "headline_2": "Pista libera? {{N}} RunHubber in giro ora 🏃‍♂️",
+    "headline_3": "{{N}} RunHubber stanno macinando km vicino a te 🔥",
+    "headline_4": "{{N}} RunHubber a piede libero qui intorno 👟",
+    "headline_5": "{{N}} runner stanno bruciando calorie nei dintorni 🚀",
+    "empty_1": "Sii il primo della zona oggi! ⚡",
+    "empty_2": "Pista vuota qui intorno. Apri tu le danze 🎯",
+    "empty_3": "Nessun RunHubber in vista. Fai vedere chi sei! 💪"
   },
   "wearables": {
     "title": "WEARABLES",
@@ -1046,5 +1056,31 @@
   },
   "wearables_native": {
     "unavailable_msg": "I wearables funzionano solo in build nativa (non in Expo Go)."
+  },
+  "race_predictor": {
+    "vo2_low": "Buona base aerobica, c'è margine di miglioramento",
+    "vo2_medium": "Fitness cardio solida — livello intermedio",
+    "vo2_good": "Ottimo livello — runner avanzato",
+    "vo2_elite": "Eccellente — livello elite"
+  },
+  "notifications_local": {
+    "channel_default": "Notifiche RunHub",
+    "channel_workout": "Promemoria allenamento",
+    "workout_reminder_title": "È ora di correre! 🏃",
+    "workout_reminder_body": "Hai un allenamento in programma oggi. Non perderlo!"
+  },
+  "paywall_debug": {
+    "no_offer_received": "nessuna offerta ricevuta"
+  },
+  "social_auth_errors": {
+    "apple_failed_title": "Accesso Apple fallito",
+    "google_failed_title": "Accesso Google fallito",
+    "try_again_later": "Riprova più tardi",
+    "server_unreachable": "Server non raggiungibile. Riprova tra 30 secondi.",
+    "apple_missing_config": "Configurazione Apple Sign-In mancante in questa build. Riprova dopo l'aggiornamento.",
+    "apple_not_handled": "Apple Sign-In non ha completato la richiesta. Verifica la connessione e riprova.",
+    "apple_not_interactive": "Apple Sign-In richiede interazione utente. Apri l'app e riprova.",
+    "apple_invalid_response": "Risposta Apple non valida. Riprova tra poco.",
+    "apple_id_token_missing": "ID token mancante dalla risposta Google"
   }
 }

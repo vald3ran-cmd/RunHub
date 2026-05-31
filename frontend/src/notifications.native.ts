@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import { api } from './api';
+import { t } from './i18n';
 
 export const isExpoGo = Constants.appOwnership === 'expo';
 // In Expo Go su SDK 53+ expo-notifications funziona parzialmente (local),
@@ -39,13 +40,13 @@ export async function initNotifications() {
     });
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Notifiche RunHub',
+        name: t('notifications_local.channel_default'),
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF3B30',
       });
       await Notifications.setNotificationChannelAsync('workout', {
-        name: 'Promemoria allenamento',
+        name: t('notifications_local.channel_workout'),
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 400, 250, 400],
         lightColor: '#FF3B30',
@@ -103,8 +104,8 @@ export async function scheduleLocalWorkoutReminder(hour: number, minute: number)
   try {
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'E\' ora di correre! 🏃',
-        body: 'Hai un allenamento in programma oggi. Non perderlo!',
+        title: t('notifications_local.workout_reminder_title'),
+        body: t('notifications_local.workout_reminder_body'),
         sound: 'default',
         priority: 'high',
       },

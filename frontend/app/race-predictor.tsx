@@ -102,7 +102,7 @@ export default function RacePredictor() {
                 <Text style={styles.vo2Label}>{t('race.vo2max').toUpperCase()}</Text>
                 <Text style={styles.vo2Value}>{result.vo2max_estimate}</Text>
                 <Text style={styles.vo2Unit}>ml/kg/min</Text>
-                <Text style={styles.vo2Desc}>{vo2Comment(result.vo2max_estimate)}</Text>
+                <Text style={styles.vo2Desc}>{vo2Comment(result.vo2max_estimate, t)}</Text>
               </View>
               <Text style={styles.sectionTitle}>{t('race.predictions').toUpperCase()}</Text>
               {Object.entries(result.predictions).map(([name, p]) => (
@@ -122,11 +122,11 @@ export default function RacePredictor() {
   );
 }
 
-function vo2Comment(v: number) {
-  if (v < 35) return 'Buona base aerobica, c\'e\' margine di miglioramento';
-  if (v < 45) return 'Fitness cardio solida — livello intermedio';
-  if (v < 55) return 'Ottimo livello — runner avanzato';
-  return 'Eccellente — livello elite';
+function vo2Comment(v: number, t: (k: string, o?: any) => string) {
+  if (v < 35) return t('race_predictor.vo2_low');
+  if (v < 45) return t('race_predictor.vo2_medium');
+  if (v < 55) return t('race_predictor.vo2_good');
+  return t('race_predictor.vo2_elite');
 }
 
 const styles = StyleSheet.create({

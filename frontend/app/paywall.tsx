@@ -221,7 +221,7 @@ export default function PaywallScreen() {
           const available = currentOfferings?.availablePackages
             ?.map((p: any) => p.product?.identifier || p.identifier)
             .filter(Boolean)
-            .join('\n• ') || 'nessuna offerta ricevuta';
+            .join('\n• ') || t('paywall_debug.no_offer_received');
           const d = rcDiagnostic;
           const debugInfo =
             `\n\n— DEBUG RC —\n` +

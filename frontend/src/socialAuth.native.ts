@@ -83,7 +83,7 @@ export async function signInWithGoogle(): Promise<{ token: string; user: any } |
     // v16+ returns { type: 'success', data: {...} }; older returns data directly
     const data = userInfo?.data || userInfo;
     const idToken = data?.idToken || data?.user?.idToken;
-    if (!idToken) throw new Error('ID token mancante dalla risposta Google');
+    if (!idToken) throw new Error(t('social_auth_errors.apple_id_token_missing'));
     const { data: resp } = await api.post('/auth/google', { id_token: idToken });
     return resp;
   } catch (e: any) {
@@ -188,8 +188,8 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
     const status = lastErr?.response?.status;
     console.error('[SocialAuth] Apple backend rejected token', { status, detail });
     Alert.alert(
-      'Accesso Apple fallito',
-      (typeof detail === 'string' ? detail : 'Server non raggiungibile. Riprova tra 30 secondi.') +
+      t('social_auth_errors.apple_failed_title'),
+      (typeof detail === 'string' ? detail : t('social_auth_errors.server_unreachable')) +
         `\n\n— DEBUG —\nStep: ${step}\nStatus: ${status || 'n/a'}\n` + diag
     );
     return null;
@@ -198,18 +198,18 @@ export async function signInWithApple(): Promise<{ token: string; user: any } | 
     if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') return null;
     console.error('[SocialAuth] Apple sign in error', { code: e?.code, message: e?.message });
     const code = e?.code || '';
-    let message = e?.message || 'Riprova piu\' tardi';
+    let message = e?.message || t('social_auth_errors.try_again_later');
     if (code === 'ERR_REQUEST_UNKNOWN') {
-      message = 'Configurazione Apple Sign-In mancante in questa build. Riprova dopo l\'aggiornamento.';
+      message = t('social_auth_errors.apple_missing_config');
     } else if (code === 'ERR_REQUEST_NOT_HANDLED' || code === 'ERR_REQUEST_FAILED') {
-      message = 'Apple Sign-In non ha completato la richiesta. Verifica la connessione e riprova.';
+      message = t('social_auth_errors.apple_not_handled');
     } else if (code === 'ERR_REQUEST_NOT_INTERACTIVE') {
-      message = 'Apple Sign-In richiede interazione utente. Apri l\'app e riprova.';
+      message = t('social_auth_errors.apple_not_interactive');
     } else if (code === 'ERR_REQUEST_INVALID_RESPONSE') {
-      message = 'Risposta Apple non valida. Riprova tra poco.';
+      message = t('social_auth_errors.apple_invalid_response');
     }
     Alert.alert(
-      'Accesso Apple fallito',
+      t('social_auth_errors.apple_failed_title'),
       message + `\n\n— DEBUG —\nStep: ${step}\nCode: ${code || 'n/a'}\n` + diag
     );
     return null;

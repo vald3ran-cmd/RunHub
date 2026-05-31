@@ -45,7 +45,7 @@ type PlanLite = {
 };
 
 export default function Home() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const { user } = useAuth();
   const [progress, setProgress] = useState<Progress | null>(null);
   const [activePlan, setActivePlan] = useState<PlanLite | null>(null);
@@ -254,7 +254,7 @@ export default function Home() {
                 {nextWorkout.distance_km
                   ? `${nextWorkout.distance_km} km`
                   : (nextWorkout.type || t('common.workout'))}
-                {nextWorkout.scheduled_for ? ` · ${fmtSchedule(nextWorkout.scheduled_for)}` : ''}
+                {nextWorkout.scheduled_for ? ` · ${fmtSchedule(nextWorkout.scheduled_for, t, locale)}` : ''}
               </Text>
             </View>
             <ChevronRight size={22} color={colors.textSecondary} />
@@ -402,7 +402,7 @@ function fmtTimeHours(s: number) {
 }
 function pad2(n: number) { return n < 10 ? `0${n}` : `${n}`; }
 
-function fmtSchedule(iso: string) {
+function fmtSchedule(iso: string, t: (k: string, o?: any) => string, locale: string) {
   try {
     const d = new Date(iso);
     const now = new Date();
@@ -410,9 +410,10 @@ function fmtSchedule(iso: string) {
     const sameDay = d.toDateString() === now.toDateString();
     const isTomorrow = d.toDateString() === tomorrow.toDateString();
     const hh = pad2(d.getHours()); const mm = pad2(d.getMinutes());
-    if (sameDay) return `Oggi · ${hh}:${mm}`;
-    if (isTomorrow) return `Domani · ${hh}:${mm}`;
-    return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) + ` · ${hh}:${mm}`;
+    if (sameDay) return `${t('common.today')} · ${hh}:${mm}`;
+    if (isTomorrow) return `${t('common.tomorrow')} · ${hh}:${mm}`;
+    const dtTag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT';
+    return d.toLocaleDateString(dtTag, { weekday: 'short', day: 'numeric', month: 'short' }) + ` · ${hh}:${mm}`;
   } catch { return iso; }
 }
 

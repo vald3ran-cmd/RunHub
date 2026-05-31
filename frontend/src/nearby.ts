@@ -105,25 +105,15 @@ export async function setNearbyVisibility(visible: boolean): Promise<boolean> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Funny rotating headlines for the Home widget
+// Funny rotating headlines for the Home widget — i18n-aware via i18n keys
 // ──────────────────────────────────────────────────────────────
-const HEADLINES = [
-  'Stanno sudando: {N} RunHubber 💦',
-  'Pista libera? {N} RunHubber in giro ora 🏃‍♂️',
-  '{N} RunHubber stanno macinando km vicino a te 🔥',
-  '{N} RunHubber a piede libero qui intorno 👟',
-  '{N} runner stanno bruciando calorie nei dintorni 🚀',
-];
-const EMPTY_HEADLINES = [
-  'Sii il primo della zona oggi! ⚡',
-  'Pista vuota qui intorno. Apri tu le danze 🎯',
-  'Nessun RunHubber in vista. Fai vedere chi sei! 💪',
-];
+import { t } from './i18n';
 
 export function pickHeadline(count: number): string {
   if (count <= 0) {
-    return EMPTY_HEADLINES[Math.floor(Math.random() * EMPTY_HEADLINES.length)];
+    const idx = Math.floor(Math.random() * 3) + 1;
+    return t(`nearby.empty_${idx}`);
   }
-  const tpl = HEADLINES[Math.floor(Math.random() * HEADLINES.length)];
-  return tpl.replace('{N}', String(count));
+  const idx = Math.floor(Math.random() * 5) + 1;
+  return t(`nearby.headline_${idx}`, { N: count });
 }

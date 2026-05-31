@@ -22,7 +22,8 @@ type Stats = {
 
 export default function WearablesScreen() {
   const router = useRouter();
-  const { t } = useT();
+  const { t, locale } = useT();
+  const numLocale = locale === 'es' ? 'es-ES' : locale === 'en' ? 'en-US' : 'it-IT';
   const [today, setToday] = useState<Stats>({});
   const [history, setHistory] = useState<Stats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +145,7 @@ export default function WearablesScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>WEARABLES</Text>
+        <Text style={styles.title}>{t('wearables.title')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -208,14 +209,14 @@ export default function WearablesScreen() {
           <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
         ) : (
           <View style={styles.grid}>
-            <StatCard icon="walk" label={t('wearables.steps')} value={(today.steps ?? 0).toLocaleString('it-IT')} />
+            <StatCard icon="walk" label={t('wearables.steps')} value={(today.steps ?? 0).toLocaleString(numLocale)} />
             <StatCard icon="map" label="KM" value={(today.distance_km ?? 0).toFixed(2)} />
             <StatCard icon="flame" label="KCAL" value={Math.round(today.active_calories ?? 0).toString()} />
             <StatCard icon="heart" label="BPM" value={today.heart_rate_avg ? Math.round(today.heart_rate_avg).toString() : '—'} />
           </View>
         )}
         <Text style={styles.meta}>
-          {today.updated_at ? t('wearables.last_sync', { when: new Date(today.updated_at).toLocaleString('it-IT') }) : t('wearables.no_data_today')}
+          {today.updated_at ? t('wearables.last_sync', { when: new Date(today.updated_at).toLocaleString(numLocale) }) : t('wearables.no_data_today')}
           {today.platform ? ` · ${platformLabel}` : ''}
         </Text>
 
@@ -224,9 +225,9 @@ export default function WearablesScreen() {
           <Text style={styles.emptyText}>{t('wearables.no_sync_7_days')}</Text>
         ) : history.map((d, i) => (
           <View key={i} style={styles.histRow}>
-            <Text style={styles.histDate}>{new Date(d.date as any).toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' })}</Text>
+            <Text style={styles.histDate}>{new Date(d.date as any).toLocaleDateString(numLocale, { weekday: 'short', day: '2-digit', month: '2-digit' })}</Text>
             <View style={{ flex: 1, flexDirection: 'row', gap: spacing.md, justifyContent: 'flex-end' }}>
-              <Text style={styles.histStat}>{(d.steps ?? 0).toLocaleString('it-IT')} {t('wearables.steps_short')}</Text>
+              <Text style={styles.histStat}>{(d.steps ?? 0).toLocaleString(numLocale)} {t('wearables.steps_short')}</Text>
               <Text style={styles.histStat}>{(d.distance_km ?? 0).toFixed(1)} {t('wearables.km_short')}</Text>
             </View>
           </View>

@@ -365,7 +365,9 @@ export default function SocialScreen() {
 }
 
 function FeedCard({ item, onLike, onComments }: { item: FeedItem; onLike: () => void; onComments: () => void }) {
-  const dateStr = new Date(item.completed_at).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const { locale } = useT();
+  const dtTag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT';
+  const dateStr = new Date(item.completed_at).toLocaleString(dtTag, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   const fmt = (s: number) => {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
