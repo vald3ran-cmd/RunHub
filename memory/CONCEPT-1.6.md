@@ -162,22 +162,45 @@ Setting in **Profile → Aspetto → ◯ Auto · ◯ Light · ◯ Dark**.
 
 ## 6. Nuova architettura informativa
 
-### Tab bar floating glass (5 voci)
+### Tab bar definitiva (5 voci, decisione 9 giu)
 ```
-🏠 Home    🔬 Lab    ⌚ Import    📅 Plan    👤 Profile
+🔬 LAB    📋 SESSIONI    ⌚ IMPORTA    🎯 ALLENAMENTI    👤 PROFILO
 ```
 
 | Tab | Contenuto |
 |---|---|
-| **Home** | Greeting + AI Insight ultimo + prossimo allenamento + CTA "Importa qualcosa" |
-| **Lab** | 🌟 Cuore della 1.6 — dashboard analytics, sessioni importate, KPI |
-| **Import** | Centro connessioni (HealthKit, Health Connect, file upload) + secondary "Corri col telefono" |
-| **Plan** | Piani AI + libreria predefinita |
-| **Profile** | Account, abbonamento, settings, traguardi |
+| **LAB** | Run Score · AI Insight · Traiettoria · Carico · Recupero · Prossimo allenamento — **stop, niente clutter** |
+| **SESSIONI** | Lista cronologica + filtri + selezione multipla → "Confronta" come funzione |
+| **IMPORTA** | HealthKit · Health Connect · File `.fit/.gpx/.tcx` · Phone GPS (secondary action) |
+| **ALLENAMENTI** | Toggle **PIANO ↔ OBIETTIVI** — piano AI + previsione gara + probabilità target |
+| **PROFILO** | Account · Abbonamento · Settings · **Analytics** (PR · Weekly Volume · Heatmap · Storico) |
 
 ### Cosa scompare
-- Tab **History** → diventa lista cronologica dentro Lab
-- Tab **Run** come primary → diventa secondary action dentro Import
+- Tab **History** → diventa lista in SESSIONI
+- Tab **Run** primary → diventa secondary action in IMPORTA
+- **Confronta** come tab → diventa funzione interna a SESSIONI (selezione multipla)
+
+### Razionale "Obiettivi dentro Allenamenti"
+Obiettivi NON va in Profilo: è la risposta motivazionale al "perché?" del piano. Mettere PIANO e OBIETTIVI nello stesso posto crea un loop psicologico potente:
+
+```
+OBIETTIVO (10K sotto 50min entro settembre)
+  → PROBABILITÀ (76% — sei in time)
+  → PIANO settimana (sessioni concrete)
+  → motivazione attiva ogni apertura tab
+```
+
+### Contenuto schermata Sessione (dettaglio)
+- Mappa GPS (mini, tap → full)
+- Chip fonte dati: ⌚ Apple Watch / 🅖 Garmin / 📱 Phone / 📄 File
+- KPI grid 4+4 (incl. **Cadenza**)
+- Grafici Pace / HR / Altitude + opzione overlay
+- **Splits per km** (tabella semantica)
+- Valutazione AI 8.2/10 + commento
+- HR Zones distribution
+- Analisi avanzata: GAP · Decoupling · Training Effect · Efficienza
+- Confronto: vs ultima · vs media 30g · **vs PR**
+- CTA footer: Share · Trova simili · Modifica
 
 ---
 
@@ -287,20 +310,27 @@ Slide story 5-frame full-screen al primo avvio dopo upgrade:
 | Lab AI Insights | In cima | ✅ Approvata |
 | Brand name | "RunHub" resta | ✅ Approvata |
 | Design direction | Scientific Light (con dark optional) | ✅ Approvata |
-
----
+| **Tab bar finale** | LAB · SESSIONI · IMPORTA · ALLENAMENTI · PROFILO | ✅ Approvata 9 giu |
+| **Confronta** | Funzione interna SESSIONI (no tab) | ✅ Approvata 9 giu |
+| **Obiettivi** | Dentro ALLENAMENTI come toggle con PIANO | ✅ Approvata 9 giu |
+| **Hero Lab** | Run Score 82 A- · sotto CARICO/RECUPERO/FATICA (no più FORMA) | ✅ Approvata 9 giu |
+| **Palette** | Arancio/Verde/Arancio/Rosso/Blu — **no viola** | ✅ Approvata 9 giu |
+| **Lab content** | Minimal: Score+AI+Trend+Carico+Recupero+Next workout | ✅ Approvata 9 giu |
+| **Sessione detail** | +Splits +Mappa +Cadenza +Source chip +CTA footer | ✅ Approvata 9 giu |
+| **Profilo Analytics** | PR · Weekly Volume · Heatmap · Storico progressi | ✅ Approvata 9 giu |
 
 ## 14. Aperte / da decidere
 
 | # | Domanda | Owner |
 |---|---|---|
-| Tab bar redesign | Floating glass o classic? | Federico |
+| Naming "Sessioni" | tenuto o cambio in Diario/Storico? | Federico |
 | Onboarding showcase | 5 slide o 3? | Federico |
 | Logo refresh | Sì/no/leggero? | Federico |
 | Dark mode default | Auto / Light / Dark? | Federico |
 | Tagline finale | Tra le 3 candidate? | Federico |
 | AI Insight cadenza | Settimanale, daily, post-run? | Federico |
-| Phone tracking destination | Dentro Import o resta tab separata "Run"? | Federico |
+| Icona tab "Importa" | Smartwatch+freccia? Plug? Sync? | Federico |
+| Toggle Piano/Obiettivi | Layout: segmented control / tab / 2 cards? | Federico |
 
 ---
 
