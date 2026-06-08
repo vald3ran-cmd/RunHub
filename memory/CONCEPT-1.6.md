@@ -204,24 +204,47 @@ OBIETTIVO (10K sotto 50min entro settembre)
 
 ---
 
-## 7. Modello free/paid ridisegnato
+## 7. Modello free/paid — Lab Edition (4 tier confermati 9 giu)
 
-| Feature | Free | Starter (4.99€) | Performance (9.99€) | Elite (19.99€) |
+**Sconto annuale: −20% su tutti i tier paganti**
+
+| Feature | Free | Starter €4,99 | Performance €9,99 | Elite €19,99 |
 |---|:---:|:---:|:---:|:---:|
-| Import HealthKit/Health Connect | ✅ illimitato | ✅ | ✅ | ✅ |
+| Import HealthKit / Health Connect | ✅ | ✅ | ✅ | ✅ |
+| Dispositivi connessi | **3** | illimitati | illimitati | illimitati |
+| File upload `.fit/.gpx/.tcx` | 5/mese | 30/mese | illimitati | illimitati |
+| Sincronizzazione automatica | ❌ | ✅ | ✅ | ✅ |
 | Storia importata illimitata | ✅ | ✅ | ✅ | ✅ |
 | GPS phone tracking | ✅ | ✅ | ✅ | ✅ |
-| **Piani predefiniti** | ✅ tutti (NEW!) | ✅ | ✅ | ✅ |
+| Dettaglio sessione base (mappa, splits) | ✅ | ✅ | ✅ | ✅ |
+| Run Score giornaliero | ✅ | ✅ | ✅ | ✅ |
+| **Heatmap** | ✅ | ✅ | ✅ | ✅ |
 | AI Insight settimanale | ❌ | ❌ | ✅ | ✅ |
-| **AI Coach personal plans** | ❌ | ✅ (NEW!) | ✅ | ✅ |
-| Lab base (zones, splits, GAP) | ❌ | ✅ | ✅ | ✅ |
 | Training Load (CTL/ATL/TSB) | ❌ | ❌ | ✅ | ✅ |
-| Aerobic decoupling, EF, VO2max trend | ❌ | ❌ | ❌ | ✅ |
-| Race predictor avanzato | ❌ | ❌ | ❌ | ✅ |
-| Compare runs side-by-side | ❌ | ❌ | ❌ | ✅ |
-| Ads | banner + interstitial | ❌ | ❌ | ❌ |
+| HR Zones distribution | ❌ | ✅ | ✅ | ✅ |
+| GAP / Decoupling / Training Effect | ❌ | ❌ | ✅ | ✅ |
+| Aerobic decoupling avanzato + EF trend + VO2max trend | ❌ | ❌ | ❌ | ✅ |
+| Piani predefiniti | ✅ tutti | ✅ | ✅ | ✅ |
+| **AI Coach personal plans** | ❌ | ✅ | ✅ | ✅ |
+| Adattamento piano settimanale | ❌ | ❌ | ✅ | ✅ |
+| Obiettivi gara | 1 | 3 | illimitati | illimitati |
+| **Race predictor base** (4 distanze) | ✅ | ✅ | ✅ | ✅ |
+| Race predictor + AI suggestions | ❌ | ✅ | ✅ | ✅ avanzato |
+| vs Ultima sessione | ✅ | ✅ | ✅ | ✅ |
+| vs Media 30 giorni | ❌ | ✅ | ✅ | ✅ |
+| vs Miglior performance / PR | ❌ | ❌ | ✅ | ✅ |
+| Compare 2 sessioni side-by-side | ❌ | ❌ | ✅ | ✅ |
+| Personal Records | ✅ | ✅ | ✅ | ✅ |
+| Volume settimanale | ✅ | ✅ | ✅ | ✅ |
+| Storico progressi 4+ settimane | ❌ | ✅ | ✅ | ✅ |
+| Export dati `.csv` / `.json` | ❌ | ❌ | ❌ | ✅ |
+| AI weekly review post-settimana | ❌ | ❌ | ❌ | ✅ |
+| Coaching DM con AI (chat) | ❌ | ❌ | ❌ | ✅ |
+| Confronto con altri runner (anonimo) | ❌ | ❌ | ❌ | ✅ |
+| Banner ads | ✅ | ❌ | ❌ | ❌ |
+| Interstitial post-run | 1/5 corse | ❌ | ❌ | ❌ |
 
-**Insight strategico**: Free diventa drasticamente più generoso. Il pagamento si sposta verso **analisi avanzate + coaching personalizzato**.
+**Insight strategico**: Free drasticamente più generoso (Heatmap, PR, Race predictor base, storia illimitata). Il pagamento si sposta verso analisi avanzate, AI Coach personal, training load. Starter sblocca l'AI Coach (decisione cardine).
 
 ---
 
