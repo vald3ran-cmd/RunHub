@@ -1,20 +1,23 @@
 /**
- * Lab Preview — replica fedele dello screen Lab Edition (mockup ufficiale).
- * Pubblicamente accessibile via /lab-preview per validazione design.
+ * Lab — Tab principale (RunHub 1.6.0 Lab Edition).
+ * Dashboard analytics: Run Score · AI Insight · Carico · Recupero · Trend · Next workout.
+ *
+ * Per ora i dati sono mock; verranno collegati ad API reali quando i flussi
+ * di import (HealthKit / Health Connect / file) saranno disponibili.
  */
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Bell, TrendingUp, ChevronRight, Calendar, Watch, Download, User, BookOpen, FlaskConical } from 'lucide-react-native';
+import { Bell, TrendingUp, ChevronRight } from 'lucide-react-native';
 import {
   tokens, FontProvider,
-  Card, Chip, KpiTile, InsightCard, ZoneBar, LineChart,
-} from '../src/design-system';
+  Card, KpiTile, InsightCard, ZoneBar, LineChart,
+} from '../../src/design-system';
 
-const { brand, neutral, text, semantic, spacing, typography, radius, hrZones } = tokens;
+const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
-// ─── MOCK DATA ───────────────────────────────────────────────
+// ─── MOCK DATA (sarà sostituito da API quando Lab data layer sarà pronto) ──
 const runScoreTrend = [70, 72, 71, 75, 73, 78, 76, 79, 80, 78, 81, 80, 82];
 const ctlData = [28, 30, 32, 33, 35, 36, 37, 38];
 const atlData = [25, 28, 32, 38, 40, 42, 43, 42];
@@ -29,7 +32,7 @@ function LabInner() {
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.brandRow}>
-          <Image source={require('../assets/lab/logo-symbol.png')} style={styles.brandLogo} />
+          <Image source={require('../../assets/lab/logo-symbol.png')} style={styles.brandLogo} />
           <Text style={styles.brandText}>RunHub <Text style={{ color: brand.primary }}>LAB</Text></Text>
         </View>
         <View style={styles.headerRight}>
@@ -123,17 +126,21 @@ function LabInner() {
         </Card>
 
         {/* PROSSIMO ALLENAMENTO */}
-        <View style={styles.nextWorkout}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.nextWorkout}
+          onPress={() => router.push('/(tabs)/allenamenti')}
+        >
           <View style={{ flex: 1 }}>
             <Text style={styles.nextLabel}>PROSSIMO ALLENAMENTO</Text>
             <Text style={styles.nextTitle}>Easy Run 8 km</Text>
             <Text style={styles.nextMeta}>Z2 · Aerobica · ~45 min</Text>
           </View>
-          <TouchableOpacity style={styles.nextCta}>
+          <View style={styles.nextCta}>
             <Text style={styles.nextCtaText}>VEDI DETTAGLI</Text>
             <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
         {/* PREVISIONE PRESTAZIONI */}
         <Card>
@@ -159,17 +166,8 @@ function LabInner() {
           <ZoneBar z1={22} z2={41} z3={24} z4={9} z5={4} />
         </Card>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* TAB BAR BOTTOM */}
-      <View style={styles.tabBar}>
-        <TabItem Icon={FlaskConical} label="Lab" active />
-        <TabItem Icon={BookOpen} label="Diario" />
-        <TabItem Icon={Watch} label="Importa" />
-        <TabItem Icon={Calendar} label="Allenamenti" />
-        <TabItem Icon={User} label="Profilo" />
-      </View>
     </SafeAreaView>
   );
 }
@@ -195,17 +193,7 @@ function PredCol({ distance, time, delta }: { distance: string; time: string; de
   );
 }
 
-function TabItem({ Icon, label, active }: { Icon: any; label: string; active?: boolean }) {
-  const color = active ? brand.primary : text.muted;
-  return (
-    <View style={styles.tabItem}>
-      <Icon size={22} color={color} strokeWidth={active ? 2.2 : 1.8} />
-      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
-    </View>
-  );
-}
-
-export default function LabPreviewScreen() {
+export default function LabScreen() {
   return (
     <FontProvider>
       <LabInner />
@@ -288,15 +276,4 @@ const styles = StyleSheet.create({
   predDistance: { ...typography.kpiLabel, color: text.muted, fontSize: 10 },
   predTime: { ...typography.kpiValue, color: text.primary, fontSize: 18, marginTop: 4 },
   predDelta: { ...typography.caption, color: semantic.success, marginTop: 2, fontFamily: typography.monoInline.fontFamily, fontSize: 11 },
-
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: neutral.card,
-    borderTopWidth: 1,
-    borderTopColor: neutral.border,
-    paddingVertical: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  tabItem: { flex: 1, alignItems: 'center', gap: 4 },
-  tabLabel: { ...typography.caption, fontSize: 10, letterSpacing: 0.3 },
 });

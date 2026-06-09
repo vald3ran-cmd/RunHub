@@ -209,7 +209,7 @@ function RootNav() {
       if (!user.onboarding_completed) {
         router.replace('/onboarding');
       } else {
-        router.replace('/(tabs)/home');
+        router.replace('/(tabs)/lab');
       }
     }
   }, [user, loading, segments]);

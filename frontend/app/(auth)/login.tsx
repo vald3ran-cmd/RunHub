@@ -34,7 +34,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/lab');
     } catch (e: any) {
       const d = e?.response?.data?.detail;
       setError(typeof d === 'string' ? d : t('auth.login_failed'));

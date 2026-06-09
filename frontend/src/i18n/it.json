@@ -51,7 +51,11 @@
     "plans": "Piani",
     "history": "Storico",
     "profile": "Profilo",
-    "dashboard": "Stats"
+    "dashboard": "Stats",
+    "lab": "Lab",
+    "diario": "Diario",
+    "importa": "Importa",
+    "allenamenti": "Allenamenti"
   },
   "home": {
     "greeting": "Ciao {{name}}!",

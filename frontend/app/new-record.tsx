@@ -67,7 +67,7 @@ export default function NewRecord() {
     if (sessionId) {
       router.replace({ pathname: '/workout/[id]', params: { id: sessionId } });
     } else {
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/lab');
     }
   };
 

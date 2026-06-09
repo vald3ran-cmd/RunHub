@@ -25,7 +25,7 @@ export function SocialAuthButtons({ mode = 'login' }: Props) {
     if (!user?.onboarding_completed) {
       router.replace('/onboarding');
     } else {
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/lab');
     }
   };
 

@@ -116,7 +116,7 @@ export default function PlanDetail() {
                 <TouchableOpacity
                   testID="locked-plan-home-button"
                   style={styles.homeBtn}
-                  onPress={() => router.replace('/(tabs)/home')}
+                  onPress={() => router.replace('/(tabs)/lab')}
                   activeOpacity={0.85}
                 >
                   <Home size={14} color={colors.textPrimary} strokeWidth={2.4} />

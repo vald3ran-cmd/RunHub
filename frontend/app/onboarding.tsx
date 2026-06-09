@@ -44,7 +44,7 @@ export default function Onboarding() {
     try {
       await api.post('/onboarding', { level, goal, days_per_week: days });
       await refresh();
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/lab');
     } catch (e: any) {
       Alert.alert(t('common.error'), t('onboarding.save_failed'));
     } finally { setSaving(false); }

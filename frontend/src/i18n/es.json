@@ -51,7 +51,11 @@
     "plans": "Planes",
     "history": "Historial",
     "profile": "Perfil",
-    "dashboard": "Stats"
+    "dashboard": "Stats",
+    "lab": "Lab",
+    "diario": "Diario",
+    "importa": "Importar",
+    "allenamenti": "Entrenos"
   },
   "home": {
     "greeting": "¡Hola {{name}}!",

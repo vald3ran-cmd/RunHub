@@ -51,7 +51,11 @@
     "plans": "Plans",
     "history": "History",
     "profile": "Profile",
-    "dashboard": "Stats"
+    "dashboard": "Stats",
+    "lab": "Lab",
+    "diario": "Journal",
+    "importa": "Import",
+    "allenamenti": "Workouts"
   },
   "home": {
     "greeting": "Hi {{name}}!",

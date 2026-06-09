@@ -9,3 +9,4 @@ export { InsightCard } from './components/InsightCard';
 export { Button } from './components/Button';
 export { ZoneBar } from './components/ZoneBar';
 export { SessionCard } from './components/SessionCard';
+export { LineChart } from './components/LineChart';
