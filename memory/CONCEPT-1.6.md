@@ -9,10 +9,10 @@
 
 ## 1. Tagline
 
-> **"Il tuo laboratorio di running. Powered by AI."**
+> **"Importa. Analizza. Migliora."** ← decisione finale 9 giu
 
-Alternative:
-- *"Importa. Analizza. Migliora."*
+Alternative valutate:
+- *"Il tuo laboratorio di running. Powered by AI."*
 - *"I tuoi dati. Il tuo coach. Il tuo prossimo PR."*
 - *"Lascia il telefono a casa. Corri col tuo watch. Noi ci pensiamo al resto."*
 

@@ -194,7 +194,7 @@ function RootNav() {
     const inOnboarding = segments[0] === 'onboarding';
     const inCompleteProfile = String(segments[1] || '') === 'complete-profile';
     // Public routes accessible without auth (legal documents must be readable pre-signup)
-    const PUBLIC_ROUTES = ['terms', 'privacy'];
+    const PUBLIC_ROUTES = ['terms', 'privacy', 'lab-preview'];
     const isPublic = PUBLIC_ROUTES.includes(String(segments[0] || ''));
     if (!user && !inAuth && !isPublic) {
       router.replace('/(auth)/login');
