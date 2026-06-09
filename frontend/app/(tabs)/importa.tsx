@@ -1,23 +1,103 @@
 /**
- * Importa — Hub di connessione dispositivi e file.
- * Cards: Apple HealthKit · Health Connect Android · File upload · Phone GPS (secondary).
- * Per ora stato 'placeholder' — l'implementazione reale arriva con HealthKit integration (P0).
+ * Importa — Hub di connessione dispositivi e file (RunHub 1.6 Lab Edition).
+ *
+ * Sorgenti:
+ *  - Apple HealthKit  (richiede build nativo iOS — non funziona in Expo Go)
+ *  - Health Connect Android (placeholder — implementazione futura)
+ *  - File upload .fit / .gpx / .tcx (funziona già, anche su web)
+ *  - Phone GPS (sorgente secondaria — apre la tab Run)
  */
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar, Platform, ActivityIndicator, Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   Apple, Smartphone, FileUp, Watch, ChevronRight, Cloud, Activity,
+  CheckCircle2, AlertCircle,
 } from 'lucide-react-native';
 import { tokens, FontProvider, Card } from '../../src/design-system';
+import { useAuth } from '../../src/auth';
+import { pickAndImportFile, getImportQuota, ImportQuota, ImportResult } from '../../src/fileImporter';
+import { connectAndImport, isHealthKitSupported, healthKitStatusReason, ImportBatchResult } from '../../src/healthkit';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
 function ImportaInner() {
   const router = useRouter();
+  const { user } = useAuth();
   const isIOS = Platform.OS === 'ios';
   const isAndroid = Platform.OS === 'android';
+
+  const [quota, setQuota] = useState<ImportQuota | null>(null);
+  const [fileImporting, setFileImporting] = useState(false);
+  const [hkImporting, setHkImporting] = useState(false);
+  const [lastResult, setLastResult] = useState<
+    | { kind: 'file'; data: ImportResult }
+    | { kind: 'health'; data: ImportBatchResult }
+    | null
+  >(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Carica quota all'ingresso
+  useEffect(() => {
+    if (!user) return;
+    getImportQuota().then(setQuota).catch((e) => {
+      console.warn('[importa] quota fetch failed:', e);
+    });
+  }, [user]);
+
+  // ─── Handler: upload file ───────────────────────────────
+  const onPickFile = async () => {
+    if (fileImporting) return;
+    setErrorMsg(null);
+    setFileImporting(true);
+    try {
+      const result = await pickAndImportFile();
+      if (!result) {
+        setFileImporting(false);
+        return; // user canceled
+      }
+      setLastResult({ kind: 'file', data: result });
+      setQuota(result.import_quota);
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.message || 'Errore durante l\'import del file.';
+      console.warn('[importa] file upload error:', msg);
+      setErrorMsg(msg);
+      if (Platform.OS === 'web') {
+        // su web Alert.alert non blocca: mostriamo solo via state
+      } else {
+        Alert.alert('Import non riuscito', msg);
+      }
+    } finally {
+      setFileImporting(false);
+    }
+  };
+
+  // ─── Handler: Apple HealthKit ───────────────────────────
+  const onConnectHealthKit = async () => {
+    if (hkImporting) return;
+    setErrorMsg(null);
+
+    const reason = healthKitStatusReason();
+    if (reason) {
+      setErrorMsg(reason);
+      if (Platform.OS !== 'web') Alert.alert('Apple Salute', reason);
+      return;
+    }
+    setHkImporting(true);
+    try {
+      const result = await connectAndImport(90);
+      setLastResult({ kind: 'health', data: result });
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.message || 'Impossibile collegare Apple Salute.';
+      setErrorMsg(msg);
+      if (Platform.OS !== 'web') Alert.alert('Apple Salute', msg);
+    } finally {
+      setHkImporting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -29,13 +109,57 @@ function ImportaInner() {
           Collega il tuo smartwatch o carica file. RunHub Lab analizza i dati per te.
         </Text>
 
-        {/* STATUS BANNER */}
+        {/* STATUS BANNER + QUOTA */}
         <View style={styles.statusBanner}>
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>
-            Nessuna sorgente connessa  ·  <Text style={{ color: text.muted }}>3 disponibili</Text>
+            {quota
+              ? (quota.is_unlimited
+                  ? <>Tier <Text style={{ fontWeight: '700' }}>{quota.tier.toUpperCase()}</Text> · Import illimitati</>
+                  : <>Import questo mese: <Text style={{ fontWeight: '700' }}>{quota.used_this_month}/{quota.monthly_limit}</Text></>
+                )
+              : 'Caricamento quota import…'
+            }
           </Text>
         </View>
+
+        {/* SUCCESS BANNER */}
+        {lastResult ? (
+          <View style={styles.successBanner}>
+            <CheckCircle2 size={18} color={semantic.success} strokeWidth={2.4} />
+            <View style={{ flex: 1 }}>
+              {lastResult.kind === 'file' ? (
+                <>
+                  <Text style={styles.successTitle}>Import completato</Text>
+                  <Text style={styles.successBody}>
+                    {lastResult.data.title} · {lastResult.data.distance_km.toFixed(2)} km · {Math.round(lastResult.data.duration_seconds / 60)} min
+                  </Text>
+                  <TouchableOpacity onPress={() => router.push(`/workout/${lastResult.data.session_id}`)}>
+                    <Text style={styles.successLink}>APRI DETTAGLI →</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.successTitle}>Apple Salute sincronizzato</Text>
+                  <Text style={styles.successBody}>
+                    {lastResult.data.inserted} nuovi · {lastResult.data.updated} aggiornati · {lastResult.data.skipped} saltati · {lastResult.data.total} totali
+                  </Text>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/diario')}>
+                    <Text style={styles.successLink}>VAI AL DIARIO →</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        ) : null}
+
+        {/* ERROR BANNER */}
+        {errorMsg ? (
+          <View style={styles.errorBanner}>
+            <AlertCircle size={18} color={semantic.danger} strokeWidth={2.4} />
+            <Text style={styles.errorText} numberOfLines={3}>{errorMsg}</Text>
+          </View>
+        ) : null}
 
         {/* PRIMARY SOURCES */}
         <Text style={styles.sectionLabel}>SORGENTI PRINCIPALI</Text>
@@ -47,7 +171,16 @@ function ImportaInner() {
           title="Apple HealthKit"
           desc="Importa Apple Watch, iPhone & app collegate (Strava, Garmin, Polar)."
           available={isIOS}
-          subnote={isIOS ? 'Backfill ultimi 90 giorni in ~10 secondi' : 'Disponibile solo su iOS'}
+          loading={hkImporting}
+          subnote={
+            isIOS
+              ? (isHealthKitSupported()
+                  ? 'Backfill ultimi 90 giorni · richiede iOS build nativo'
+                  : '⚠️ Funziona solo in app build nativa (non Expo Go)')
+              : 'Disponibile solo su iPhone'
+          }
+          ctaLabel={isIOS ? 'CONNETTI' : undefined}
+          onPress={isIOS ? onConnectHealthKit : undefined}
         />
 
         <SourceCard
@@ -57,7 +190,7 @@ function ImportaInner() {
           title="Health Connect"
           desc="Importa Samsung Health, Google Fit, Garmin, Polar, Wahoo, Coros, Suunto."
           available={isAndroid}
-          subnote={isAndroid ? 'Backfill ultimi 90 giorni in ~10 secondi' : 'Disponibile solo su Android'}
+          subnote={isAndroid ? 'In arrivo · richiede build nativo Android' : 'Disponibile solo su Android'}
         />
 
         <SourceCard
@@ -67,7 +200,17 @@ function ImportaInner() {
           title="Carica file .fit / .gpx / .tcx"
           desc="Esportati da qualsiasi piattaforma. Anche via Condividi da Strava/Garmin Connect."
           available={true}
-          subnote="Free: 5/mese · Starter: 30/mese · Performance+: illimitati"
+          loading={fileImporting}
+          subnote={
+            quota
+              ? (quota.is_unlimited
+                  ? `${quota.tier.charAt(0).toUpperCase()}${quota.tier.slice(1)} · import illimitati`
+                  : `Free: 5/mese · Starter: 30/mese · ${quota.remaining ?? 0} ancora disponibili`
+                )
+              : 'Free: 5/mese · Starter: 30/mese · Performance+: illimitati'
+          }
+          ctaLabel="CARICA"
+          onPress={onPickFile}
         />
 
         {/* SECONDARY */}
@@ -104,7 +247,7 @@ function ImportaInner() {
             <Watch size={18} color={text.muted} strokeWidth={2} />
             <View style={{ flex: 1 }}>
               <Text style={styles.comingTitle}>Strava OAuth nativo</Text>
-              <Text style={styles.comingDesc}>Sync automatico senza file. Post‑1.6.</Text>
+              <Text style={styles.comingDesc}>Sync automatico senza file. Post-1.6.</Text>
             </View>
             <View style={styles.comingBadge}><Text style={styles.comingBadgeText}>SOON</Text></View>
           </View>
@@ -113,7 +256,7 @@ function ImportaInner() {
             <Watch size={18} color={text.muted} strokeWidth={2} />
             <View style={{ flex: 1 }}>
               <Text style={styles.comingTitle}>Garmin Connect IQ</Text>
-              <Text style={styles.comingDesc}>App nativa Garmin. Post‑1.6 (NDA in approvazione).</Text>
+              <Text style={styles.comingDesc}>App nativa Garmin. Post-1.6 (NDA in approvazione).</Text>
             </View>
             <View style={styles.comingBadge}><Text style={styles.comingBadgeText}>SOON</Text></View>
           </View>
@@ -126,18 +269,18 @@ function ImportaInner() {
 }
 
 function SourceCard({
-  Icon, iconBg, iconColor, title, desc, available, subnote, ctaLabel, onPress,
+  Icon, iconBg, iconColor, title, desc, available, subnote, ctaLabel, onPress, loading,
 }: {
   Icon: any; iconBg: string; iconColor: string;
   title: string; desc: string; available: boolean;
-  subnote?: string; ctaLabel?: string; onPress?: () => void;
+  subnote?: string; ctaLabel?: string; onPress?: () => void; loading?: boolean;
 }) {
   return (
     <TouchableOpacity
-      activeOpacity={available ? 0.7 : 1}
-      onPress={available ? onPress : undefined}
-      disabled={!available}
-      style={[styles.sourceCard, !available && { opacity: 0.55 }]}
+      activeOpacity={available && !loading ? 0.7 : 1}
+      onPress={available && !loading ? onPress : undefined}
+      disabled={!available || loading}
+      style={[styles.sourceCard, (!available || loading) && { opacity: 0.7 }]}
     >
       <View style={[styles.sourceIcon, { backgroundColor: iconBg }]}>
         <Icon size={22} color={iconColor} strokeWidth={2} />
@@ -147,7 +290,9 @@ function SourceCard({
         <Text style={styles.sourceDesc}>{desc}</Text>
         {subnote ? <Text style={styles.sourceSubnote}>{subnote}</Text> : null}
       </View>
-      {available ? (
+      {loading ? (
+        <ActivityIndicator size="small" color={brand.primary} />
+      ) : available ? (
         ctaLabel ? (
           <View style={styles.sourceCta}>
             <Text style={styles.sourceCtaText}>{ctaLabel}</Text>
@@ -184,6 +329,24 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 8, height: 8, borderRadius: 999, backgroundColor: semantic.warning },
   statusText: { ...typography.body, color: text.primary, fontSize: 13 },
+
+  successBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: '#ECFDF5', borderRadius: 12,
+    borderWidth: 1, borderColor: '#A7F3D0',
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  successTitle: { ...typography.bodyBold, color: semantic.success, fontSize: 13 },
+  successBody: { ...typography.caption, color: text.primary, marginTop: 2, fontSize: 12 },
+  successLink: { ...typography.kpiLabel, color: semantic.success, fontSize: 11, marginTop: 6 },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#FEF2F2', borderRadius: 12,
+    borderWidth: 1, borderColor: '#FCA5A5',
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  errorText: { ...typography.caption, color: semantic.danger, flex: 1, fontSize: 12 },
 
   sectionLabel: {
     ...typography.kpiLabel, color: text.muted, fontSize: 10,

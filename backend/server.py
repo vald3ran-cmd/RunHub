@@ -16,7 +16,7 @@ from typing import List, Optional, Dict, Any
 
 import bcrypt
 import jwt
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -24,6 +24,9 @@ from pydantic import BaseModel, Field, EmailStr
 
 import stripe
 from anthropic import AsyncAnthropic
+
+# File parsers (Batch 2 — import .gpx/.fit/.tcx)
+from file_parsers import parse_activity_file, SUPPORTED_EXTENSIONS
 # emergentintegrations is only available inside Emergent's container.
 # On Render production the import will fail and we fall back to direct Anthropic SDK.
 try:
@@ -2045,6 +2048,276 @@ async def workout_detail(session_id: str, user: dict = Depends(get_current_user)
     if not doc:
         raise HTTPException(status_code=404, detail="Sessione non trovata")
     return doc
+
+
+# ----------------- File Import (.fit / .gpx / .tcx) — Batch 2 -----------------
+# Quota mensile per tier (numero di file importati al mese)
+IMPORT_QUOTA_BY_TIER = {
+    "free": 5,
+    "starter": 30,
+    "performance": -1,  # -1 = illimitato
+    "elite": -1,
+}
+
+
+def _month_start_utc() -> datetime:
+    now = datetime.now(timezone.utc)
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+async def _imports_used_this_month(user_id: str) -> int:
+    count = await db.workout_sessions.count_documents({
+        "user_id": user_id,
+        "import_source": {"$in": ["fit", "gpx", "tcx"]},
+        "imported_at": {"$gte": _month_start_utc()},
+    })
+    return count
+
+
+@api_router.get("/imports/quota")
+async def imports_quota(user: dict = Depends(get_current_user)):
+    tier = user_tier(user)
+    limit = IMPORT_QUOTA_BY_TIER.get(tier, 5)
+    used = await _imports_used_this_month(user["user_id"])
+    return {
+        "tier": tier,
+        "monthly_limit": limit,            # -1 = unlimited
+        "used_this_month": used,
+        "remaining": (max(0, limit - used) if limit >= 0 else None),
+        "is_unlimited": limit < 0,
+    }
+
+
+@api_router.post("/imports/file")
+async def import_activity_file(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Carica un file .fit / .gpx / .tcx e crea una workout_session normalizzata.
+    Enforce quota mensile per tier (Free=5, Starter=30, Performance/Elite=illimitati).
+    """
+    # ── Verifica estensione ───────────────────────────────
+    filename = file.filename or ""
+    name_lc = filename.lower().strip()
+    if not any(name_lc.endswith(f".{ext}") for ext in SUPPORTED_EXTENSIONS):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato non supportato. Accettati: {', '.join(SUPPORTED_EXTENSIONS)}",
+        )
+
+    # ── Enforce quota ─────────────────────────────────────
+    tier = user_tier(user)
+    limit = IMPORT_QUOTA_BY_TIER.get(tier, 5)
+    if limit >= 0:
+        used = await _imports_used_this_month(user["user_id"])
+        if used >= limit:
+            raise HTTPException(
+                status_code=402,  # Payment Required (quota exceeded)
+                detail=f"Limite mensile raggiunto: {used}/{limit} file. Esegui upgrade per più import.",
+            )
+
+    # ── Leggi blob e dimensione (limit 20MB) ──────────────
+    blob = await file.read()
+    size_mb = len(blob) / (1024 * 1024)
+    if size_mb > 20:
+        raise HTTPException(status_code=413, detail=f"File troppo grande ({size_mb:.1f} MB). Limite: 20 MB.")
+    if size_mb < 0.0005:  # 500 bytes
+        raise HTTPException(status_code=400, detail="File vuoto o corrotto.")
+
+    # ── Parse ─────────────────────────────────────────────
+    try:
+        parsed = parse_activity_file(filename, blob)
+    except Exception as e:
+        logger.warning(f"File import parse error for {filename}: {e}")
+        raise HTTPException(status_code=400, detail=f"Impossibile leggere il file: {str(e)[:120]}")
+
+    if parsed.get("distance_km", 0) <= 0 and parsed.get("duration_seconds", 0) <= 0:
+        raise HTTPException(status_code=400, detail="File senza dati attività validi (distanza e durata = 0).")
+
+    # ── Build session doc ─────────────────────────────────
+    session_id = f"imp_{uuid.uuid4().hex[:12]}"
+    now_utc = datetime.now(timezone.utc)
+    started_at = parsed.get("started_at") or now_utc
+    if isinstance(started_at, datetime) and started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=timezone.utc)
+
+    base_title = filename.rsplit(".", 1)[0][:80] or "Sessione importata"
+    activity = parsed.get("activity_type") or "run"
+    locations_min = parsed.get("locations") or []
+    # Convertiamo le locazioni nel formato SessionLocation (lat/lon/timestamp opzionale)
+    locations_doc = [{"lat": l["lat"], "lon": l["lon"]} for l in locations_min if l.get("lat") is not None]
+
+    doc = {
+        "session_id": session_id,
+        "user_id": user["user_id"],
+        "workout_id": None,
+        "plan_id": None,
+        "title": base_title,
+        "activity_type": activity,
+        "duration_seconds": int(parsed.get("duration_seconds") or 0),
+        "distance_km": float(parsed.get("distance_km") or 0),
+        "avg_pace_min_per_km": parsed.get("avg_pace_min_per_km"),
+        "calories": parsed.get("calories"),
+        "elevation_gain_m": parsed.get("elevation_gain_m"),
+        "splits": parsed.get("splits") or [],
+        "locations": locations_doc,
+        "completed_at": started_at,
+        # Import metadata
+        "import_source": parsed.get("raw_format"),   # 'fit' | 'gpx' | 'tcx'
+        "import_filename": filename,
+        "imported_at": now_utc,
+    }
+    await db.workout_sessions.insert_one(doc)
+    doc.pop("_id", None)
+
+    # Award badges (non bloccare se errore)
+    try:
+        newly = await award_badges(user["user_id"])
+        doc["newly_awarded_badges"] = newly
+    except Exception as e:
+        logger.error(f"badge award error post-import: {e}")
+        doc["newly_awarded_badges"] = []
+
+    # Ritorna anche quota aggiornata
+    used_after = await _imports_used_this_month(user["user_id"])
+    doc["import_quota"] = {
+        "tier": tier,
+        "monthly_limit": limit,
+        "used_this_month": used_after,
+        "remaining": (max(0, limit - used_after) if limit >= 0 else None),
+        "is_unlimited": limit < 0,
+    }
+    return doc
+
+
+# ----------------- Apple HealthKit batch import — Batch 3 -----------------
+class HealthKitHeartRateSample(BaseModel):
+    timestamp: str
+    bpm: float
+
+class HealthKitRoutePoint(BaseModel):
+    timestamp: Optional[str] = None
+    latitude: float
+    longitude: float
+    altitude: Optional[float] = None
+
+class HealthKitWorkoutIn(BaseModel):
+    external_id: str = Field(min_length=1)
+    activity_type: str = "run"        # 'run' | 'walk' | 'bike' | 'swim' | ...
+    started_at: str                   # ISO 8601
+    ended_at: str                     # ISO 8601
+    duration_seconds: int
+    distance_km: Optional[float] = None
+    calories: Optional[float] = None
+    avg_hr_bpm: Optional[float] = None
+    elevation_gain_m: Optional[float] = None
+    heart_rate_samples: List[HealthKitHeartRateSample] = Field(default_factory=list)
+    route_points: List[HealthKitRoutePoint] = Field(default_factory=list)
+
+class HealthKitBatchIn(BaseModel):
+    workouts: List[HealthKitWorkoutIn]
+
+
+@api_router.post("/workouts/import-batch")
+async def workouts_import_batch(
+    batch: HealthKitBatchIn,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Riceve un batch di workout da Apple HealthKit (o Health Connect).
+    Idempotente: l'unione (user_id, external_id, import_source='apple_health')
+    impedisce duplicati. I record esistenti vengono aggiornati.
+
+    Free tier: max 90 workout per chiamata (basta per backfill 90 giorni).
+    """
+    if len(batch.workouts) > 500:
+        raise HTTPException(status_code=400, detail="Batch troppo grande (max 500 workout).")
+
+    inserted = 0
+    updated = 0
+    skipped = 0
+    now_utc = datetime.now(timezone.utc)
+    source = "apple_health"
+
+    for w in batch.workouts:
+        try:
+            started = datetime.fromisoformat(w.started_at.replace("Z", "+00:00"))
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+        except Exception:
+            skipped += 1
+            continue
+
+        activity = _activity_from_string_str(w.activity_type)
+        session_id = f"hk_{uuid.uuid4().hex[:12]}"
+
+        doc = {
+            "session_id": session_id,
+            "user_id": user["user_id"],
+            "workout_id": None,
+            "plan_id": None,
+            "title": f"{activity.capitalize()} (Apple Salute)",
+            "activity_type": activity,
+            "duration_seconds": int(w.duration_seconds or 0),
+            "distance_km": float(w.distance_km or 0),
+            "avg_pace_min_per_km": (
+                round((float(w.duration_seconds or 0) / 60.0) / float(w.distance_km), 3)
+                if (w.distance_km and w.distance_km > 0 and w.duration_seconds and w.duration_seconds > 0)
+                else None
+            ),
+            "calories": w.calories,
+            "elevation_gain_m": w.elevation_gain_m,
+            "avg_hr_bpm": w.avg_hr_bpm,
+            "hr_samples_count": len(w.heart_rate_samples),
+            "splits": [],
+            "locations": [
+                {"lat": p.latitude, "lon": p.longitude}
+                for p in w.route_points
+            ],
+            "completed_at": started,
+            "import_source": source,
+            "import_external_id": w.external_id,
+            "imported_at": now_utc,
+        }
+
+        # Idempotenza
+        existing = await db.workout_sessions.find_one({
+            "user_id": user["user_id"],
+            "import_external_id": w.external_id,
+            "import_source": source,
+        }, {"_id": 1, "session_id": 1})
+
+        if existing:
+            doc["session_id"] = existing["session_id"]
+            await db.workout_sessions.update_one(
+                {"_id": existing["_id"]},
+                {"$set": doc},
+            )
+            updated += 1
+        else:
+            await db.workout_sessions.insert_one(doc)
+            inserted += 1
+
+    return {
+        "inserted": inserted,
+        "updated": updated,
+        "skipped": skipped,
+        "total": len(batch.workouts),
+    }
+
+
+def _activity_from_string_str(s: Optional[str]) -> str:
+    if not s:
+        return "run"
+    s = str(s).lower()
+    if "bik" in s or "cycl" in s or "ride" in s:
+        return "bike"
+    if "walk" in s or "hike" in s:
+        return "walk"
+    if "swim" in s:
+        return "swim"
+    return "run"
 
 
 # ----------------- Referrals -----------------
