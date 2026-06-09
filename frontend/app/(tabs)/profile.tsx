@@ -12,13 +12,49 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
-import { colors, spacing, radius, fonts } from '../../src/theme';
+import { tokens, FontProvider } from '../../src/design-system';
 import { showPrivacyOptionsForm } from '../../src/ConsentManager';
 import { isAdMobAvailable } from '../../src/adMobConfig';
 import { chooseAndUploadAvatar } from '../../src/avatar';
 import { useT, SUPPORTED_LOCALES, SupportedLocale } from '../../src/i18n';
 
+// ── Scientific Light shim (mappa al design-system 1.6) ──
+const colors = {
+  primary: tokens.brand.primary,
+  primaryMuted: tokens.brand.subtle,
+  background: tokens.neutral.background,
+  surface: tokens.neutral.card,
+  surfaceSecondary: tokens.neutral.surfaceSoft,
+  textPrimary: tokens.text.primary,
+  textSecondary: tokens.text.secondary,
+  textMuted: tokens.text.muted,
+  border: tokens.neutral.border,
+  danger: tokens.semantic.danger,
+};
+const spacing = {
+  ...tokens.spacing,
+};
+const radius = {
+  ...tokens.radius,
+  lg: tokens.radius.card,
+  xxl: tokens.radius.modal,
+};
+const fonts = {
+  heading: tokens.fontFamily.sansBold,
+  headingBold: tokens.fontFamily.sansBold,
+  bold: tokens.fontFamily.sansBold,
+  medium: tokens.fontFamily.sansMedium,
+};
+
 export default function Profile() {
+  return (
+    <FontProvider>
+      <ProfileInner />
+    </FontProvider>
+  );
+}
+
+function ProfileInner() {
   const { user, logout, refresh } = useAuth();
   const router = useRouter();
   const { t, locale, setLocale } = useT();
@@ -478,22 +514,14 @@ const styles = StyleSheet.create({
   avatar: {
     width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    elevation: 8,
+    ...tokens.shadow.md,
   },
   avatarImg: {
     width: 96, height: 96, borderRadius: 48,
     borderWidth: 3,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    elevation: 8,
+    borderColor: '#fff',
     backgroundColor: colors.surface,
+    ...tokens.shadow.md,
   },
   avatarCameraBadge: {
     position: 'absolute',
@@ -504,7 +532,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: colors.background,
+    borderColor: '#fff',
   },
   avatarText: {
     color: '#fff',
@@ -568,11 +596,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     marginTop: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 6,
+    ...tokens.shadow.md,
   },
   premiumIcon: {
     width: 40, height: 40, borderRadius: 12,
@@ -681,7 +705,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.35)',
+    borderColor: 'rgba(220,38,38,0.25)',
   },
   logoutText: {
     color: colors.danger,

@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius } from '../src/theme';
+import { colors as oldColors, spacing as oldSpacing, radius as oldRadius } from '../src/theme';
+import { tokens as dsTokens, FontProvider } from '../src/design-system';
 import { api } from '../src/api';
 import {
   fetchOfferings,
@@ -24,6 +25,23 @@ import {
 } from '../src/revenuecat';
 import { useAuth } from '../src/auth';
 import { useT } from '../src/i18n';
+
+// ── Scientific Light shim ──
+const colors = {
+  primary: dsTokens.brand.primary,
+  primaryMuted: dsTokens.brand.subtle,
+  background: dsTokens.neutral.background,
+  surface: dsTokens.neutral.card,
+  surfaceSecondary: dsTokens.neutral.surfaceSoft,
+  textPrimary: dsTokens.text.primary,
+  textSecondary: dsTokens.text.secondary,
+  textMuted: dsTokens.text.muted,
+  border: dsTokens.neutral.border,
+  danger: dsTokens.semantic.danger,
+  success: dsTokens.semantic.success,
+};
+const spacing = { ...oldSpacing };
+const radius = { ...oldRadius };
 
 type Period = 'monthly' | 'yearly';
 type TierKey = 'starter' | 'performance' | 'elite';
@@ -57,7 +75,7 @@ const TIERS: TierDef[] = [
     key: 'performance',
     name: 'Performance',
     taglineKey: 'paywall.tier_performance_tagline',
-    color: '#FF3B30',
+    color: dsTokens.brand.primary,
     popular: true,
     featuresKeys: ['paywall.perf_f1', 'paywall.perf_f2', 'paywall.perf_f3', 'paywall.perf_f4', 'paywall.perf_f5'],
     monthlyProductId: 'com.runhub.app.sub.performance.monthly.v2',
@@ -79,6 +97,14 @@ const TIERS: TierDef[] = [
 ];
 
 export default function PaywallScreen() {
+  return (
+    <FontProvider>
+      <PaywallInner />
+    </FontProvider>
+  );
+}
+
+function PaywallInner() {
   const router = useRouter();
   const { user, refresh } = useAuth();
   const { t } = useT();
@@ -339,6 +365,42 @@ export default function PaywallScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── FREE TIER CARD (mostra cosa hai già a costo zero) ── */}
+        {currentTier === 'free' ? (
+          <View style={[styles.freeCard]} testID="paywall-free-card">
+            <View style={styles.cardHeader}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.freeTitleRow}>
+                  <Text style={styles.freeTierName}>Free</Text>
+                  <View style={styles.currentBadge}>
+                    <Text style={styles.currentBadgeText}>{t('paywall.current')}</Text>
+                  </View>
+                </View>
+                <Text style={styles.tierTagline}>
+                  {t('paywall.tier_free_tagline') || 'Quello che hai già, senza costi'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={styles.freePrice}>0 €</Text>
+              <Text style={styles.priceUnit}>/{t('paywall.month') || 'mese'}</Text>
+            </View>
+            <View style={styles.features}>
+              {[
+                t('paywall.free_f1') || 'Piani di allenamento predefiniti',
+                t('paywall.free_f2') || 'Import 5 file FIT/GPX al mese',
+                t('paywall.free_f3') || 'Tracking GPS dal telefono',
+                t('paywall.free_f4') || 'Diario sessioni base',
+              ].map((line, i) => (
+                <View key={i} style={styles.featureRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  <Text style={styles.featureText}>{line}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* Cards tier */}
         {TIERS.map((tier) => {
           const fallbackPrice = period === 'monthly' ? tier.monthlyPrice : tier.yearlyPrice;
@@ -494,6 +556,23 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 2,
+  },
+  freeCard: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  freeTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  freeTierName: {
+    color: colors.textPrimary,
+    fontSize: 22, fontWeight: '900', letterSpacing: -0.4,
+  },
+  freePrice: {
+    color: colors.textPrimary,
+    fontSize: 34, fontWeight: '900', letterSpacing: -0.8,
   },
   cardPopular: {
     borderWidth: 2,

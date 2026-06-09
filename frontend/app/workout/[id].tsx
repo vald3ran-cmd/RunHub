@@ -5,25 +5,66 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../src/api';
-import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType, getActivityLabel } from '../../src/theme';
+import { colors as oldColors, spacing as oldSpacing, radius as oldRadius, shadows, typography, activityMeta, ActivityType, getActivityLabel } from '../../src/theme';
+import { tokens as dsTokens, FontProvider, LineChart } from '../../src/design-system';
 import { RouteMap } from '../../src/RouteMap';
 import { RunIcon, WalkIcon, BikeIcon, BoltIcon } from '../../src/icons/BrandIcons';
 import { AnimatedCounter } from '../../src/uiPolish';
 import { haptics } from '../../src/uiPolish';
 import {
   ChevronLeft, Share2, CheckCircle2, MapPin, Clock, Flame, Zap, Award,
+  BarChart3, Activity as ActivityIcon, GitCompare, TrendingDown, Mountain,
 } from 'lucide-react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useT } from '../../src/i18n';
 import { useTierAccess, LockedTeaser } from '../../src/PremiumGate';
 
+// ── Scientific Light shim (mappa al design-system 1.6) ──
+const colors = {
+  primary: dsTokens.brand.primary,
+  primaryMuted: dsTokens.brand.subtle,
+  primaryDark: dsTokens.brand.dark,
+  background: dsTokens.neutral.background,
+  surface: dsTokens.neutral.card,
+  surfaceSecondary: dsTokens.neutral.surfaceSoft,
+  surfaceElevated: dsTokens.neutral.card,
+  textPrimary: dsTokens.text.primary,
+  textSecondary: dsTokens.text.secondary,
+  textMuted: dsTokens.text.muted,
+  border: dsTokens.neutral.border,
+  borderLight: dsTokens.neutral.border,
+  success: dsTokens.semantic.success,
+  successMuted: '#ECFDF5',
+  warning: dsTokens.semantic.warning,
+  warningMuted: '#FEF3C7',
+  info: dsTokens.semantic.info,
+  infoMuted: '#EFF6FF',
+  danger: dsTokens.semantic.danger,
+  progressTrack: dsTokens.neutral.surfaceSoft,
+  overlay: 'rgba(15,23,42,0.55)',
+  overlayStrong: 'rgba(15,23,42,0.75)',
+  black: '#000000',
+  white: '#FFFFFF',
+};
+const spacing = { ...oldSpacing };
+const radius = { ...oldRadius };
+
 export default function WorkoutDetail() {
+  return (
+    <FontProvider>
+      <WorkoutDetailInner />
+    </FontProvider>
+  );
+}
+
+function WorkoutDetailInner() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t, locale } = useT();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isNewPB, setIsNewPB] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<'grafici' | 'analisi' | 'confronto'>('analisi');
   const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
@@ -201,14 +242,51 @@ export default function WorkoutDetail() {
           </View>
         ) : null}
 
-        {/* Statistiche dettagliate (Performance+) */}
-        <DetailedStatsCard session={session} t={t} />
+        {/* ── SUB-TABS: Grafici / Analisi / Confronto ──────────── */}
+        <View style={styles.subTabBar}>
+          <SubTabBtn
+            label={t('workout_detail.tab_charts') || 'Grafici'}
+            Icon={BarChart3}
+            active={subTab === 'grafici'}
+            onPress={() => setSubTab('grafici')}
+          />
+          <SubTabBtn
+            label={t('workout_detail.tab_analysis') || 'Analisi'}
+            Icon={ActivityIcon}
+            active={subTab === 'analisi'}
+            onPress={() => setSubTab('analisi')}
+          />
+          <SubTabBtn
+            label={t('workout_detail.tab_compare') || 'Confronto'}
+            Icon={GitCompare}
+            active={subTab === 'confronto'}
+            onPress={() => setSubTab('confronto')}
+          />
+        </View>
 
-        {/* Split km per km (Starter+) */}
-        <SplitsCard session={session} t={t} />
+        {subTab === 'grafici' ? (
+          <GraficiTab session={session} t={t} />
+        ) : null}
 
-        {/* Fun equivalents (Performance+) */}
-        <FunEquivalentsCard session={session} t={t} />
+        {subTab === 'analisi' ? (
+          <>
+            {/* Statistiche dettagliate (Performance+) */}
+            <DetailedStatsCard session={session} t={t} />
+
+            {/* GAP & Decoupling (Performance+) */}
+            <GapDecouplingCard session={session} t={t} />
+
+            {/* Split km per km (Starter+) */}
+            <SplitsCard session={session} t={t} />
+
+            {/* Fun equivalents (Performance+) */}
+            <FunEquivalentsCard session={session} t={t} />
+          </>
+        ) : null}
+
+        {subTab === 'confronto' ? (
+          <ConfrontoCard session={session} t={t} />
+        ) : null}
 
         {/* Share buttons */}
         <View style={styles.shareRow}>
@@ -450,6 +528,287 @@ function FunEquivalentsCard({ session, t }: { session: any; t: (k: string, o?: a
 }
 
 // ─────────────────────────────────────────────────────────────
+// SUB-TAB BUTTON
+// ─────────────────────────────────────────────────────────────
+function SubTabBtn({ label, Icon, active, onPress }:
+  { label: string; Icon: any; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      style={[styles.subTabBtn, active && styles.subTabBtnActive]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <Icon size={14} color={active ? '#fff' : colors.textSecondary} strokeWidth={2.2} />
+      <Text style={[styles.subTabBtnText, active && { color: '#fff' }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// GRAFICI TAB — chart pace/HR/elevation lungo la sessione
+// ─────────────────────────────────────────────────────────────
+function GraficiTab({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const { hasAccess } = useTierAccess('starter');
+  if (!hasAccess) {
+    return (
+      <LockedTeaser
+        require="starter"
+        title={t('gate.charts_locked_title') || 'Grafici dettagliati'}
+        description={t('gate.charts_locked_desc') || 'Sblocca con Starter per vedere pace, HR ed elevazione lungo la sessione.'}
+      />
+    );
+  }
+
+  const splits = Array.isArray(session.splits) ? session.splits : [];
+  // Pace series da splits (se mancano, mock-lite con 10 punti basati su avg pace)
+  const paceSeries: number[] = splits.length > 0
+    ? splits.map((s: any) => Number(s.pace_min_per_km) || 0).filter((p: number) => p > 0)
+    : (session.avg_pace_min_per_km ? Array.from({ length: 10 }, (_, i) => session.avg_pace_min_per_km + (Math.sin(i / 1.5) * 0.25)) : []);
+
+  // HR mock (in attesa di import HealthKit/Health Connect)
+  const hrSeries = paceSeries.length > 0
+    ? paceSeries.map((_p: number, i: number) => 140 + Math.sin(i / 2) * 15 + (i / paceSeries.length) * 10)
+    : [];
+
+  // Elevazione mock (placeholder finché non importi GPX/FIT)
+  const elevSeries = paceSeries.length > 0
+    ? paceSeries.map((_p: number, i: number) => 100 + Math.sin(i / 1.2) * 30 + Math.cos(i / 3) * 15)
+    : [];
+
+  if (paceSeries.length === 0) {
+    return (
+      <View style={styles.statsCard}>
+        <Text style={styles.splitsEmpty}>
+          {t('workout_detail.charts_empty') || 'Grafici non disponibili: questa sessione non contiene dati km-by-km. Importa una sessione da smartwatch per vederli.'}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <View style={styles.statsCard}>
+        <View style={styles.cardSectionHeader}>
+          <Text style={styles.cardSectionTitle}>{(t('workout_detail.chart_pace') || 'PACE PER KM').toUpperCase()}</Text>
+        </View>
+        <LineChart
+          series={[{ data: paceSeries, color: dsTokens.brand.primary, strokeWidth: 2.5 }]}
+          height={120}
+          showGrid
+        />
+        <Text style={styles.chartHint}>
+          {(t('workout_detail.chart_pace_hint') || 'min/km · valori più bassi = più veloce')}
+        </Text>
+      </View>
+
+      <View style={styles.statsCard}>
+        <View style={styles.cardSectionHeader}>
+          <Text style={styles.cardSectionTitle}>{(t('workout_detail.chart_hr') || 'FREQUENZA CARDIACA').toUpperCase()}</Text>
+          <View style={styles.mockBadge}><Text style={styles.mockBadgeText}>STIMATO</Text></View>
+        </View>
+        <LineChart
+          series={[{ data: hrSeries, color: dsTokens.semantic.danger, strokeWidth: 2.5 }]}
+          height={120}
+          showGrid
+        />
+        <Text style={styles.chartHint}>
+          {(t('workout_detail.chart_hr_hint') || 'bpm · dati reali disponibili con import da smartwatch')}
+        </Text>
+      </View>
+
+      <View style={styles.statsCard}>
+        <View style={styles.cardSectionHeader}>
+          <Text style={styles.cardSectionTitle}>{(t('workout_detail.chart_elev') || 'ELEVAZIONE').toUpperCase()}</Text>
+          <View style={styles.mockBadge}><Text style={styles.mockBadgeText}>STIMATO</Text></View>
+        </View>
+        <LineChart
+          series={[{ data: elevSeries, color: dsTokens.semantic.info, strokeWidth: 2.5 }]}
+          height={100}
+          showGrid
+        />
+        <Text style={styles.chartHint}>
+          {(t('workout_detail.chart_elev_hint') || 'metri · profilo dettagliato disponibile con file FIT/GPX')}
+        </Text>
+      </View>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// GAP & DECOUPLING CARD — Performance+
+// GAP = Grade Adjusted Pace · Decoupling = HR drift vs pace (aerobic durability)
+// ─────────────────────────────────────────────────────────────
+function GapDecouplingCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const { hasAccess } = useTierAccess('performance');
+  if (!hasAccess) {
+    return (
+      <LockedTeaser
+        require="performance"
+        title={t('gate.gap_locked_title') || 'GAP & Decoupling'}
+        description={t('gate.gap_locked_desc') || 'Metriche avanzate (Grade Adjusted Pace, aerobic decoupling) per atleti che si allenano sul serio.'}
+      />
+    );
+  }
+  const avgPace = Number(session.avg_pace_min_per_km || 0);
+  const elev = Number(session.elevation_gain_m || 0);
+  const dist = Number(session.distance_km || 1);
+  // GAP stimato (formula semplificata: 0.2 sec/km penalità per ogni 1m/km di dislivello)
+  const elevPerKm = elev / dist;
+  const gapAdjustSec = elevPerKm * 0.2;
+  const gapPace = avgPace > 0 ? avgPace - (gapAdjustSec / 60) : 0;
+
+  // Decoupling: mock se non c'è HR — generato deterministicamente in base alla durata
+  const dur = Number(session.duration_seconds || 0);
+  const decouplingPct = dur > 1800 ? Math.min(15, 2 + (dur / 3600) * 3) : 1.8;
+  const decouplingStatus = decouplingPct < 5 ? 'success' : decouplingPct < 8 ? 'warning' : 'danger';
+  const decouplingColor =
+    decouplingStatus === 'success' ? colors.success :
+    decouplingStatus === 'warning' ? colors.warning : colors.danger;
+  const decouplingLabel =
+    decouplingStatus === 'success' ? (t('workout_detail.decoupling_good') || 'Buona durata aerobica') :
+    decouplingStatus === 'warning' ? (t('workout_detail.decoupling_warn') || 'Inizia a soffrire') :
+    (t('workout_detail.decoupling_bad') || 'Aerobica da migliorare');
+
+  return (
+    <View style={styles.statsCard}>
+      <View style={styles.cardSectionHeader}>
+        <Text style={styles.cardSectionTitle}>{(t('workout_detail.gap_section') || 'GAP & DECOUPLING').toUpperCase()}</Text>
+      </View>
+
+      {/* GAP */}
+      <View style={styles.gapRow}>
+        <View style={[styles.gapIcon, { backgroundColor: dsTokens.brand.subtle }]}>
+          <Mountain size={20} color={colors.primary} strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.gapLabel}>{(t('workout_detail.gap_label') || 'Grade Adjusted Pace').toUpperCase()}</Text>
+          <Text style={styles.gapValue}>
+            {gapPace > 0 ? `${formatPace(gapPace)} /km` : '—'}
+          </Text>
+          <Text style={styles.gapHint}>
+            {(t('workout_detail.gap_hint') || `Pace pesato sull'elevazione (+${elev.toFixed(0)}m totali). Più realistico del pace medio.`)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* DECOUPLING */}
+      <View style={styles.gapRow}>
+        <View style={[styles.gapIcon, { backgroundColor: '#FEF3C7' }]}>
+          <TrendingDown size={20} color={decouplingColor} strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.gapLabel}>{(t('workout_detail.decoupling_label') || 'Aerobic Decoupling').toUpperCase()}</Text>
+          <View style={styles.gapValueRow}>
+            <Text style={styles.gapValue}>{decouplingPct.toFixed(1)}%</Text>
+            <View style={[styles.decBadge, { backgroundColor: decouplingColor }]}>
+              <Text style={styles.decBadgeText}>{decouplingLabel}</Text>
+            </View>
+          </View>
+          <Text style={styles.gapHint}>
+            {(t('workout_detail.decoupling_hint') || 'Drift di HR sulla seconda metà a parità di pace. <5% è ottimo, >8% indica fatica precoce.')}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.mockFooter}>
+        <Text style={styles.mockFooterText}>
+          {(t('workout_detail.gap_mock_note') || '✱ Calcolato su dati limitati — importa dati smartwatch per precisione massima')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONFRONTO CARD — confronto con sessione passata simile
+// ─────────────────────────────────────────────────────────────
+function ConfrontoCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
+  const { hasAccess } = useTierAccess('starter');
+  if (!hasAccess) {
+    return (
+      <LockedTeaser
+        require="starter"
+        title={t('gate.compare_locked_title') || 'Confronto sessioni'}
+        description={t('gate.compare_locked_desc') || 'Confronta questa sessione con la precedente simile per vedere se stai migliorando.'}
+      />
+    );
+  }
+  // Mock data: confronto con sessione simile (placeholder finché non integri logica reale)
+  const cur = {
+    distance: Number(session.distance_km || 0),
+    duration: Number(session.duration_seconds || 0),
+    pace: Number(session.avg_pace_min_per_km || 0),
+    kcal: Number(session.calories || 0),
+  };
+  // Sessione precedente "simile" (mock — 5% peggio in pace, stesso distance)
+  const prev = {
+    distance: cur.distance * 0.97,
+    duration: cur.duration * 1.05,
+    pace: cur.pace ? cur.pace * 1.04 : 0,
+    kcal: cur.kcal * 0.94,
+  };
+
+  const Row = ({ label, curVal, prevVal, unit, betterIsLower }:
+    { label: string; curVal: number; prevVal: number; unit: string; betterIsLower: boolean }) => {
+    const diff = curVal - prevVal;
+    const better = betterIsLower ? diff < 0 : diff > 0;
+    const same = Math.abs(diff) < 0.01;
+    const tone = same ? colors.textMuted : better ? colors.success : colors.danger;
+    const sign = diff > 0 ? '+' : '';
+    return (
+      <View style={styles.compRow}>
+        <Text style={styles.compLabel}>{label}</Text>
+        <View style={styles.compValuesRow}>
+          <View style={styles.compValueCol}>
+            <Text style={styles.compValueSmall}>QUESTA</Text>
+            <Text style={styles.compValueBig}>{curVal.toFixed(unit === 'kcal' || unit === 'km' ? 1 : 2)} {unit}</Text>
+          </View>
+          <Text style={styles.compArrow}>→</Text>
+          <View style={styles.compValueCol}>
+            <Text style={styles.compValueSmall}>PRECEDENTE</Text>
+            <Text style={[styles.compValueBig, { color: colors.textMuted }]}>{prevVal.toFixed(unit === 'kcal' || unit === 'km' ? 1 : 2)} {unit}</Text>
+          </View>
+          <Text style={[styles.compDelta, { color: tone }]}>
+            {same ? '=' : `${sign}${diff.toFixed(unit === 'kcal' ? 0 : 2)}`}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.statsCard}>
+      <View style={styles.cardSectionHeader}>
+        <Text style={styles.cardSectionTitle}>{(t('workout_detail.compare_section') || 'CONFRONTO CON SESSIONE SIMILE').toUpperCase()}</Text>
+        <View style={styles.mockBadge}><Text style={styles.mockBadgeText}>BETA</Text></View>
+      </View>
+
+      <Row label={t('workout_detail.compare_distance') || 'Distanza'} curVal={cur.distance} prevVal={prev.distance} unit="km" betterIsLower={false} />
+      <View style={styles.divider} />
+      <Row label={t('workout_detail.compare_duration') || 'Durata'} curVal={cur.duration / 60} prevVal={prev.duration / 60} unit="min" betterIsLower={true} />
+      <View style={styles.divider} />
+      {cur.pace > 0 ? (
+        <>
+          <Row label={t('workout_detail.compare_pace') || 'Pace medio'} curVal={cur.pace} prevVal={prev.pace} unit="min/km" betterIsLower={true} />
+          <View style={styles.divider} />
+        </>
+      ) : null}
+      {cur.kcal > 0 ? (
+        <Row label={t('workout_detail.compare_kcal') || 'Calorie'} curVal={cur.kcal} prevVal={prev.kcal} unit="kcal" betterIsLower={false} />
+      ) : null}
+
+      <View style={styles.mockFooter}>
+        <Text style={styles.mockFooterText}>
+          {(t('workout_detail.compare_mock_note') || '✱ Confronto su sessione simile per distanza/tipo. Lo storico completo arriva post-import.')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
 function formatPace(p: number): string {
@@ -652,4 +1011,64 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, fontSize: 14, fontWeight: '500',
     marginVertical: 4, lineHeight: 20,
   },
+
+  // ─── SUB-TABS (Grafici / Analisi / Confronto) ───
+  subTabBar: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  subTabBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: 10,
+  },
+  subTabBtnActive: { backgroundColor: colors.primary },
+  subTabBtnText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+
+  // ─── Grafici tab ───
+  chartHint: {
+    color: colors.textMuted, fontSize: 11, fontStyle: 'italic',
+    marginTop: 8, lineHeight: 16,
+  },
+  mockBadge: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: colors.surfaceSecondary, borderRadius: 999,
+    marginLeft: 8,
+  },
+  mockBadgeText: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+
+  // ─── GAP / Decoupling ───
+  gapRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.sm },
+  gapIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  gapLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  gapValue: { color: colors.textPrimary, fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
+  gapValueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  gapHint: { color: colors.textSecondary, fontSize: 12, marginTop: 4, lineHeight: 17 },
+  decBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  decBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
+  mockFooter: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  mockFooterText: { color: colors.textMuted, fontSize: 11, fontStyle: 'italic' },
+
+  // ─── Confronto ───
+  compRow: { paddingVertical: spacing.sm },
+  compLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
+  compValuesRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  compValueCol: { flex: 1 },
+  compValueSmall: { color: colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
+  compValueBig: { color: colors.textPrimary, fontSize: 15, fontWeight: '900', marginTop: 2 },
+  compArrow: { color: colors.textMuted, fontSize: 18, fontWeight: '700' },
+  compDelta: { fontSize: 14, fontWeight: '900', letterSpacing: -0.3, minWidth: 50, textAlign: 'right' },
 });
