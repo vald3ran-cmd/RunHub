@@ -1693,6 +1693,102 @@ async def ai_generate_status(job_id: str, user: dict = Depends(get_current_user)
     }
 
 
+async def _build_athlete_context(user_id: str, locale: str) -> Optional[str]:
+    """Costruisce un blocco di context con metriche reali dalle ultime sessioni
+    dell'atleta (importate o registrate). Usato dall'AI Coach v2 per personalizzare
+    il piano. Ritorna None se l'utente non ha dati significativi."""
+    now = datetime.now(timezone.utc)
+    start_30 = now - timedelta(days=30)
+    sessions = await db.workout_sessions.find(
+        {"user_id": user_id, "completed_at": {"$gte": start_30}},
+        {"_id": 0, "distance_km": 1, "duration_seconds": 1, "avg_pace_min_per_km": 1,
+         "avg_hr_bpm": 1, "completed_at": 1, "import_source": 1, "activity_type": 1},
+    ).sort("completed_at", -1).to_list(200)
+
+    # Normalizza datetime per evitare errori tz-naive vs tz-aware
+    for s in sessions:
+        ca = s.get("completed_at")
+        if isinstance(ca, datetime) and ca.tzinfo is None:
+            s["completed_at"] = ca.replace(tzinfo=timezone.utc)
+
+    if len(sessions) < 2:
+        # Niente abbastanza dati: skip personalizzazione
+        return None
+
+    weeks = 4
+    weekly_km = [0.0] * weeks
+    weekly_sessions = [0] * weeks
+    for s in sessions:
+        days_ago = (now - s["completed_at"]).days
+        w = min(weeks - 1, days_ago // 7)
+        weekly_km[w] += float(s.get("distance_km") or 0)
+        weekly_sessions[w] += 1
+
+    paces = [s.get("avg_pace_min_per_km") for s in sessions
+             if s.get("avg_pace_min_per_km") and (s.get("distance_km") or 0) >= 1]
+    avg_pace = sum(paces) / len(paces) if paces else None
+    best_pace = min(paces) if paces else None
+
+    # Distanze tipiche
+    distances = [s.get("distance_km") or 0 for s in sessions]
+    avg_distance = sum(distances) / len(distances) if distances else 0
+    max_distance = max(distances) if distances else 0
+
+    # HR data
+    hr_values = [s.get("avg_hr_bpm") for s in sessions if s.get("avg_hr_bpm")]
+    avg_hr = (sum(hr_values) / len(hr_values)) if hr_values else None
+
+    # Sources
+    sources = set(s.get("import_source") or "phone" for s in sessions)
+    sources_str = ", ".join(sorted(sources))
+
+    def pace_str(p):
+        if not p: return "n/a"
+        m, s = int(p), int((p - int(p)) * 60)
+        return f"{m}:{s:02d}/km"
+
+    if locale == "en":
+        return (
+            "## ATHLETE FITNESS CONTEXT (real data, last 30 days)\n"
+            f"- Total sessions: {len(sessions)} (avg {len(sessions)/4.0:.1f}/week)\n"
+            f"- Weekly km (most recent → 4w ago): {' → '.join(f'{k:.1f}' for k in weekly_km[::-1])}\n"
+            f"- Average pace: {pace_str(avg_pace)} | Best pace: {pace_str(best_pace)}\n"
+            f"- Average distance: {avg_distance:.1f} km | Longest: {max_distance:.1f} km\n"
+            + (f"- Average HR: {avg_hr:.0f} bpm\n" if avg_hr else "")
+            + f"- Data sources: {sources_str}\n"
+            "\nUse this context to: (1) calibrate target paces to the athlete's real fitness, "
+            "(2) progress volume gradually from current weekly km, (3) avoid prescribing distances/paces "
+            "the athlete cannot yet handle, (4) include recovery weeks if training load is high. "
+            "DO NOT mention this context block in your response — use it silently."
+        )
+    if locale == "es":
+        return (
+            "## CONTEXTO DE FORMA FÍSICA (datos reales, últimos 30 días)\n"
+            f"- Sesiones totales: {len(sessions)} (promedio {len(sessions)/4.0:.1f}/semana)\n"
+            f"- Km por semana (reciente → hace 4s): {' → '.join(f'{k:.1f}' for k in weekly_km[::-1])}\n"
+            f"- Ritmo medio: {pace_str(avg_pace)} | Mejor ritmo: {pace_str(best_pace)}\n"
+            f"- Distancia media: {avg_distance:.1f} km | Más larga: {max_distance:.1f} km\n"
+            + (f"- FC media: {avg_hr:.0f} ppm\n" if avg_hr else "")
+            + f"- Fuentes: {sources_str}\n"
+            "\nUsa este contexto para calibrar los ritmos objetivo, progresar gradualmente "
+            "el volumen y evitar sobrecargar al atleta. NO menciones este bloque en tu respuesta."
+        )
+    # IT default
+    return (
+        "## CONTESTO FORMA ATLETA (dati reali, ultimi 30 giorni)\n"
+        f"- Sessioni totali: {len(sessions)} (media {len(sessions)/4.0:.1f}/settimana)\n"
+        f"- Km per settimana (recente → 4 sett. fa): {' → '.join(f'{k:.1f}' for k in weekly_km[::-1])}\n"
+        f"- Pace medio: {pace_str(avg_pace)} | Pace migliore: {pace_str(best_pace)}\n"
+        f"- Distanza media: {avg_distance:.1f} km | Più lunga: {max_distance:.1f} km\n"
+        + (f"- FC media: {avg_hr:.0f} bpm\n" if avg_hr else "")
+        + f"- Fonti dati: {sources_str}\n"
+        "\nUSA questo contesto per: (1) calibrare i pace target sulla reale forma dell'atleta, "
+        "(2) progredire il volume gradualmente partendo dai km settimanali attuali, "
+        "(3) evitare di prescrivere distanze/pace insostenibili, (4) inserire settimane di scarico se il carico è alto. "
+        "NON menzionare questo blocco nella tua risposta — usalo silenziosamente come riferimento."
+    )
+
+
 async def _run_ai_generation(job_id: str, user: dict, data: AIGenerateRequest, user_locale: str):
     """Background task: runs Claude, parses JSON, persists plan, updates job status.
     Errors are captured and saved to the job doc (no HTTPException raised here)."""
@@ -1781,6 +1877,14 @@ async def _run_ai_generation(job_id: str, user: dict, data: AIGenerateRequest, u
         minutes=data.available_minutes,
         notes=data.notes or tpl["no_notes"],
     )
+
+    # ── AI Coach v2: inject athlete fitness context from imported/recorded sessions ─
+    try:
+        ctx_block = await _build_athlete_context(user["user_id"], user_locale)
+        if ctx_block:
+            prompt = f"{prompt}\n\n{ctx_block}"
+    except Exception as _ctx_err:
+        logger.warning(f"[AI Job {job_id}] athlete context fetch failed: {_ctx_err}")
 
     async def _mark_error(code: int, detail: str):
         try:
@@ -2146,7 +2250,7 @@ async def import_activity_file(
     activity = parsed.get("activity_type") or "run"
     locations_min = parsed.get("locations") or []
     # Convertiamo le locazioni nel formato SessionLocation (lat/lon/timestamp opzionale)
-    locations_doc = [{"lat": l["lat"], "lon": l["lon"]} for l in locations_min if l.get("lat") is not None]
+    locations_doc = [{"lat": pt["lat"], "lon": pt["lon"]} for pt in locations_min if pt.get("lat") is not None]
 
     doc = {
         "session_id": session_id,
@@ -2535,6 +2639,222 @@ async def stats_dashboard(user: dict = Depends(get_current_user)):
     }
 
     return {"days_7": days, "weeks_12": weeks, "totals": totals}
+
+
+# ---------- Lab Overview (Batch finale — aggrega tutti i dati per il Lab tab) ----------
+@api_router.get("/lab/overview")
+async def lab_overview(user: dict = Depends(get_current_user)):
+    """
+    Aggregato per il Lab dashboard: Run Score, training load, recovery, predizioni,
+    HR zones, prossimo workout, ultima sessione. Tutto in una sola call.
+    """
+    now = datetime.now(timezone.utc)
+    user_id = user["user_id"]
+
+    # ── Recent sessions (60 giorni per training load) ─────
+    start_60 = now - timedelta(days=60)
+    recent = await db.workout_sessions.find(
+        {"user_id": user_id, "completed_at": {"$gte": start_60}},
+        {"_id": 0, "locations": 0, "splits": 0, "newly_awarded_badges": 0},
+    ).sort("completed_at", 1).to_list(500)
+
+    sessions_count = len(recent)
+    # Normalizza datetime per evitare errori tz-naive vs tz-aware
+    for s in recent:
+        ca = s.get("completed_at")
+        if isinstance(ca, datetime) and ca.tzinfo is None:
+            s["completed_at"] = ca.replace(tzinfo=timezone.utc)
+    if sessions_count == 0:
+        return {
+            "has_data": False,
+            "sessions_count": 0,
+            "run_score": None,
+            "run_score_trend": [],
+            "weekly_km": 0,
+            "weekly_count": 0,
+            "weekly_delta_pct": 0,
+            "training_load": None,
+            "recovery": None,
+            "predictions": None,
+            "hr_zones": None,
+            "next_workout": None,
+            "last_session": None,
+            "last_update": now.isoformat(),
+        }
+
+    # ── Run Score: media pesata di volume/regolarità/intensità (0-100) ─
+    # Heuristica: 30% regolarità (giorni/settimana), 40% volume (km), 30% pace medio
+    last_7d = [s for s in recent if (now - s["completed_at"]).days < 7]
+    last_30d = [s for s in recent if (now - s["completed_at"]).days < 30]
+    days_with_workout = len({s["completed_at"].date() for s in last_7d})
+    weekly_km = sum((s.get("distance_km") or 0) for s in last_7d)
+    weekly_count = len(last_7d)
+
+    # week-1 (8-14 days ago) per delta
+    prev_7d = [s for s in recent if 7 <= (now - s["completed_at"]).days < 14]
+    prev_weekly_km = sum((s.get("distance_km") or 0) for s in prev_7d)
+    weekly_delta_pct = (
+        round(((weekly_km - prev_weekly_km) / prev_weekly_km) * 100, 1)
+        if prev_weekly_km > 0 else (100 if weekly_km > 0 else 0)
+    )
+
+    regularity_score = min(100, days_with_workout * 18)  # 5 giorni = 90
+    volume_score = min(100, (weekly_km / 50.0) * 100)    # 50km/wk = 100
+    paces = [s.get("avg_pace_min_per_km") for s in last_30d
+             if s.get("avg_pace_min_per_km") and (s.get("distance_km") or 0) >= 1]
+    avg_pace = (sum(paces) / len(paces)) if paces else None
+    # Pace target: 5:00/km = 100, 7:00/km = 50, 9:00/km = 0
+    pace_score = (
+        max(0, min(100, 100 - ((avg_pace - 5.0) * 25))) if avg_pace else 50
+    )
+    run_score = round(regularity_score * 0.3 + volume_score * 0.4 + pace_score * 0.3, 1)
+    # Map a lettera
+    if run_score >= 90:
+        letter = "A+"
+    elif run_score >= 82:
+        letter = "A"
+    elif run_score >= 75:
+        letter = "A-"
+    elif run_score >= 68:
+        letter = "B+"
+    elif run_score >= 60:
+        letter = "B"
+    elif run_score >= 50:
+        letter = "C+"
+    else:
+        letter = "C"
+
+    # Trend: ultimi 14 valori (uno per sessione)
+    trend = [round(min(100, (s.get("distance_km") or 0) * 3 + 60), 1) for s in last_30d[-14:]]
+
+    # ── Training Load: CTL/ATL/TSB su 8 settimane ─────────
+    # CTL = media ponderata distance/durata ultimi 42 giorni
+    # ATL = ultimi 7 giorni
+    # TSB = CTL - ATL
+    ctl_history, atl_history, tsb_history = [], [], []
+    for week_back in range(8, 0, -1):
+        wk_end = now - timedelta(days=(week_back - 1) * 7)
+        wk_start_atl = wk_end - timedelta(days=7)
+        wk_start_ctl = wk_end - timedelta(days=42)
+        atl_sessions = [s for s in recent if wk_start_atl <= s["completed_at"] <= wk_end]
+        ctl_sessions = [s for s in recent if wk_start_ctl <= s["completed_at"] <= wk_end]
+        atl = round(sum((s.get("distance_km") or 0) for s in atl_sessions) / 7 * 5, 1)
+        ctl = round(sum((s.get("distance_km") or 0) for s in ctl_sessions) / 42 * 5, 1)
+        ctl_history.append(ctl)
+        atl_history.append(atl)
+        tsb_history.append(round(ctl - atl, 1))
+    training_load = {
+        "ctl": ctl_history[-1],
+        "atl": atl_history[-1],
+        "tsb": tsb_history[-1],
+        "ctl_history": ctl_history,
+        "atl_history": atl_history,
+        "tsb_history": tsb_history,
+    }
+
+    # ── KPI gauges (0-100) ─────────────────────────────────
+    carico_pct = min(100, int(atl_history[-1] * 4))
+    fatica_pct = min(100, max(0, int((atl_history[-1] - ctl_history[-1] + 5) * 8)))
+    recupero_pct = max(0, 100 - fatica_pct)
+
+    # ── Predictions Riegel: T2 = T1 * (D2/D1)^1.06 ────────
+    predictions = None
+    if avg_pace:
+        # base 5K time
+        base_5k_sec = (avg_pace - 0.1) * 60 * 5  # leggermente più veloce della media
+        def riegel(d1, t1, d2):
+            return t1 * ((d2 / d1) ** 1.06)
+        def fmt(sec):
+            sec = int(sec)
+            h, r = divmod(sec, 3600)
+            m, s = divmod(r, 60)
+            return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+        predictions = {
+            "5k": fmt(base_5k_sec),
+            "10k": fmt(riegel(5, base_5k_sec, 10)),
+            "21k": fmt(riegel(5, base_5k_sec, 21.0975)),
+            "42k": fmt(riegel(5, base_5k_sec, 42.195)),
+        }
+
+    # ── HR Zones (solo se abbiamo HR data, altrimenti None) ─
+    hr_zones = None
+    sessions_with_hr = [s for s in recent if s.get("avg_hr_bpm")]
+    if sessions_with_hr:
+        # distribuzione approssimativa: usa avg_hr come proxy
+        zones = {"z1": 0, "z2": 0, "z3": 0, "z4": 0, "z5": 0}
+        total = 0
+        for s in sessions_with_hr:
+            hr = s.get("avg_hr_bpm") or 0
+            dur = s.get("duration_seconds") or 0
+            total += dur
+            if hr < 130:
+                zones["z1"] += dur
+            elif hr < 150:
+                zones["z2"] += dur
+            elif hr < 165:
+                zones["z3"] += dur
+            elif hr < 180:
+                zones["z4"] += dur
+            else:
+                zones["z5"] += dur
+        if total > 0:
+            hr_zones = {k: round(v / total * 100, 1) for k, v in zones.items()}
+
+    # ── Last session ──────────────────────────────────────
+    last_session_doc = recent[-1] if recent else None
+    last_session = None
+    if last_session_doc:
+        last_session = {
+            "session_id": last_session_doc.get("session_id"),
+            "title": last_session_doc.get("title"),
+            "distance_km": last_session_doc.get("distance_km"),
+            "duration_seconds": last_session_doc.get("duration_seconds"),
+            "avg_pace_min_per_km": last_session_doc.get("avg_pace_min_per_km"),
+            "completed_at": last_session_doc["completed_at"].isoformat() if last_session_doc.get("completed_at") else None,
+            "activity_type": last_session_doc.get("activity_type"),
+            "import_source": last_session_doc.get("import_source") or "phone",
+        }
+
+    # ── Next workout (dal piano attivo se esiste) ─────────
+    next_workout = None
+    active_plan = await db.training_plans.find_one(
+        {"user_id": user_id, "status": "active"},
+        {"_id": 0, "plan_id": 1, "title": 1, "workouts": 1, "current_workout_index": 1},
+    )
+    if active_plan and active_plan.get("workouts"):
+        idx = active_plan.get("current_workout_index", 0)
+        if 0 <= idx < len(active_plan["workouts"]):
+            wk = active_plan["workouts"][idx]
+            next_workout = {
+                "plan_id": active_plan["plan_id"],
+                "workout_id": wk.get("workout_id"),
+                "title": wk.get("title") or wk.get("name") or "Allenamento",
+                "description": wk.get("description") or wk.get("type") or "",
+                "target_distance_km": wk.get("distance_km"),
+            }
+
+    return {
+        "has_data": True,
+        "sessions_count": sessions_count,
+        "run_score": run_score,
+        "run_score_letter": letter,
+        "run_score_trend": trend,
+        "weekly_km": round(weekly_km, 1),
+        "weekly_count": weekly_count,
+        "weekly_delta_pct": weekly_delta_pct,
+        "kpi": {
+            "carico_pct": carico_pct,
+            "recupero_pct": recupero_pct,
+            "fatica_pct": fatica_pct,
+        },
+        "training_load": training_load,
+        "recovery": None,  # placeholder finché HRV/sonno non importati
+        "predictions": predictions,
+        "hr_zones": hr_zones,
+        "next_workout": next_workout,
+        "last_session": last_session,
+        "last_update": now.isoformat(),
+    }
 
 
 # ---------- Personal Bests (FREE — calcolati on-the-fly) ----------

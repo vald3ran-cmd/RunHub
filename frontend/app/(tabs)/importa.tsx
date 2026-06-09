@@ -21,6 +21,11 @@ import { tokens, FontProvider, Card } from '../../src/design-system';
 import { useAuth } from '../../src/auth';
 import { pickAndImportFile, getImportQuota, ImportQuota, ImportResult } from '../../src/fileImporter';
 import { connectAndImport, isHealthKitSupported, healthKitStatusReason, ImportBatchResult } from '../../src/healthkit';
+import {
+  connectAndImport as hcConnectAndImport,
+  isHealthConnectSupported,
+  healthConnectStatusReason,
+} from '../../src/healthConnect';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -33,6 +38,7 @@ function ImportaInner() {
   const [quota, setQuota] = useState<ImportQuota | null>(null);
   const [fileImporting, setFileImporting] = useState(false);
   const [hkImporting, setHkImporting] = useState(false);
+  const [hcImporting, setHcImporting] = useState(false);
   const [lastResult, setLastResult] = useState<
     | { kind: 'file'; data: ImportResult }
     | { kind: 'health'; data: ImportBatchResult }
@@ -96,6 +102,29 @@ function ImportaInner() {
       if (Platform.OS !== 'web') Alert.alert('Apple Salute', msg);
     } finally {
       setHkImporting(false);
+    }
+  };
+
+  // ─── Handler: Health Connect (Android) ──────────────────
+  const onConnectHealthConnect = async () => {
+    if (hcImporting) return;
+    setErrorMsg(null);
+    const reason = healthConnectStatusReason();
+    if (reason) {
+      setErrorMsg(reason);
+      if (Platform.OS !== 'web') Alert.alert('Health Connect', reason);
+      return;
+    }
+    setHcImporting(true);
+    try {
+      const result = await hcConnectAndImport(90);
+      setLastResult({ kind: 'health', data: result });
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.message || 'Impossibile collegare Health Connect.';
+      setErrorMsg(msg);
+      if (Platform.OS !== 'web') Alert.alert('Health Connect', msg);
+    } finally {
+      setHcImporting(false);
     }
   };
 
@@ -190,7 +219,16 @@ function ImportaInner() {
           title="Health Connect"
           desc="Importa Samsung Health, Google Fit, Garmin, Polar, Wahoo, Coros, Suunto."
           available={isAndroid}
-          subnote={isAndroid ? 'In arrivo · richiede build nativo Android' : 'Disponibile solo su Android'}
+          loading={hcImporting}
+          subnote={
+            isAndroid
+              ? (isHealthConnectSupported()
+                  ? 'Backfill ultimi 90 giorni · richiede Android build nativo'
+                  : '⚠️ Funziona solo in app build nativa (non Expo Go)')
+              : 'Disponibile solo su Android'
+          }
+          ctaLabel={isAndroid ? 'CONNETTI' : undefined}
+          onPress={isAndroid ? onConnectHealthConnect : undefined}
         />
 
         <SourceCard

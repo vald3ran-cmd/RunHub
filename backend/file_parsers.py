@@ -55,7 +55,6 @@ def _compute_splits(locations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     total_km = 0.0
     current_km_target = 1.0
     km_start_ts = locations[0].get("ts")
-    km_start_dist = 0.0
     last = locations[0]
     for cur in locations[1:]:
         try:
@@ -71,7 +70,6 @@ def _compute_splits(locations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     "duration_seconds": int(ts_delta),
                 })
                 km_start_ts = cur["ts"]
-                km_start_dist = total_km
                 current_km_target += 1.0
                 if current_km_target > 60:  # safety cap
                     return splits
@@ -159,8 +157,8 @@ def parse_gpx(blob: bytes) -> Dict[str, Any]:
         "started_at": started_at,
         "splits": _compute_splits(locations),
         "locations": [
-            {"lat": l["lat"], "lon": l["lon"], "elev": l.get("elev")}
-            for l in locations
+            {"lat": pt["lat"], "lon": pt["lon"], "elev": pt.get("elev")}
+            for pt in locations
         ],
         "raw_format": "gpx",
     }
@@ -203,15 +201,18 @@ def parse_tcx(blob: bytes) -> Dict[str, Any]:
         for lap in fall(act, f"{ns}Lap"):
             try:
                 total_time_s += float(fx(lap, f"{ns}TotalTimeSeconds").text or 0)
-            except Exception: pass
+            except Exception:
+                pass
             try:
                 total_distance_m += float(fx(lap, f"{ns}DistanceMeters").text or 0)
-            except Exception: pass
+            except Exception:
+                pass
             try:
                 cal_node = fx(lap, f"{ns}Calories")
                 if cal_node is not None and cal_node.text:
                     total_calories += float(cal_node.text)
-            except Exception: pass
+            except Exception:
+                pass
             for tp in fall(lap, f".//{ns}Trackpoint"):
                 t = fx(tp, f"{ns}Time")
                 ts = None
@@ -228,12 +229,15 @@ def parse_tcx(blob: bytes) -> Dict[str, Any]:
                     try:
                         lat = float(fx(pos, f"{ns}LatitudeDegrees").text)
                         lon = float(fx(pos, f"{ns}LongitudeDegrees").text)
-                    except Exception: pass
+                    except Exception:
+                        pass
                 elev = None
                 e = fx(tp, f"{ns}AltitudeMeters")
                 if e is not None and e.text:
-                    try: elev = float(e.text)
-                    except Exception: pass
+                    try:
+                        elev = float(e.text)
+                    except Exception:
+                        pass
                 if lat is not None and lon is not None:
                     locations.append({"lat": lat, "lon": lon, "elev": elev, "ts": ts})
                     if ts:
@@ -265,8 +269,8 @@ def parse_tcx(blob: bytes) -> Dict[str, Any]:
         "started_at": started_at,
         "splits": _compute_splits(locations),
         "locations": [
-            {"lat": l["lat"], "lon": l["lon"], "elev": l.get("elev")}
-            for l in locations
+            {"lat": pt["lat"], "lon": pt["lon"], "elev": pt.get("elev")}
+            for pt in locations
         ],
         "raw_format": "tcx",
     }
@@ -351,8 +355,8 @@ def parse_fit(blob: bytes) -> Dict[str, Any]:
         "started_at": started_at,
         "splits": _compute_splits(locations),
         "locations": [
-            {"lat": l["lat"], "lon": l["lon"], "elev": l.get("elev")}
-            for l in locations
+            {"lat": pt["lat"], "lon": pt["lon"], "elev": pt.get("elev")}
+            for pt in locations
         ],
         "raw_format": "fit",
     }

@@ -3,12 +3,13 @@
  * Stile Scientific Light. Per ora mock; in 1.6.x si collegherà a:
  *   GET /api/workouts/history (sessioni esistenti) + futuro /api/imported_sessions.
  */
-import React, { useMemo, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, Filter, GitCompare } from 'lucide-react-native';
 import { tokens, FontProvider, SessionCard, Chip } from '../../src/design-system';
+import { api } from '../../src/api';
 
 const { brand, neutral, text, spacing, typography } = tokens;
 
@@ -23,34 +24,121 @@ type SessionItem = {
   scoreLetter: string;
   scoreValue: number;
   dateLabel: string;
-  monthKey: string; // 'Giugno 2026'
+  monthKey: string;
   source: Source;
 };
 
-const MOCK_SESSIONS: SessionItem[] = [
-  { id: '1', title: 'Easy Run mattutino', distanceKm: 8.42, durationStr: '46:12', paceStr: '5:29/km', zoneChip: 'Z2 · Aerobica', scoreLetter: 'A-', scoreValue: 82, dateLabel: 'oggi', monthKey: 'Giugno 2026', source: 'apple_watch' },
-  { id: '2', title: 'Tempo run 5K', distanceKm: 5.12, durationStr: '22:48', paceStr: '4:27/km', zoneChip: 'Z4 · Soglia', scoreLetter: 'A', scoreValue: 88, dateLabel: 'ieri', monthKey: 'Giugno 2026', source: 'apple_watch' },
-  { id: '3', title: 'Long Run domenica', distanceKm: 16.05, durationStr: '1:28:34', paceStr: '5:31/km', zoneChip: 'Z2 · Aerobica', scoreLetter: 'B+', scoreValue: 78, dateLabel: '7 giu', monthKey: 'Giugno 2026', source: 'garmin' },
-  { id: '4', title: 'Intervalli 6×800', distanceKm: 7.20, durationStr: '38:02', paceStr: '5:17/km', zoneChip: 'Z5 · VO2max', scoreLetter: 'A', scoreValue: 86, dateLabel: '5 giu', monthKey: 'Giugno 2026', source: 'apple_watch' },
-  { id: '5', title: 'Recovery jog', distanceKm: 4.30, durationStr: '26:18', paceStr: '6:07/km', zoneChip: 'Z1 · Recupero', scoreLetter: 'B', scoreValue: 70, dateLabel: '3 giu', monthKey: 'Giugno 2026', source: 'phone' },
-  { id: '6', title: 'Progression run', distanceKm: 12.18, durationStr: '1:02:44', paceStr: '5:09/km', zoneChip: 'Z3 · Tempo', scoreLetter: 'A-', scoreValue: 80, dateLabel: '28 mag', monthKey: 'Maggio 2026', source: 'garmin' },
-  { id: '7', title: 'Strava import .fit', distanceKm: 10.04, durationStr: '52:11', paceStr: '5:12/km', zoneChip: 'Z2 · Aerobica', scoreLetter: 'B+', scoreValue: 76, dateLabel: '25 mag', monthKey: 'Maggio 2026', source: 'file' },
-];
-
 type FilterKey = 'all' | 'apple_watch' | 'garmin' | 'phone' | 'file';
+
+const MONTH_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+function fmtDuration(sec: number): string {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function fmtPace(pace?: number | null): string {
+  if (!pace || pace <= 0) return '—';
+  const m = Math.floor(pace);
+  const s = Math.round((pace - m) * 60);
+  return `${m}:${String(s).padStart(2, '0')}/km`;
+}
+
+function fmtRelativeDate(iso: string): string {
+  const dt = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - dt.getTime()) / 86400000);
+  if (diffDays === 0) return 'oggi';
+  if (diffDays === 1) return 'ieri';
+  if (diffDays < 7) return `${diffDays} giorni fa`;
+  return `${dt.getDate()} ${MONTH_IT[dt.getMonth()].slice(0, 3).toLowerCase()}`;
+}
+
+function zoneFromPace(pace?: number | null, activity?: string): string {
+  if (activity === 'bike') return 'Bici';
+  if (activity === 'walk') return 'Camminata';
+  if (!pace || pace <= 0) return 'Run';
+  if (pace < 4.5) return 'Z5 · VO2max';
+  if (pace < 5.0) return 'Z4 · Soglia';
+  if (pace < 5.5) return 'Z3 · Tempo';
+  if (pace < 6.5) return 'Z2 · Aerobica';
+  return 'Z1 · Recupero';
+}
+
+function scoreFromDistance(km: number, pace?: number | null): { letter: string; value: number } {
+  let score = Math.min(95, 50 + km * 4 + (pace ? Math.max(0, (7 - pace) * 6) : 0));
+  score = Math.round(score);
+  let letter = 'C';
+  if (score >= 90) letter = 'A+';
+  else if (score >= 82) letter = 'A';
+  else if (score >= 75) letter = 'A-';
+  else if (score >= 68) letter = 'B+';
+  else if (score >= 60) letter = 'B';
+  else if (score >= 50) letter = 'C+';
+  return { letter, value: score };
+}
+
+function sourceFromImport(importSource?: string | null): Source {
+  if (importSource === 'fit' || importSource === 'gpx' || importSource === 'tcx') return 'file';
+  if (importSource === 'apple_health') return 'apple_watch';
+  if (importSource === 'garmin' || importSource === 'health_connect') return 'garmin';
+  return 'phone';
+}
 
 function DiarioInner() {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchSessions = useCallback(async () => {
+    try {
+      const res = await api.get('/workouts/history');
+      const raw: any[] = res.data || [];
+      const mapped: SessionItem[] = raw.map((s) => {
+        const completedAt = s.completed_at;
+        const dt = completedAt ? new Date(completedAt) : new Date();
+        const km = Number(s.distance_km) || 0;
+        const dur = Number(s.duration_seconds) || 0;
+        const pace = s.avg_pace_min_per_km;
+        const score = scoreFromDistance(km, pace);
+        return {
+          id: s.session_id,
+          title: s.title || 'Sessione',
+          distanceKm: km,
+          durationStr: fmtDuration(dur),
+          paceStr: fmtPace(pace),
+          zoneChip: zoneFromPace(pace, s.activity_type),
+          scoreLetter: score.letter,
+          scoreValue: score.value,
+          dateLabel: fmtRelativeDate(completedAt),
+          monthKey: `${MONTH_IT[dt.getMonth()]} ${dt.getFullYear()}`,
+          source: sourceFromImport(s.import_source),
+        };
+      });
+      setSessions(mapped);
+    } catch (e) {
+      console.warn('[diario] history error:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useFocusEffect(useCallback(() => { fetchSessions(); }, [fetchSessions]));
 
   const filtered = useMemo(
-    () => filter === 'all' ? MOCK_SESSIONS : MOCK_SESSIONS.filter(s => s.source === filter),
-    [filter],
+    () => filter === 'all' ? sessions : sessions.filter(s => s.source === filter),
+    [filter, sessions],
   );
 
-  // Raggruppa per monthKey preservando l'ordine d'inserimento
   const grouped = useMemo(() => {
     const map = new Map<string, SessionItem[]>();
     filtered.forEach(s => {
@@ -92,7 +180,7 @@ function DiarioInner() {
         </TouchableOpacity>
       </View>
 
-      {/* SEARCH BAR (visiva — funzione in roadmap) */}
+      {/* SEARCH BAR */}
       <View style={styles.searchBar}>
         <Search size={16} color={text.muted} strokeWidth={2} />
         <Text style={styles.searchPlaceholder}>Cerca sessione, distanza, data…</Text>
@@ -102,20 +190,36 @@ function DiarioInner() {
       </View>
 
       {/* FILTER CHIPS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsRow}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
         <Chip label="Tutte" selected={filter === 'all'} onPress={() => setFilter('all')} />
         <Chip label="Apple Watch" selected={filter === 'apple_watch'} onPress={() => setFilter('apple_watch')} />
-        <Chip label="Garmin" selected={filter === 'garmin'} onPress={() => setFilter('garmin')} />
+        <Chip label="Garmin / Health Connect" selected={filter === 'garmin'} onPress={() => setFilter('garmin')} />
         <Chip label="Telefono" selected={filter === 'phone'} onPress={() => setFilter('phone')} />
         <Chip label="File" selected={filter === 'file'} onPress={() => setFilter('file')} />
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {grouped.map(([month, items]) => (
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchSessions(); }} tintColor={brand.primary} />}
+      >
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={brand.primary} />
+          </View>
+        ) : grouped.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Nessuna sessione</Text>
+            <Text style={styles.emptyBody}>
+              {sessions.length === 0
+                ? 'Importa la tua prima sessione o registra una corsa per iniziare.'
+                : 'Nessuna sessione corrisponde al filtro selezionato.'}
+            </Text>
+            <TouchableOpacity style={styles.emptyCta} onPress={() => router.push('/(tabs)/importa')}>
+              <Text style={styles.emptyCtaText}>VAI A IMPORTA</Text>
+            </TouchableOpacity>
+          </View>
+        ) : grouped.map(([month, items]) => (
           <View key={month} style={styles.section}>
             <Text style={styles.monthLabel}>{month.toUpperCase()}</Text>
             <View style={{ gap: spacing.sm }}>
@@ -145,20 +249,10 @@ function DiarioInner() {
           </View>
         ))}
 
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Nessuna sessione</Text>
-            <Text style={styles.emptyBody}>Connetti il tuo wearable dalla tab Importa per iniziare.</Text>
-            <TouchableOpacity style={styles.emptyCta} onPress={() => router.push('/(tabs)/importa')}>
-              <Text style={styles.emptyCtaText}>VAI A IMPORTA</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* COMPARE BAR (sticky bottom) */}
+      {/* COMPARE BAR */}
       {compareMode && selected.size > 0 ? (
         <View style={styles.compareBar}>
           <Text style={styles.compareBarText}>
@@ -167,6 +261,10 @@ function DiarioInner() {
           <TouchableOpacity
             disabled={selected.size !== 2}
             style={[styles.compareBarBtn, selected.size !== 2 && { opacity: 0.5 }]}
+            onPress={() => {
+              const [first] = Array.from(selected);
+              if (first) router.push(`/workout/${first}`);
+            }}
           >
             <Text style={styles.compareBarBtnText}>CONFRONTA</Text>
           </TouchableOpacity>
