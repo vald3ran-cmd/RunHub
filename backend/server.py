@@ -2652,14 +2652,24 @@ async def lab_overview(user: dict = Depends(get_current_user)):
     user_id = user["user_id"]
 
     # ── Recent sessions (60 giorni per training load) ─────
+    # NB: usiamo $or per accettare sia completed_at tz-aware che tz-naive,
+    # perché il vecchio complete_workout salvava datetime.utcnow() (naive)
+    # mentre i nuovi import salvano UTC tz-aware.
     start_60 = now - timedelta(days=60)
+    start_60_naive = start_60.replace(tzinfo=None)
     recent = await db.workout_sessions.find(
-        {"user_id": user_id, "completed_at": {"$gte": start_60}},
+        {
+            "user_id": user_id,
+            "$or": [
+                {"completed_at": {"$gte": start_60}},
+                {"completed_at": {"$gte": start_60_naive}},
+            ],
+        },
         {"_id": 0, "locations": 0, "splits": 0, "newly_awarded_badges": 0},
     ).sort("completed_at", 1).to_list(500)
 
     sessions_count = len(recent)
-    # Normalizza datetime per evitare errori tz-naive vs tz-aware
+    # Normalizza datetime per evitare errori tz-naive vs tz-aware nei calcoli successivi
     for s in recent:
         ca = s.get("completed_at")
         if isinstance(ca, datetime) and ca.tzinfo is None:

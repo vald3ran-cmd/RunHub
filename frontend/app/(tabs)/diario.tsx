@@ -41,7 +41,7 @@ function fmtDuration(sec: number): string {
 }
 
 function fmtPace(pace?: number | null): string {
-  if (!pace || pace <= 0) return '—';
+  if (!pace || pace <= 0 || pace > 30) return '—';
   const m = Math.floor(pace);
   const s = Math.round((pace - m) * 60);
   return `${m}:${String(s).padStart(2, '0')}/km`;

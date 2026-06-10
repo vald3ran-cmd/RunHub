@@ -650,12 +650,14 @@ function GapDecouplingCard({ session, t }: { session: any; t: (k: string, o?: an
     );
   }
   const avgPace = Number(session.avg_pace_min_per_km || 0);
+  // Clamp per sessioni troppo brevi (pace > 30 min/km = irrealistico)
+  const avgPaceValid = avgPace > 0 && avgPace <= 30;
   const elev = Number(session.elevation_gain_m || 0);
   const dist = Number(session.distance_km || 1);
   // GAP stimato (formula semplificata: 0.2 sec/km penalità per ogni 1m/km di dislivello)
   const elevPerKm = elev / dist;
   const gapAdjustSec = elevPerKm * 0.2;
-  const gapPace = avgPace > 0 ? avgPace - (gapAdjustSec / 60) : 0;
+  const gapPace = avgPaceValid ? avgPace - (gapAdjustSec / 60) : 0;
 
   // Decoupling: mock se non c'è HR — generato deterministicamente in base alla durata
   const dur = Number(session.duration_seconds || 0);
