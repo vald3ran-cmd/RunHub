@@ -64,10 +64,10 @@ function LabInner() {
 
   useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
-  // refresh on focus
+  // refresh on focus (assicura aggiornamento dopo aver chiuso una sessione)
   useFocusEffect(useCallback(() => {
-    if (data) fetchOverview();
-  }, [fetchOverview, data]));
+    fetchOverview();
+  }, [fetchOverview]));
 
   const onRefresh = () => { setRefreshing(true); fetchOverview(); };
 

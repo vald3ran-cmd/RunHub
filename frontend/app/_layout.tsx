@@ -214,6 +214,24 @@ function RootNav() {
     }
   }, [user, loading, segments]);
 
+  // ─── Onboarding Lab 1.6 (one-shot post-login) ──────────────
+  // Mostra il tour delle 3 schermate Lab/Importa/AI Coach al primo accesso
+  // dopo l'aggiornamento 1.6. Persistente via AsyncStorage.
+  useEffect(() => {
+    if (loading || !user || user.needs_profile_completion || !user.onboarding_completed) return;
+    const seg0 = segments[0] as string | undefined;
+    const inLabOnboarding = seg0 === 'onboarding-lab';
+    const inAuthGroup = seg0 === '(auth)';
+    const inLegacyOnb = seg0 === 'onboarding';
+    if (inLabOnboarding || inAuthGroup || inLegacyOnb) return;
+    (async () => {
+      try {
+        const done = await AsyncStorage.getItem('runhub.onboarding16.done');
+        if (!done) router.replace('/onboarding-lab');
+      } catch {}
+    })();
+  }, [user, loading, segments]);
+
   if (loading) {
     return (
       <View style={styles.loader}>

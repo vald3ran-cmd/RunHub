@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, StyleProp, TouchableOpacity } from 'react-native';
 import { brand, neutral, semantic, text, radius, spacing, typography } from '../tokens';
 
 type Tone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
@@ -10,6 +10,8 @@ type Props = {
   filled?: boolean;
   icon?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  selected?: boolean;
+  onPress?: () => void;
 };
 
 const TONE_MAP: Record<Tone, { bg: string; fg: string; border: string }> = {
@@ -21,21 +23,28 @@ const TONE_MAP: Record<Tone, { bg: string; fg: string; border: string }> = {
   info:    { bg: '#DBEAFE', fg: semantic.info, border: '#BFDBFE' },
 };
 
-export function Chip({ label, tone = 'neutral', filled = true, icon, style }: Props) {
+export function Chip({ label, tone = 'neutral', filled = true, icon, style, selected, onPress }: Props) {
   const c = TONE_MAP[tone];
+  // When `selected` is true → render orange brand fill irrespective of tone.
+  const colors = selected
+    ? { bg: brand.primary, fg: '#FFFFFF', border: brand.primary }
+    : c;
+  const Wrap: any = onPress ? TouchableOpacity : View;
+  const wrapProps = onPress ? { onPress, activeOpacity: 0.7 } : {};
   return (
-    <View
+    <Wrap
+      {...wrapProps}
       style={[
         styles.chip,
         filled
-          ? { backgroundColor: c.bg, borderColor: c.border }
-          : { backgroundColor: 'transparent', borderColor: c.fg },
+          ? { backgroundColor: colors.bg, borderColor: colors.border }
+          : { backgroundColor: 'transparent', borderColor: colors.fg },
         style,
       ]}
     >
       {icon ? <View style={{ marginRight: 6 }}>{icon}</View> : null}
-      <Text style={[styles.text, { color: c.fg }]} numberOfLines={1}>{label}</Text>
-    </View>
+      <Text style={[styles.text, { color: colors.fg }]} numberOfLines={1}>{label}</Text>
+    </Wrap>
   );
 }
 
@@ -44,7 +53,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
     alignSelf: 'flex-start',
@@ -53,5 +62,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontFamily: typography.kpiLabel.fontFamily,
     letterSpacing: 0.5,
+    fontSize: 12,
   },
 });
