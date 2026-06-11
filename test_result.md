@@ -985,6 +985,9 @@ agent_communication:
   - agent: "main"
     message: "✅ BLE HRM Real-Time Integration completata (RunHub 1.6.2). **Backend**: aggiunto `HRSampleIn` Pydantic model, esteso `CompleteWorkoutRequest` con `avg_hr_bpm`, `max_hr_bpm`, `hr_device_name`, `heart_rate_samples: List[HRSampleIn]`. Il doc salvato in `workout_sessions` ora include tutti i campi HR. Backward compatible (tutti i campi sono Optional / default factory). **Frontend dependencies**: installato `react-native-ble-plx@3.5.1` via `yarn expo install` (config plugin auto-added). Reverificato `react-native-reanimated@3.19.5` (yarn ha tentato bump a 4.1.7 → ripristinato). **app.json**: aggiunti permessi iOS `NSBluetoothAlwaysUsageDescription` + `NSBluetoothPeripheralUsageDescription` (italiano), permessi Android `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, config plugin react-native-ble-plx con `modes: [central]` e usage description. **Nuovi moduli**: (1) `/app/frontend/src/bleHrm.ts` — servizio BLE: `isBleSupported()` (rileva Expo Go), `requestBlePermissions()`, `scanForHrmDevices()` filtra per Heart Rate Service UUID 0x180D, `connectAndSubscribe()` parsea Heart Rate Measurement char (0x2A37) gestendo flag uint8/uint16, decode base64 custom RN-friendly. (2) `/app/frontend/src/HrmPickerModal.tsx` — bottom sheet Scientific Light: scan auto a apertura, lista device ordinata per RSSI con icona heart e signal label, errori inline con CTA Impostazioni, fallback graceful per Expo Go ('Build nativa richiesta'). **Integrazione `/run-active.tsx`**: aggiunto state `currentHr` + `hrSamplesRef`, button heart nel top bar (mostra ❤️ + bpm live se connesso), HR card nel secondary stats row, cleanup BLE su unmount, sample storage in ref, calcolo avg/max HR al complete + invio a `/workouts/complete`. **Bundle health**: ✅ Metro bundled OK (2905 modules, 12.9s), 0 errori. **⚠️ Test richiesto SU BUILD NATIVA**: il BLE non funziona in Expo Go (fallback automatico mostra UI 'Pubblica l\\'app per usare'). Sarà testabile solo dopo build EAS iOS/Android."
 
+  - agent: "main"
+    message: "✅ Backend refactor partial (D): estratto `/api/weather` in `/app/backend/routes/weather.py` come APIRouter modulare. Pattern: `build_weather_router(get_current_user_dep)` factory che riceve l'auth dep dal main server (no circular imports). Aggiunto `/app/backend/routes/__init__.py`. server.py ora include il router via `app.include_router(weather_router, prefix='/api')`. Endpoint /api/weather verificato post-refactor (curl OK: Roma → 24°C, Poco nuvoloso, cloud-sun). Architettura pronta per estrarre altri endpoint (ai_coach, social, workouts, ecc.) seguendo lo stesso pattern. server.py da 4354 → 4297 righe. **F (UI polish) skip**: il pace bar chart per km in workout/[id].tsx già esiste (component SplitsCard, righe 488-552) con best/worst indication. Non necessario re-implementare. **E (Coros/Polar/Suunto OAuth) richiede credenziali utente**: prossimo step richiede Client ID/Secret. Ho fatto pausa per chiedere all'utente."
+
 frontend:
   - task: "BLE HRM Real-Time Integration (react-native-ble-plx)"
     implemented: true
@@ -1001,15 +1004,30 @@ frontend:
 backend:
   - task: "CompleteWorkoutRequest extended with HR fields (avg_hr_bpm, max_hr_bpm, hr_device_name, heart_rate_samples)"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Schema esteso (Optional/default-factory per backward compat), salvataggio in workout_sessions doc. Hot-reloaded OK. Test: POST /api/workouts/complete con HR payload → verifica salvataggio e GET /api/workouts/{id} → verifica restituzione."
+      - working: true
+        agent: "testing"
+        comment: "✅ 4/4 PASS (no-auth=401, legacy backward-compat=200 with nulls, full HR payload=200, GET roundtrip=200). Tutti i 4 nuovi campi HR persistiti correttamente. Production-ready."
+
+  - task: "Backend modular routes — extracted /api/weather to routes/weather.py"
+    implemented: true
+    working: true
+    file: "backend/routes/weather.py, backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Refactor: /api/weather estratto in routes/weather.py via APIRouter factory. server.py ora include il router via app.include_router con prefix='/api'. Verificato manualmente via curl: GET /api/weather?lat=41.9028&lon=12.4964 → 200 OK con payload meteo Roma. Pattern pronto per estrarre altri endpoint."
 
 
 

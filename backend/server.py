@@ -2656,66 +2656,6 @@ async def stats_dashboard(user: dict = Depends(get_current_user)):
 
 # ---------- Lab Overview (Batch finale — aggrega tutti i dati per il Lab tab) ----------
 # ---------- Weather (Open-Meteo, no API key) — Share Card v2 ----------
-@api_router.get("/weather")
-async def weather_for_share(
-    lat: float,
-    lon: float,
-    timestamp: Optional[str] = None,
-    user: dict = Depends(get_current_user),
-):
-    """
-    Restituisce condizioni meteo per share card.
-    Provider: open-meteo.com (gratis, no auth, ~10k req/giorno).
-    """
-    try:
-        import httpx
-        # Use historical forecast for past timestamps, current for now
-        target_dt = None
-        if timestamp:
-            try:
-                target_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-            except Exception:
-                target_dt = None
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": lat,
-            "longitude": lon,
-            "current": "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m",
-            "timezone": "auto",
-        }
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            r = await client.get(url, params=params)
-            r.raise_for_status()
-            data = r.json()
-        cur = data.get("current") or {}
-        wc = int(cur.get("weather_code") or 0)
-        # WMO code → label/icon
-        def label_for(code: int) -> tuple[str, str]:
-            if code == 0: return ("Sereno", "sun")
-            if code <= 3: return ("Poco nuvoloso", "cloud-sun")
-            if code <= 48: return ("Nebbia", "cloud-fog")
-            if code <= 67: return ("Pioggia", "cloud-rain")
-            if code <= 77: return ("Neve", "cloud-snow")
-            if code <= 82: return ("Acquazzoni", "cloud-rain")
-            if code <= 99: return ("Temporale", "cloud-lightning")
-            return ("—", "cloud")
-        label, icon = label_for(wc)
-        return {
-            "temperature_c": round(float(cur.get("temperature_2m") or 0)),
-            "humidity_pct": round(float(cur.get("relative_humidity_2m") or 0)),
-            "wind_kmh": round(float(cur.get("wind_speed_10m") or 0)),
-            "weather_code": wc,
-            "label": label,
-            "icon": icon,
-        }
-    except Exception as e:
-        logger.warning(f"weather fetch error: {e}")
-        return {
-            "temperature_c": None, "humidity_pct": None, "wind_kmh": None,
-            "weather_code": None, "label": None, "icon": "cloud",
-        }
-
-
 @api_router.get("/lab/overview")
 async def lab_overview(user: dict = Depends(get_current_user)):
     """
@@ -4340,6 +4280,14 @@ async def set_nearby_visibility(data: NearbyVisibilityIn, user: dict = Depends(g
 
 
 app.include_router(api_router)
+
+# ── Modular routers (RunHub 1.6.2+) ──────────────────────────────────
+# These will gradually receive endpoints extracted from server.py for scaling.
+from routes.weather import build_weather_router
+
+weather_router = build_weather_router(get_current_user)
+app.include_router(weather_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
