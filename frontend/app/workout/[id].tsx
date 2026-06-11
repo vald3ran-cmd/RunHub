@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Alert, Platform,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Alert, Platform, Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -65,6 +65,7 @@ function WorkoutDetailInner() {
   const [loading, setLoading] = useState(true);
   const [isNewPB, setIsNewPB] = useState<string | null>(null);
   const [subTab, setSubTab] = useState<'grafici' | 'analisi' | 'confronto'>('analisi');
+  const [weather, setWeather] = useState<{ temperature_c: number; humidity_pct: number; wind_kmh: number; label: string; icon: string } | null>(null);
   const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
@@ -90,6 +91,33 @@ function WorkoutDetailInner() {
       setLoading(false);
     })();
   }, [id]);
+
+  // Fetch weather using session GPS coords (for Share Card v2)
+  useEffect(() => {
+    if (!session?.locations || session.locations.length === 0) return;
+    const first = session.locations[0];
+    const lat = first?.lat;
+    const lon = first?.lng ?? first?.lon;
+    if (typeof lat !== 'number' || typeof lon !== 'number') return;
+    (async () => {
+      try {
+        const { data } = await api.get('/weather', {
+          params: { lat, lon, timestamp: session.completed_at },
+        });
+        if (data && typeof data.temperature_c === 'number') {
+          setWeather({
+            temperature_c: data.temperature_c,
+            humidity_pct: data.humidity_pct ?? 0,
+            wind_kmh: data.wind_kmh ?? 0,
+            label: data.label || '—',
+            icon: data.icon || 'cloud',
+          });
+        }
+      } catch (e) {
+        // silenzioso — il widget meteo è opzionale
+      }
+    })();
+  }, [session]);
 
   if (loading) return <View style={styles.loader}><ActivityIndicator color={colors.primary} /></View>;
   if (!session) return <View style={styles.loader}><Text style={{ color: colors.textSecondary }}>{t('workout_detail.session_not_found')}</Text></View>;
@@ -157,67 +185,105 @@ function WorkoutDetailInner() {
 
         {/* ─────────────────────────────────────────────── */}
         {/* SHARE CARD — il blocco esportato come immagine */}
-        {/* ─────────────────────────────────────────────── */}
+        {/* ─── SHARE CARD v2 (RunHub Lab Edition) ──────────── */}
         <ViewShot ref={shareCardRef as any} options={{ format: 'png', quality: 0.95 }} style={styles.shareCardWrap}>
-          <View style={[styles.shareCard, { backgroundColor: colors.textPrimary }]}>
-            {/* Header card */}
-            <View style={styles.cardHeader}>
-              <View style={[styles.activityBadge, { backgroundColor: activity.color }]}>
-                <ActIcon size={16} color="#fff" strokeWidth={2.4} />
-                <Text style={styles.activityBadgeText}>{getActivityLabel(activityType, t)}</Text>
+          <View style={styles.scV2}>
+            {/* TOP ROW: Brand + Weather */}
+            <View style={styles.scV2Top}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.scV2BrandRow}>
+                  <Image source={require('../../assets/lab/logo-symbol.png')} style={styles.scV2Logo} />
+                  <Text style={styles.scV2Brand}>RUNHUB <Text style={{ color: dsTokens.brand.primary }}>LAB</Text></Text>
+                </View>
+                <View style={styles.scV2Status}>
+                  <CheckCircle2 size={11} color={colors.success} strokeWidth={2.6} />
+                  <Text style={styles.scV2StatusText}>SESSIONE COMPLETATA</Text>
+                </View>
+                <View style={[styles.scV2ActPill, { borderColor: activity.color }]}>
+                  <ActIcon size={12} color={activity.color} strokeWidth={2.4} />
+                  <Text style={[styles.scV2ActPillText, { color: activity.color }]}>{getActivityLabel(activityType, t).toUpperCase()}</Text>
+                </View>
               </View>
-              <Text style={styles.cardBrand}>RunHub</Text>
+              {weather ? (
+                <View style={styles.scV2Weather}>
+                  <Text style={styles.scV2WeatherIcon}>{weather.icon === 'sun' ? '☀️' : weather.icon === 'cloud-rain' ? '🌧️' : weather.icon === 'cloud-lightning' ? '⛈️' : weather.icon === 'cloud-snow' ? '❄️' : weather.icon === 'cloud-fog' ? '🌫️' : '⛅'}</Text>
+                  <Text style={styles.scV2WeatherTemp}>{weather.temperature_c}°C</Text>
+                  <Text style={styles.scV2WeatherLabel}>{weather.label}</Text>
+                  <View style={styles.scV2WeatherMeta}>
+                    <Text style={styles.scV2WeatherMetaText}>💨 {weather.wind_kmh} km/h</Text>
+                    <Text style={styles.scV2WeatherMetaText}>💧 {weather.humidity_pct}%</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
 
-            {/* Hero metric */}
-            <View style={styles.heroMetric}>
-              <Text style={styles.heroValue}>{session.distance_km.toFixed(2)}</Text>
-              <Text style={styles.heroUnit}>KM</Text>
+            {/* HERO DISTANCE */}
+            <View style={styles.scV2Hero}>
+              <Text style={styles.scV2HeroValue}>{session.distance_km.toFixed(2)}</Text>
+              <Text style={styles.scV2HeroUnit}>KM</Text>
             </View>
 
             {/* PB Badge */}
             {isNewPB ? (
-              <View style={styles.pbBanner}>
-                <Award size={14} color="#fff" strokeWidth={2.4} />
-                <Text style={styles.pbBannerText}>{t('workout_detail.new_record')} · {isNewPB}</Text>
+              <View style={[styles.scV2Pb, { backgroundColor: dsTokens.brand.subtle }]}>
+                <Award size={12} color={dsTokens.brand.primary} strokeWidth={2.5} />
+                <Text style={styles.scV2PbText}>🏆 NUOVO RECORD · {isNewPB.toUpperCase()}</Text>
               </View>
             ) : null}
 
-            {/* Stats grid */}
-            <View style={styles.cardStats}>
-              <CardStat
-                icon={<Clock size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />}
-                label={t('workout_detail.duration')}
-                value={formatTime(session.duration_seconds)}
-              />
-              <View style={styles.cardDivider} />
-              <CardStat
-                icon={<Zap size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />}
-                label={activityType === 'bike' ? t('workout_detail.kmh') : t('workout_detail.pace')}
-                value={
-                  activityType === 'bike'
-                    ? (session.duration_seconds > 0
-                        ? ((session.distance_km / session.duration_seconds) * 3600).toFixed(1)
-                        : '--')
-                    : (pace
-                        ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}`
-                        : '--')
-                }
-              />
-              <View style={styles.cardDivider} />
-              <CardStat
-                icon={<Flame size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.4} />}
-                label={t('workout_detail.kcal')}
-                value={String(session.calories ?? '--')}
-              />
+            {/* STATS ROW */}
+            <View style={styles.scV2Stats}>
+              <View style={styles.scV2Stat}>
+                <Clock size={14} color={colors.textMuted} strokeWidth={2.2} />
+                <Text style={styles.scV2StatLabel}>DURATA</Text>
+                <Text style={styles.scV2StatValue}>{formatTime(session.duration_seconds)}</Text>
+              </View>
+              <View style={styles.scV2StatDivider} />
+              <View style={styles.scV2Stat}>
+                <Zap size={14} color={colors.textMuted} strokeWidth={2.2} />
+                <Text style={styles.scV2StatLabel}>{activityType === 'bike' ? 'VEL.' : 'PASSO'}</Text>
+                <Text style={styles.scV2StatValue}>
+                  {activityType === 'bike'
+                    ? (session.duration_seconds > 0 ? `${((session.distance_km / session.duration_seconds) * 3600).toFixed(1)} km/h` : '—')
+                    : (pace && pace <= 30 ? `${Math.floor(pace)}:${String(Math.floor((pace % 1) * 60)).padStart(2, '0')}` : '—')}
+                </Text>
+              </View>
+              <View style={styles.scV2StatDivider} />
+              <View style={styles.scV2Stat}>
+                <Flame size={14} color={colors.textMuted} strokeWidth={2.2} />
+                <Text style={styles.scV2StatLabel}>KCAL</Text>
+                <Text style={styles.scV2StatValue}>{session.calories ?? '—'}</Text>
+              </View>
             </View>
 
-            {/* Date footer */}
-            <Text style={styles.cardDate}>{formatDate(session.completed_at, locale)}</Text>
+            {/* BOTTOM: Route + Highlights */}
+            <View style={styles.scV2Bottom}>
+              <View style={styles.scV2BottomCol}>
+                <Text style={styles.scV2BottomLabel}>📍 PERCORSO</Text>
+                <View style={styles.scV2RouteBox}>
+                  <Text style={styles.scV2RouteText}>
+                    {Array.isArray(session.locations) && session.locations.length > 1 ? '~' : '—'}
+                  </Text>
+                  <Text style={styles.scV2RouteSub}>
+                    {Array.isArray(session.locations) && session.locations.length > 1
+                      ? `${session.locations.length} punti GPS`
+                      : 'no GPS'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.scV2BottomCol}>
+                <Text style={styles.scV2BottomLabel}>⚡ HIGHLIGHTS</Text>
+                <HiBar label="Intensità" value={Math.min(100, Math.round(((pace || 7) <= 5 ? 80 : (pace || 7) <= 6 ? 50 : 25)))} color={activity.color} />
+                <HiBar label="FC media" value={session.avg_hr_bpm ? Math.min(100, Math.round((session.avg_hr_bpm / 200) * 100)) : 0} valueText={session.avg_hr_bpm ? `${session.avg_hr_bpm} bpm` : '—'} color="#22C55E" />
+                <HiBar label="Cadenza" value={session.avg_cadence_spm ? Math.min(100, Math.round((session.avg_cadence_spm / 200) * 100)) : 0} valueText={session.avg_cadence_spm ? `${session.avg_cadence_spm} spm` : '—'} color="#3B82F6" />
+              </View>
+            </View>
 
-            {/* Decorative blobs */}
-            <View style={[styles.blobBig, { backgroundColor: activity.color, opacity: 0.18 }]} />
-            <View style={[styles.blobSmall, { backgroundColor: activity.color, opacity: 0.10 }]} />
+            {/* FOOTER */}
+            <View style={styles.scV2Footer}>
+              <Text style={styles.scV2FooterDate}>📅 {formatDate(session.completed_at, locale)}</Text>
+              <Text style={styles.scV2FooterBrand}>RunHub.app</Text>
+            </View>
           </View>
         </ViewShot>
 
@@ -321,6 +387,23 @@ function CardStat({ icon, label, value }: { icon: React.ReactNode; label: string
         <Text style={styles.cardStatLabel}>{label}</Text>
       </View>
       <Text style={styles.cardStatValue}>{value}</Text>
+    </View>
+  );
+}
+
+// ─── Share Card v2: Highlight Bar ───────────────────────────────
+function HiBar({ label, value, color, valueText }:
+  { label: string; value: number; color: string; valueText?: string }) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <View style={styles.scV2Hi}>
+      <View style={styles.scV2HiHeader}>
+        <Text style={styles.scV2HiLabel}>{label}</Text>
+        <Text style={styles.scV2HiValue}>{valueText ?? `${pct}%`}</Text>
+      </View>
+      <View style={styles.scV2HiTrack}>
+        <View style={[styles.scV2HiFill, { width: `${pct}%`, backgroundColor: color }]} />
+      </View>
     </View>
   );
 }
@@ -1073,4 +1156,222 @@ const styles = StyleSheet.create({
   compValueBig: { color: colors.textPrimary, fontSize: 15, fontWeight: '900', marginTop: 2 },
   compArrow: { color: colors.textMuted, fontSize: 18, fontWeight: '700' },
   compDelta: { fontSize: 14, fontWeight: '900', letterSpacing: -0.3, minWidth: 50, textAlign: 'right' },
+
+  // ─────────────────────────────────────────────────────────
+  // SHARE CARD V2 — Scientific Light / RunHub Lab Edition
+  // ─────────────────────────────────────────────────────────
+  scV2: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  scV2Top: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  scV2BrandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  scV2Logo: { width: 26, height: 26, resizeMode: 'contain' },
+  scV2Brand: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  scV2Status: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+  },
+  scV2StatusText: {
+    color: colors.success,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+  scV2ActPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  scV2ActPillText: { fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  scV2Weather: {
+    minWidth: 92,
+    alignItems: 'flex-end',
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scV2WeatherIcon: { fontSize: 22, lineHeight: 26 },
+  scV2WeatherTemp: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  scV2WeatherLabel: {
+    color: colors.textSecondary,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  scV2WeatherMeta: { marginTop: 4, gap: 1, alignItems: 'flex-end' },
+  scV2WeatherMetaText: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '600',
+  },
+
+  scV2Hero: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  scV2HeroValue: {
+    color: colors.textPrimary,
+    fontSize: 76,
+    fontWeight: '900',
+    letterSpacing: -3.5,
+    lineHeight: 80,
+  },
+  scV2HeroUnit: {
+    color: dsTokens.brand.primary,
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginLeft: 8,
+  },
+
+  scV2Pb: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    marginBottom: spacing.sm,
+  },
+  scV2PbText: {
+    color: dsTokens.brand.primary,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+
+  scV2Stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  scV2Stat: { flex: 1, alignItems: 'center', gap: 4 },
+  scV2StatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.border,
+  },
+  scV2StatLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  scV2StatValue: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+
+  scV2Bottom: { flexDirection: 'row', gap: spacing.md },
+  scV2BottomCol: { flex: 1 },
+  scV2BottomLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  scV2RouteBox: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 10,
+    padding: 12,
+    minHeight: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scV2RouteText: {
+    color: dsTokens.brand.primary,
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 32,
+  },
+  scV2RouteSub: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+
+  scV2Hi: { marginBottom: 8 },
+  scV2HiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  scV2HiLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+  scV2HiValue: { color: colors.textPrimary, fontSize: 10, fontWeight: '900' },
+  scV2HiTrack: {
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceSecondary,
+    overflow: 'hidden',
+  },
+  scV2HiFill: { height: '100%', borderRadius: 999 },
+
+  scV2Footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  scV2FooterDate: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  scV2FooterBrand: {
+    color: dsTokens.brand.primary,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
 });

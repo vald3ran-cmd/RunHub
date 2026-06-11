@@ -458,6 +458,23 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+backend:
+  - task: "GET /api/weather (Open-Meteo, no API key) — Share Card v2"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "7/7 assertions PASS via /app/backend/tests/test_weather_endpoint.py against https://run-training-hub-1.preview.emergentagent.com/api. (1) GET /api/weather?lat=41.9028&lon=12.4964 without Authorization -> 401 'Not authenticated' as expected (Depends(get_current_user) protects the endpoint). (2) With admin Bearer token and Rome coords -> 200 with {temperature_c:25, humidity_pct:55, wind_kmh:6, weather_code:1, label:'Poco nuvoloso', icon:'cloud-sun'}. All 6 required keys present; types are int/int/int/int/str/str respectively; label is in the expected Italian set {Sereno, Poco nuvoloso, Nebbia, Pioggia, Neve, Acquazzoni, Temporale}; icon in {sun, cloud-sun, cloud-fog, cloud-rain, cloud-snow, cloud-lightning, cloud}; values are plausible (temp in -40..60, humidity 0..100, wind 0..400). (3) Same call with timestamp='2026-06-10T08:30:00Z' -> 200 with identical shape. NOTE: the timestamp parameter is parsed (datetime.fromisoformat with Z->+00:00 swap) but the parsed target_dt is never used to query historical data — the endpoint always returns CURRENT weather from open-meteo /v1/forecast?current=... regardless of timestamp. Not blocking (response shape matches spec for any timestamp), but worth a future enhancement to call the archive/forecast endpoint with the requested datetime. (4) Invalid lat=999, lon=999 -> 200 with graceful fallback {temperature_c:null, humidity_pct:null, wind_kmh:null, weather_code:null, label:null, icon:'cloud'} — no 500, no crash. open-meteo returns an HTTP error for out-of-range coords, the try/except in lines 2698-2703 catches and returns the fallback as designed. (5) Regression smoke ALL PASS: GET /api/health -> 200; GET /api/auth/me with admin token -> 200 (role='admin', email='admin@runhub.com'); GET /api/lab/overview with admin token -> 200 (dict response). No regressions detected. Endpoint is production-ready for Share Card v2."
+
+agent_communication:
+  - agent: "testing"
+    message: "TESTED GET /api/weather (RunHub 1.6.2 Share Card v2). 7/7 assertions PASS via /app/backend/tests/test_weather_endpoint.py against the public URL. All 4 weather scenarios from the review request work as specified: (1) no auth -> 401; (2) Rome (lat=41.9028, lon=12.4964) with admin Bearer -> 200 with temperature_c=25, humidity_pct=55, wind_kmh=6, weather_code=1, label='Poco nuvoloso', icon='cloud-sun' — all required keys present with correct numeric/string types; (3) with timestamp='2026-06-10T08:30:00Z' -> 200, same shape; (4) invalid lat/lon (999,999) -> 200 with graceful fallback {all null + icon:'cloud'} — no crash. Regression smoke ALL PASS: /api/health 200, /api/auth/me admin 200, /api/lab/overview admin 200. MINOR OBSERVATION (not blocking): the 'timestamp' parameter is parsed but never actually used by the open-meteo call — it always returns CURRENT weather regardless of the requested timestamp. The endpoint signature accepts it and the response shape is identical, so it doesn't break anything, but if Share Card v2 needs historical weather for a past run, the implementation will need to switch to the open-meteo historical/archive endpoint and pass start_date/end_date derived from target_dt. JUnit report: /app/test_reports/pytest/weather_iteration3.xml. Iteration report: /app/test_reports/iteration_3.json."
+
   - task: "AI Coach background job pattern (job + polling) — fixes 502 ingress timeout"
     implemented: true
     working: true
@@ -895,4 +912,53 @@ agent_communication:
 
   - agent: "main"
     message: "✅ Batch 2 + 3 implementati. **BATCH 2 (File Parser)**: (Backend) Creato `/app/backend/file_parsers.py` con parser robusti per `.gpx` (gpxpy), `.fit` (fitparse, con conversione semicircles→degrees per GPS), `.tcx` (lxml). Calcolo automatico: distance via haversine, splits km-by-km, elevation gain, durata, pace medio, activity type (run/walk/bike). Aggiunto `POST /api/imports/file` (multipart, max 20MB) + `GET /api/imports/quota`. Quota mensile: Free 5, Starter 30, Performance/Elite illimitati. Idempotenza + import metadata salvati. (Frontend) Installati `expo-document-picker@14.0.8` + `react-native-health@1.19.0`. Creato `/app/frontend/src/fileImporter.ts` (picker + multipart upload). Rifatto `(tabs)/importa.tsx` con state: fileImporting/hkImporting/quota/lastResult/errorMsg, banner verde di successo con CTA 'APRI DETTAGLI' che porta a /workout/[id], banner rosso errori, quota in tempo reale nello status banner e nei subnote. **TEST end-to-end via web UI**: ✅ GPX upload riuscito (2.02 km · 15 min · 7 punti GPS parsed correttamente). **BATCH 3 (Apple HealthKit)**: (Backend) Creato `POST /api/workouts/import-batch` con schema Pydantic (HealthKitWorkoutIn + heart_rate_samples + route_points), idempotente via (user_id, external_id, source='apple_health'), supporto bulk fino a 500 workout. (Frontend) Creato `/app/frontend/src/healthkit.ts` con: `isHealthKitSupported()` (rileva Expo Go via Constants.appOwnership), `requestHealthKitPermissions()` (read-only: Workout/HeartRate/ActiveEnergyBurned/DistanceWalkingRunning/DistanceCycling/Steps), `readWorkouts(days)` con `getAnchoredWorkouts`, `connectAndImport(90)` che fa il full flow. Wired al pulsante 'CONNETTI' di Apple HealthKit in Importa con loader. **app.json già configurato dal precedente lavoro**: entitlements `com.apple.developer.healthkit=true`, infoPlist NSHealthShareUsageDescription/NSHealthUpdateUsageDescription in italiano, plugin `react-native-health` con permessi UI. **⚠️ Apple HealthKit non testabile in Expo Go/web** — fallback automatico mostra reason 'richiede iOS build nativo'. Sarà testabile solo dopo Publish + build iOS dell'utente. **Bundle health**: 0 errori bloccanti ESLint sui nuovi file. Backend running, expo running."
+
+
+# ─────────────────────────────────────────────────────────────
+# RunHub 1.6.2 — Share Card v2 (Scientific Light) + dep fix
+# ─────────────────────────────────────────────────────────────
+backend:
+  - task: "GET /api/weather (Open-Meteo)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint che restituisce temperatura, umidità, vento, weather_code/label/icon (WMO mapping) dato lat/lon (+ timestamp opzionale). Provider Open-Meteo (free, no API key). Usato dal nuovo Share Card v2 in workout/[id].tsx per popolare il widget meteo nella sezione brand. Auth richiesta (get_current_user). Gestione errori con fallback a campi None."
+
+frontend:
+  - task: "Share Card v2 (workout/[id].tsx) — Scientific Light + weather widget"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/workout/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Ricostruita Share Card v2 in Scientific Light: top row con logo RunHub LAB + status SESSIONE COMPLETATA + activity pill colorata e weather widget (icona emoji, °C, label, vento km/h, umidità %); hero distance gigante con .kmunit arancione; PB pill arancione condizionale; stats row (Durata/Passo/Kcal) con divider verticali; bottom 2 colonne (Percorso con conteggio punti GPS + Highlights con HiBar di Intensità/FC/Cadenza); footer con data + RunHub.app. Fetch weather su mount via GET /api/weather (lat=first.lat, lon=first.lng, timestamp=completed_at). Aggiunto Image import. Aggiunto componente HiBar. ViewShot wrapper conservato per share via captureRef + expo-sharing. Stili scV2* aggiunti al StyleSheet."
+  - task: "Fix dependency drift react-native-reanimated (4.1.7 → 3.19.5)"
+    implemented: true
+    working: true
+    file: "frontend/package.json"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Bundle rotto: error 'Cannot find module react-native-worklets/plugin' durante babel transform di @react-navigation/native. Causa: dependencies aveva ~4.1.1 (yarn install ha pickato 4.1.7 che richiede react-native-worklets). resolutions:'3.19.5' non bastava perché applica solo a transitive deps."
+      - working: true
+        agent: "main"
+        comment: "Corretto package.json dependencies a '3.19.5' esatto. yarn install ha downgraded a 3.19.5. Bundle ricompila correttamente, login screen renderizza, Tunnel ready. EAS build iOS ora di nuovo allineato al lock noto-buono."
+
+agent_communication:
+  - agent: "main"
+    message: "✅ Share Card v2 implementata in `/app/frontend/app/workout/[id].tsx` (Scientific Light): top row logo+status+activity pill + widget meteo (icona+°C+label+vento+umidità via nuovo /api/weather), hero distance gigante con unità arancione, PB pill condizionale, stats row 3 colonne (Durata/Passo/Kcal), bottom 2-col (Percorso GPS + Highlights HiBar Intensità/FC/Cadenza), footer data+brand. Aggiunto Image import, HiBar component, ~20 stili scV2*. Weather fetch via api.get('/weather', {lat,lon,timestamp}) — silent fail se manca GPS. ✅ FIX CRITICO dependency drift: react-native-reanimated era a 4.1.7 (richiedeva react-native-worklets non installato) → riportato a 3.19.5 esatto in package.json deps, yarn install OK, bundle OK. Onboarding-lab.tsx già completo da fork precedente (3 slide + AsyncStorage flag + redirect a /importa), _layout.tsx già wired. Auto-refresh lab + deep-link diario → workout/[id] già attivi (useFocusEffect). Pronto per test backend /api/weather e visual check Share Card."
+
 
