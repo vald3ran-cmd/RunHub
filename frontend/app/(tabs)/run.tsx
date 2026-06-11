@@ -1,231 +1,420 @@
-import { useState } from 'react';
+/**
+ * Run · "Scegli l'attività" (RunHub 1.6 Lab Edition)
+ * - Color-shift dinamico (Corsa arancione · Camminata verde · Bici blu)
+ * - Icone custom: /assets/lab/activity/* + /assets/lab/icons/*
+ * - Settings modal (unità · countdown · auto-pausa · schermo · audio · vibrazione)
+ *   persistiti in AsyncStorage 'runhub.run.settings.v1'
+ * - Diagnostica GPS → naviga a /gps-test esistente
+ */
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, StatusBar, Modal, Switch,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, shadows, typography, activityMeta, ActivityType, getActivityLabel } from '../../src/theme';
-import { MapPin, Bug, ChevronRight, Zap, Footprints, Bike, Activity } from 'lucide-react-native';
-import { useT } from '../../src/i18n';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ChevronLeft, Settings, Target, ChevronRight, X, Check } from 'lucide-react-native';
+import { tokens, FontProvider } from '../../src/design-system';
 
-type Mode = ActivityType;
+const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
-export default function RunTab() {
+type ActivityKey = 'run' | 'walk' | 'bike';
+
+const THEMES: Record<ActivityKey, { primary: string; subtle: string; light: string }> = {
+  run:  { primary: brand.primary, subtle: brand.subtle, light: brand.light },
+  walk: { primary: '#16A34A',     subtle: '#D1FAE5',    light: '#A7F3D0' },
+  bike: { primary: '#2563EB',     subtle: '#DBEAFE',    light: '#BFDBFE' },
+};
+
+const ACTIVITIES: Array<{
+  key: ActivityKey;
+  name: string;
+  icon: any;
+  ctaLabel: string;
+  description: string;
+}> = [
+  { key: 'run',  name: 'Corsa',      icon: require('../../assets/lab/activity/corsa.png'),
+    ctaLabel: 'AVVIA CORSA',
+    description: 'Traccia distanza, tempo e passo con GPS. Ideale per allenamenti aerobici e tempo run.' },
+  { key: 'walk', name: 'Camminata',  icon: require('../../assets/lab/activity/camminata.png'),
+    ctaLabel: 'AVVIA CAMMINATA',
+    description: 'Monitora i tuoi passi, la distanza e le calorie bruciate durante una passeggiata.' },
+  { key: 'bike', name: 'Bici',       icon: require('../../assets/lab/activity/bici.png'),
+    ctaLabel: 'AVVIA BICI',
+    description: 'Registra velocità, distanza e dislivello durante un\'uscita in bicicletta.' },
+];
+
+const ICON_GPS         = require('../../assets/lab/icons/gps.png');
+const ICON_PERCORSO    = require('../../assets/lab/icons/percorso.png');
+const ICON_TEMPO       = require('../../assets/lab/icons/tempo.png');
+const ICON_VELOCITA    = require('../../assets/lab/icons/velocita.png');
+const ICON_POSIZIONE   = require('../../assets/lab/icons/posizione.png');
+const ICON_SETTINGS    = require('../../assets/lab/icons/impostazioni.png');
+const ICON_DIAGNOSTICA = require('../../assets/lab/icons/diagnostica.png');
+
+// ── Settings ─────────────────────────────────────────────
+type RunSettings = {
+  unit: 'km' | 'mi';
+  countdown: 0 | 3 | 5;
+  autoPause: boolean;
+  screenOn: boolean;
+  audioCue: boolean;
+  vibration: boolean;
+};
+const SETTINGS_KEY = 'runhub.run.settings.v1';
+const DEFAULT_SETTINGS: RunSettings = {
+  unit: 'km', countdown: 3, autoPause: true, screenOn: true, audioCue: true, vibration: true,
+};
+
+function RunInner() {
   const router = useRouter();
-  const { t } = useT();
-  const [mode, setMode] = useState<Mode>('run');
+  const [selected, setSelected] = useState<ActivityKey>('run');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<RunSettings>(DEFAULT_SETTINGS);
+  const theme = THEMES[selected];
+  const current = ACTIVITIES.find(a => a.key === selected)!;
 
-  const ACTIVITIES: { type: Mode; title: string; subtitle: string; Icon: any }[] = [
-    { type: 'run',  title: t('run.activity_run_title'),  subtitle: t('run.activity_run_sub'),  Icon: Activity },
-    { type: 'walk', title: t('run.activity_walk_title'), subtitle: t('run.activity_walk_sub'), Icon: Footprints },
-    { type: 'bike', title: t('run.activity_bike_title'), subtitle: t('run.activity_bike_sub'), Icon: Bike },
-  ];
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SETTINGS_KEY);
+        if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+      } catch {}
+    })();
+  }, []);
 
-  const current = ACTIVITIES.find((a) => a.type === mode)!;
-  const meta = activityMeta[mode];
+  const saveSettings = async (next: RunSettings) => {
+    setSettings(next);
+    try { await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch {}
+  };
 
-  const startActivity = () => {
-    const titleMap: Record<Mode, string> = {
-      run: t('run.free_run'),
-      walk: t('run.walk_free'),
-      bike: t('run.bike_free'),
-    };
+  const startSession = () => {
     router.push({
       pathname: '/run-active',
-      params: { title: titleMap[mode], activity_type: mode },
+      params: { title: current.name, activity_type: selected },
     });
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>{t('run.tab_eyebrow')}</Text>
-          <Text style={styles.title}>{t('run.tab_title')}</Text>
-          <Text style={styles.subtitle}>
-            {t('run.tab_subtitle')}
-          </Text>
-        </View>
+      <StatusBar barStyle="dark-content" backgroundColor={neutral.background} />
 
-        {/* Activity selector */}
-        <View style={styles.modeRow}>
-          {ACTIVITIES.map((a) => {
-            const m = activityMeta[a.type];
-            const active = mode === a.type;
-            const Icon = a.Icon;
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
+          <ChevronLeft size={20} color={text.primary} strokeWidth={2.2} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => setSettingsOpen(true)}>
+          <Image source={ICON_SETTINGS} style={styles.iconBtnImg} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* BRAND + KICKER */}
+        <View style={styles.brandRow}>
+          <Image source={require('../../assets/lab/logo-symbol.png')} style={styles.logo} />
+          <Text style={styles.brandText}>RUNHUB <Text style={{ color: brand.primary }}>LAB</Text></Text>
+        </View>
+        <Text style={[styles.kicker, { color: theme.primary }]}>ALLENAMENTO LIBERO</Text>
+
+        {/* TITLE */}
+        <Text style={styles.title}>Scegli l&apos;attività</Text>
+        <Text style={styles.subtitle}>
+          Seleziona il tipo di allenamento e parti, senza un piano predefinito.
+        </Text>
+
+        {/* ACTIVITY GRID 3 columns */}
+        <View style={styles.grid}>
+          {ACTIVITIES.map(act => {
+            const isSel = act.key === selected;
+            const t = THEMES[act.key];
             return (
               <TouchableOpacity
-                key={a.type}
-                testID={`mode-${a.type}`}
-                activeOpacity={0.85}
-                onPress={() => setMode(a.type)}
+                key={act.key}
                 style={[
-                  styles.modeCard,
-                  active && { borderColor: m.color, backgroundColor: m.colorMuted, ...shadows.md },
+                  styles.actCard,
+                  isSel && { borderColor: t.primary, borderWidth: 2 },
                 ]}
+                onPress={() => setSelected(act.key)}
+                activeOpacity={0.85}
               >
-                <View
-                  style={[
-                    styles.modeIcon,
-                    { backgroundColor: active ? m.color : colors.surfaceSecondary },
-                  ]}
-                >
-                  <Icon size={26} color={active ? '#fff' : colors.textPrimary} strokeWidth={2.2} />
+                <View style={[styles.actIconWrap, { backgroundColor: t.subtle }]}>
+                  <Image source={act.icon} style={styles.actIcon} resizeMode="contain" />
                 </View>
-                <Text style={[styles.modeLabel, active && { color: m.color }]}>
-                  {a.title}
-                </Text>
+                <Text style={[styles.actName, isSel && { color: t.primary }]}>{act.name}</Text>
+                {isSel ? <View style={[styles.actUnderline, { backgroundColor: t.primary }]} /> : null}
+                {isSel ? (
+                  <View style={[styles.actCheck, { backgroundColor: t.primary }]}>
+                    <Check size={12} color="#fff" strokeWidth={3} />
+                  </View>
+                ) : null}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Description of selected */}
-        <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionTitle}>{current.title}</Text>
-          <Text style={styles.descriptionText}>{current.subtitle}</Text>
+        {/* DETAIL CARD */}
+        <View style={[styles.detailCard, { borderLeftColor: theme.primary, backgroundColor: theme.subtle + '40' }]}>
+          <View style={styles.detailHead}>
+            <View style={[styles.detailIconWrap, { backgroundColor: theme.subtle }]}>
+              <Image source={current.icon} style={styles.detailIcon} resizeMode="contain" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.detailName, { color: theme.primary }]}>{current.name}</Text>
+              <Text style={styles.detailDesc}>{current.description}</Text>
+            </View>
+          </View>
 
-          <View style={styles.infoRow}>
-            <MapPin size={16} color={meta.color} strokeWidth={2.2} />
-            <Text style={styles.infoText}>
-              {t('run.location_info')}
-            </Text>
+          <View style={styles.statsRow}>
+            <StatCol icon={ICON_GPS}      label="Tracciamento" value="GPS" />
+            <StatCol icon={ICON_PERCORSO} label="Distanza"     value="Tempo" />
+            <StatCol icon={ICON_VELOCITA} label="Passo"        value="Live" />
+          </View>
+
+          <View style={styles.permCard}>
+            <Image source={ICON_POSIZIONE} style={styles.permIcon} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.permTitle}>Usa la tua posizione</Text>
+              <Text style={styles.permDesc}>Permesso necessario per tracciare il percorso.</Text>
+            </View>
           </View>
         </View>
 
-        {/* Big start button */}
+        {/* CTA */}
         <TouchableOpacity
-          testID="start-free-run-button"
-          style={[styles.startBtn, { backgroundColor: meta.color, shadowColor: meta.color }]}
-          onPress={startActivity}
-          activeOpacity={0.9}
+          style={[styles.cta, { backgroundColor: theme.primary }]}
+          onPress={startSession}
+          activeOpacity={0.88}
         >
-          <Zap size={20} color="#fff" strokeWidth={2.4} fill="#fff" />
-          <Text style={styles.startBtnText}>{t('run.start_with', { name: getActivityLabel(mode, t) })}</Text>
+          <Image source={current.icon} style={styles.ctaIcon} resizeMode="contain" />
+          <Text style={styles.ctaText}>{current.ctaLabel}</Text>
         </TouchableOpacity>
 
-        {/* Diagnostica GPS */}
-        <TouchableOpacity
-          testID="gps-test-link"
-          style={styles.diag}
-          onPress={() => router.push('/gps-test')}
-        >
-          <Bug size={14} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={styles.diagText}>{t('run.gps_diagnostic')}</Text>
-          <ChevronRight size={14} color={colors.textSecondary} strokeWidth={2.2} />
+        {/* DIAGNOSTICA */}
+        <TouchableOpacity style={styles.diagLink} onPress={() => router.push('/gps-test')}>
+          <Image source={ICON_DIAGNOSTICA} style={styles.diagIcon} />
+          <Text style={styles.diagText}>Diagnostica GPS</Text>
+          <ChevronRight size={14} color={text.muted} strokeWidth={2} />
         </TouchableOpacity>
+
+        <View style={{ height: 24 }} />
       </ScrollView>
+
+      {/* SETTINGS MODAL */}
+      <SettingsModal
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onChange={saveSettings}
+      />
     </SafeAreaView>
   );
 }
 
+function StatCol({ icon, label, value }: { icon: any; label: string; value: string }) {
+  return (
+    <View style={styles.statCol}>
+      <Image source={icon} style={styles.statIcon} resizeMode="contain" />
+      <Text style={styles.statLabel}>{label.toUpperCase()}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SETTINGS MODAL
+// ─────────────────────────────────────────────────────────
+function SettingsModal({
+  visible, onClose, settings, onChange,
+}: { visible: boolean; onClose: () => void; settings: RunSettings; onChange: (s: RunSettings) => void }) {
+  const set = <K extends keyof RunSettings>(k: K, v: RunSettings[K]) =>
+    onChange({ ...settings, [k]: v });
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Impostazioni sessione</Text>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+              <X size={20} color={text.primary} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+            <Text style={styles.modalSection}>🏃 SESSIONE</Text>
+
+            <Row label="Unità di misura">
+              <SegmentedControl
+                value={settings.unit}
+                options={[{ v: 'km', l: 'Km' }, { v: 'mi', l: 'Miglia' }]}
+                onChange={(v) => set('unit', v as 'km' | 'mi')}
+              />
+            </Row>
+
+            <Row label="Countdown all'avvio">
+              <SegmentedControl
+                value={String(settings.countdown)}
+                options={[{ v: '0', l: 'Off' }, { v: '3', l: '3s' }, { v: '5', l: '5s' }]}
+                onChange={(v) => set('countdown', Number(v) as 0 | 3 | 5)}
+              />
+            </Row>
+
+            <SwitchRow label="Auto-pausa" desc="Pausa automatica se ti fermi >8 secondi"
+              value={settings.autoPause} onChange={(v) => set('autoPause', v)} />
+
+            <SwitchRow label="Schermo sempre acceso" desc="Evita che il display si spenga durante la corsa"
+              value={settings.screenOn} onChange={(v) => set('screenOn', v)} />
+
+            <Text style={styles.modalSection}>🔔 FEEDBACK</Text>
+
+            <SwitchRow label="Audio cue ogni km" desc="Annuncio vocale tempo/pace ad ogni chilometro"
+              value={settings.audioCue} onChange={(v) => set('audioCue', v)} />
+
+            <SwitchRow label="Vibrazione" desc="Feedback tattile per checkpoint e alert"
+              value={settings.vibration} onChange={(v) => set('vibration', v)} />
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.settingRow}>
+      <Text style={styles.settingLabel}>{label}</Text>
+      <View style={{ marginTop: 8 }}>{children}</View>
+    </View>
+  );
+}
+
+function SwitchRow({ label, desc, value, onChange }:
+  { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <View style={styles.switchRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.settingLabel}>{label}</Text>
+        <Text style={styles.settingDesc}>{desc}</Text>
+      </View>
+      <Switch value={value} onValueChange={onChange}
+        trackColor={{ false: neutral.surfaceSoft, true: brand.subtle }}
+        thumbColor={value ? brand.primary : '#fff'} />
+    </View>
+  );
+}
+
+function SegmentedControl<T extends string>({ value, options, onChange }:
+  { value: T; options: Array<{ v: T; l: string }>; onChange: (v: T) => void }) {
+  return (
+    <View style={styles.segControl}>
+      {options.map(opt => {
+        const active = opt.v === value;
+        return (
+          <TouchableOpacity
+            key={opt.v}
+            style={[styles.segBtn, active && styles.segBtnActive]}
+            onPress={() => onChange(opt.v)}
+          >
+            <Text style={[styles.segBtnText, active && { color: '#fff' }]}>{opt.l}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+export default function RunScreen() {
+  return (
+    <FontProvider>
+      <RunInner />
+    </FontProvider>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: neutral.background },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.marginApp, paddingTop: spacing.sm, paddingBottom: 4 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: neutral.card,
+    borderWidth: 1, borderColor: neutral.border, alignItems: 'center', justifyContent: 'center' },
+  iconBtnImg: { width: 18, height: 18 },
 
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg },
-  eyebrow: { ...typography.eyebrow, color: colors.textSecondary, marginBottom: spacing.sm },
-  title: { ...typography.displayMd, color: colors.textPrimary },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    lineHeight: 22,
-  },
+  scroll: { paddingHorizontal: spacing.marginApp, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  logo: { width: 24, height: 24 },
+  brandText: { ...typography.bodyBold, color: text.primary, fontSize: 14, letterSpacing: 0.8 },
 
-  // Modes
-  modeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  modeCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    ...shadows.sm,
-  },
-  modeIcon: {
-    width: 52, height: 52, borderRadius: 26,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  modeLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
+  kicker: { ...typography.kpiLabel, fontSize: 11, marginTop: spacing.lg, letterSpacing: 1.2 },
+  title: { ...typography.sectionTitle, color: text.primary, fontSize: 32, marginTop: 4, letterSpacing: -0.5 },
+  subtitle: { ...typography.body, color: text.secondary, fontSize: 14, marginTop: 6, lineHeight: 21 },
 
-  // Description card
-  descriptionCard: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    ...shadows.sm,
-  },
-  descriptionTitle: { ...typography.h2, color: colors.textPrimary },
-  descriptionText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    lineHeight: 22,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  infoText: {
-    flex: 1,
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
+  grid: { flexDirection: 'row', gap: 10, marginTop: spacing.xl },
+  actCard: { flex: 1, backgroundColor: neutral.card, borderRadius: radius.card,
+    borderWidth: 1, borderColor: neutral.border, paddingVertical: 18, alignItems: 'center', position: 'relative' },
+  actIconWrap: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  actIcon: { width: 40, height: 40 },
+  actName: { ...typography.bodyBold, color: text.primary, fontSize: 13 },
+  actUnderline: { width: 24, height: 3, borderRadius: 999, marginTop: 6 },
+  actCheck: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center' },
 
-  // Start button
-  startBtn: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: 18,
-    borderRadius: radius.pill,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  startBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-  },
+  detailCard: { borderRadius: radius.card, borderLeftWidth: 4, padding: spacing.md, marginTop: spacing.lg, gap: spacing.md },
+  detailHead: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  detailIconWrap: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  detailIcon: { width: 38, height: 38 },
+  detailName: { ...typography.bodyBold, fontSize: 18 },
+  detailDesc: { ...typography.caption, color: text.secondary, marginTop: 4, fontSize: 13, lineHeight: 18 },
 
-  // Diagnostica
-  diag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 4,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  diagText: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+  statsRow: { flexDirection: 'row', backgroundColor: neutral.card, borderRadius: 12,
+    paddingVertical: 12, borderWidth: 1, borderColor: neutral.border },
+  statCol: { flex: 1, alignItems: 'center', gap: 4 },
+  statIcon: { width: 22, height: 22 },
+  statLabel: { ...typography.kpiLabel, color: text.muted, fontSize: 9, letterSpacing: 0.5 },
+  statValue: { ...typography.bodyBold, color: text.primary, fontSize: 12 },
+
+  permCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: neutral.card,
+    borderRadius: 12, padding: 12, borderWidth: 1, borderColor: neutral.border },
+  permIcon: { width: 28, height: 28 },
+  permTitle: { ...typography.bodyBold, color: text.primary, fontSize: 13 },
+  permDesc: { ...typography.caption, color: text.muted, fontSize: 11, marginTop: 2 },
+
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingVertical: 18, borderRadius: radius.button, marginTop: spacing.xl },
+  ctaIcon: { width: 24, height: 24 },
+  ctaText: { ...typography.kpiLabel, color: '#fff', fontSize: 13 },
+
+  diagLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 14, marginTop: 4 },
+  diagIcon: { width: 16, height: 16 },
+  diagText: { ...typography.body, color: text.muted, fontSize: 13 },
+
+  // Modal
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: neutral.background, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingTop: 6, maxHeight: '85%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingTop: 14, paddingBottom: 10,
+    borderBottomWidth: 1, borderBottomColor: neutral.border },
+  modalTitle: { ...typography.bodyBold, color: text.primary, fontSize: 17 },
+  modalClose: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: neutral.surfaceSoft },
+  modalSection: { ...typography.kpiLabel, color: text.muted, fontSize: 11,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: 4 },
+
+  settingRow: { paddingHorizontal: spacing.lg, paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: neutral.border },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: neutral.border },
+  settingLabel: { ...typography.bodyBold, color: text.primary, fontSize: 14 },
+  settingDesc: { ...typography.caption, color: text.muted, fontSize: 11, marginTop: 2 },
+
+  segControl: { flexDirection: 'row', backgroundColor: neutral.surfaceSoft, borderRadius: 10, padding: 3, gap: 2 },
+  segBtn: { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center' },
+  segBtnActive: { backgroundColor: brand.primary },
+  segBtnText: { ...typography.kpiLabel, color: text.secondary, fontSize: 11 },
 });
