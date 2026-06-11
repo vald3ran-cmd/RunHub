@@ -471,7 +471,22 @@ backend:
         agent: "testing"
         comment: "7/7 assertions PASS via /app/backend/tests/test_weather_endpoint.py against https://run-training-hub-1.preview.emergentagent.com/api. (1) GET /api/weather?lat=41.9028&lon=12.4964 without Authorization -> 401 'Not authenticated' as expected (Depends(get_current_user) protects the endpoint). (2) With admin Bearer token and Rome coords -> 200 with {temperature_c:25, humidity_pct:55, wind_kmh:6, weather_code:1, label:'Poco nuvoloso', icon:'cloud-sun'}. All 6 required keys present; types are int/int/int/int/str/str respectively; label is in the expected Italian set {Sereno, Poco nuvoloso, Nebbia, Pioggia, Neve, Acquazzoni, Temporale}; icon in {sun, cloud-sun, cloud-fog, cloud-rain, cloud-snow, cloud-lightning, cloud}; values are plausible (temp in -40..60, humidity 0..100, wind 0..400). (3) Same call with timestamp='2026-06-10T08:30:00Z' -> 200 with identical shape. NOTE: the timestamp parameter is parsed (datetime.fromisoformat with Z->+00:00 swap) but the parsed target_dt is never used to query historical data — the endpoint always returns CURRENT weather from open-meteo /v1/forecast?current=... regardless of timestamp. Not blocking (response shape matches spec for any timestamp), but worth a future enhancement to call the archive/forecast endpoint with the requested datetime. (4) Invalid lat=999, lon=999 -> 200 with graceful fallback {temperature_c:null, humidity_pct:null, wind_kmh:null, weather_code:null, label:null, icon:'cloud'} — no 500, no crash. open-meteo returns an HTTP error for out-of-range coords, the try/except in lines 2698-2703 catches and returns the fallback as designed. (5) Regression smoke ALL PASS: GET /api/health -> 200; GET /api/auth/me with admin token -> 200 (role='admin', email='admin@runhub.com'); GET /api/lab/overview with admin token -> 200 (dict response). No regressions detected. Endpoint is production-ready for Share Card v2."
 
+  - task: "CompleteWorkoutRequest extended with HR fields (BLE HRM, RunHub 1.6.2)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "4/4 pytest assertions PASS via /app/backend/tests/test_hr_workout_complete.py against https://run-training-hub-1.preview.emergentagent.com/api. (1) POST /api/workouts/complete without auth -> 401 Not authenticated. (2) Backward compat: legacy payload WITHOUT HR fields (title, activity_type, duration_seconds, distance_km, splits, locations) -> 200 with session_id=ws_*; response and persisted doc contain avg_hr_bpm=null, max_hr_bpm=null, hr_device_name=null, heart_rate_samples=[]. GET /api/workouts/{session_id} confirms same null/[] values. (3) Full HR payload {avg_hr_bpm:145.3, max_hr_bpm:178.0, hr_device_name:'Polar H10', heart_rate_samples:[{bpm:142,timestamp_ms:1717999999000},{bpm:148,timestamp_ms:1718000000000}]} -> 200 with all HR fields echoed correctly (avg/max float, device name string, samples list with both bpm + timestamp_ms preserved). (4) GET /api/workouts/{session_id} returns full HR data persisted in MongoDB (avg_hr_bpm=145.3, max_hr_bpm=178.0, hr_device_name='Polar H10', heart_rate_samples len=2 with exact values). Edge: GET non-existent session -> 404 'Sessione non trovata'. Schema HRSampleIn(bpm:float, timestamp_ms:float) parses correctly; all 4 HR fields are Optional/default_factory=list so existing clients are unaffected. Endpoint at server.py:2028-2049 maps fields cleanly. Production-ready for RunHub 1.6.2 BLE HRM integration."
+
 agent_communication:
+  - agent: "testing"
+    message: "TESTED CompleteWorkoutRequest extended HR schema (BLE HRM, RunHub 1.6.2). 4/4 pytest PASS via /app/backend/tests/test_hr_workout_complete.py against the public URL. All 4 scenarios from the review request pass: (1) no-auth -> 401; (2) legacy payload without HR -> 200, doc persisted with HR null/[]; (3) full HR payload (avg=145.3, max=178.0, device='Polar H10', 2 samples) -> 200 with all fields echoed; (4) GET /api/workouts/{session_id} returns the persisted HR data. Backward compatibility verified (no breaking change for existing clients). Report at /app/test_reports/iteration_4.json, JUnit XML at /app/test_reports/pytest/iteration_4_hr.xml. No issues found, no retest needed."
+
   - agent: "testing"
     message: "TESTED GET /api/weather (RunHub 1.6.2 Share Card v2). 7/7 assertions PASS via /app/backend/tests/test_weather_endpoint.py against the public URL. All 4 weather scenarios from the review request work as specified: (1) no auth -> 401; (2) Rome (lat=41.9028, lon=12.4964) with admin Bearer -> 200 with temperature_c=25, humidity_pct=55, wind_kmh=6, weather_code=1, label='Poco nuvoloso', icon='cloud-sun' — all required keys present with correct numeric/string types; (3) with timestamp='2026-06-10T08:30:00Z' -> 200, same shape; (4) invalid lat/lon (999,999) -> 200 with graceful fallback {all null + icon:'cloud'} — no crash. Regression smoke ALL PASS: /api/health 200, /api/auth/me admin 200, /api/lab/overview admin 200. MINOR OBSERVATION (not blocking): the 'timestamp' parameter is parsed but never actually used by the open-meteo call — it always returns CURRENT weather regardless of the requested timestamp. The endpoint signature accepts it and the response shape is identical, so it doesn't break anything, but if Share Card v2 needs historical weather for a past run, the implementation will need to switch to the open-meteo historical/archive endpoint and pass start_date/end_date derived from target_dt. JUnit report: /app/test_reports/pytest/weather_iteration3.xml. Iteration report: /app/test_reports/iteration_3.json."
 
@@ -960,5 +975,42 @@ frontend:
 agent_communication:
   - agent: "main"
     message: "✅ Share Card v2 implementata in `/app/frontend/app/workout/[id].tsx` (Scientific Light): top row logo+status+activity pill + widget meteo (icona+°C+label+vento+umidità via nuovo /api/weather), hero distance gigante con unità arancione, PB pill condizionale, stats row 3 colonne (Durata/Passo/Kcal), bottom 2-col (Percorso GPS + Highlights HiBar Intensità/FC/Cadenza), footer data+brand. Aggiunto Image import, HiBar component, ~20 stili scV2*. Weather fetch via api.get('/weather', {lat,lon,timestamp}) — silent fail se manca GPS. ✅ FIX CRITICO dependency drift: react-native-reanimated era a 4.1.7 (richiedeva react-native-worklets non installato) → riportato a 3.19.5 esatto in package.json deps, yarn install OK, bundle OK. Onboarding-lab.tsx già completo da fork precedente (3 slide + AsyncStorage flag + redirect a /importa), _layout.tsx già wired. Auto-refresh lab + deep-link diario → workout/[id] già attivi (useFocusEffect). Pronto per test backend /api/weather e visual check Share Card."
+
+  - agent: "main"
+    message: "✅ 1.6.2 — `/run-active.tsx` refactor a Scientific Light completato. (A) **Shim del design-system 1.6.2** aggiunto: const colors = { primary, background, surface, surfaceSoft, border, textPrimary/Secondary/Muted, success/warning/danger/info } mappato a dsTokens. Vecchio `colors` da theme rinominato in `oldColors`. (B) **StyleSheet completamente riscritto** in chiave light: background bianco/#FAFAF7, top bar e bottom controls con bordi sottili invece di overlay scuri, hero metric in JetBrains Mono (`dsTokens.fontFamily.monoBold`) su fondo bianco con unità arancione, stats grid con borderTop chiaro, splits chip su fondo card bianco con border verde/rosso pastello, GPS+weather badge con surface bianco + shadow sottile, lap btn su surface bianco con border. (C) **Pause button** ora slate scuro (#0F172A) per contrasto premium con label/icona bianca. **Stop button** mantiene arancione brand. **Lap btn** etichetta slate. (D) **Pace target chip** colori semantic light (rgba 10% green/blue/red invece di 18%). **PaceColor**: success/info/danger/textPrimary. (E) **GPS status dots**: warning/danger/border invece di amber/red/white-overlay. (F) **FontProvider** wrap aggiunto all'export default. (G) **App version** bumpata da 1.6.1 → 1.6.2 (buildNumber 73 → 74) in app.json. Bundle healthy, 0 errori. Pronto per build EAS iOS per test visivo TestFlight."
+
+  - agent: "main"
+    message: "ℹ️ Note finale 1.6.2: il tester `testing_agent` può validare backend (/api/weather endpoint già 7/7 PASS). Il run-active.tsx refactor è puramente visuale e richiede GPS attivo + login admin per essere visualizzato — sarà confermato visualmente solo sulla build TestFlight. Cambiamenti su `app.json` (version 1.6.2, buildNumber 74) e `package.json` (reanimated 3.19.5 esatto) sono allineati al lock di EAS Build noto-buono."
+
+  - agent: "main"
+    message: "✅ BLE HRM Real-Time Integration completata (RunHub 1.6.2). **Backend**: aggiunto `HRSampleIn` Pydantic model, esteso `CompleteWorkoutRequest` con `avg_hr_bpm`, `max_hr_bpm`, `hr_device_name`, `heart_rate_samples: List[HRSampleIn]`. Il doc salvato in `workout_sessions` ora include tutti i campi HR. Backward compatible (tutti i campi sono Optional / default factory). **Frontend dependencies**: installato `react-native-ble-plx@3.5.1` via `yarn expo install` (config plugin auto-added). Reverificato `react-native-reanimated@3.19.5` (yarn ha tentato bump a 4.1.7 → ripristinato). **app.json**: aggiunti permessi iOS `NSBluetoothAlwaysUsageDescription` + `NSBluetoothPeripheralUsageDescription` (italiano), permessi Android `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, config plugin react-native-ble-plx con `modes: [central]` e usage description. **Nuovi moduli**: (1) `/app/frontend/src/bleHrm.ts` — servizio BLE: `isBleSupported()` (rileva Expo Go), `requestBlePermissions()`, `scanForHrmDevices()` filtra per Heart Rate Service UUID 0x180D, `connectAndSubscribe()` parsea Heart Rate Measurement char (0x2A37) gestendo flag uint8/uint16, decode base64 custom RN-friendly. (2) `/app/frontend/src/HrmPickerModal.tsx` — bottom sheet Scientific Light: scan auto a apertura, lista device ordinata per RSSI con icona heart e signal label, errori inline con CTA Impostazioni, fallback graceful per Expo Go ('Build nativa richiesta'). **Integrazione `/run-active.tsx`**: aggiunto state `currentHr` + `hrSamplesRef`, button heart nel top bar (mostra ❤️ + bpm live se connesso), HR card nel secondary stats row, cleanup BLE su unmount, sample storage in ref, calcolo avg/max HR al complete + invio a `/workouts/complete`. **Bundle health**: ✅ Metro bundled OK (2905 modules, 12.9s), 0 errori. **⚠️ Test richiesto SU BUILD NATIVA**: il BLE non funziona in Expo Go (fallback automatico mostra UI 'Pubblica l\\'app per usare'). Sarà testabile solo dopo build EAS iOS/Android."
+
+frontend:
+  - task: "BLE HRM Real-Time Integration (react-native-ble-plx)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/bleHrm.ts, frontend/src/HrmPickerModal.tsx, frontend/app/run-active.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato scan + connect + subscribe a Heart Rate Service (UUID 0x180D, char 0x2A37). Compatibile con Polar H10/H9, Wahoo TICKR, Garmin HRM-Pro, Coros HRM, Suunto Smart Sensor, CooSpo, Magene. Bottom sheet picker in Scientific Light style. Fallback graceful per Expo Go/web. NON testabile in preview — richiede build nativa."
+
+backend:
+  - task: "CompleteWorkoutRequest extended with HR fields (avg_hr_bpm, max_hr_bpm, hr_device_name, heart_rate_samples)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Schema esteso (Optional/default-factory per backward compat), salvataggio in workout_sessions doc. Hot-reloaded OK. Test: POST /api/workouts/complete con HR payload → verifica salvataggio e GET /api/workouts/{id} → verifica restituzione."
+
+
 
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "RunHub",
     "slug": "runhub",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "runhub",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "73",
+      "buildNumber": "74",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -31,6 +31,8 @@
         "NSCameraUsageDescription": "Scatta una foto profilo direttamente nell'app",
         "NSPhotoLibraryUsageDescription": "Scegli una foto profilo dalla tua galleria",
         "NSLocationAlwaysUsageDescription": "Traccia il tuo percorso anche in background",
+        "NSBluetoothAlwaysUsageDescription": "Collega cardiofrequenzimetri Bluetooth per dati FC live",
+        "NSBluetoothPeripheralUsageDescription": "Collega cardiofrequenzimetri Bluetooth per dati FC live",
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
@@ -54,7 +56,11 @@
         "android.permission.health.READ_DISTANCE",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
-        "android.permission.health.WRITE_EXERCISE"
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT"
       ]
     },
     "web": {
@@ -140,7 +146,15 @@
         }
       ],
       "expo-localization",
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["central"],
+          "bluetoothAlwaysPermission": "Collega cardiofrequenzimetri Bluetooth per dati FC live"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -539,6 +539,10 @@ class SessionSplit(BaseModel):
     total_sec: int
     pace_min_per_km: float
 
+class HRSampleIn(BaseModel):
+    bpm: float
+    timestamp_ms: float  # unix epoch ms
+
 class CompleteWorkoutRequest(BaseModel):
     workout_id: Optional[str] = None
     plan_id: Optional[str] = None
@@ -551,6 +555,11 @@ class CompleteWorkoutRequest(BaseModel):
     elevation_gain_m: Optional[float] = None
     splits: Optional[List[SessionSplit]] = None
     locations: List[SessionLocation] = []
+    # BLE HRM data (RunHub 1.6.2+)
+    avg_hr_bpm: Optional[float] = None
+    max_hr_bpm: Optional[float] = None
+    hr_device_name: Optional[str] = None
+    heart_rate_samples: List[HRSampleIn] = Field(default_factory=list)
 
 class CheckoutRequest(BaseModel):
     package_id: str  # "monthly" or "yearly"
@@ -2034,6 +2043,10 @@ async def complete_workout(data: CompleteWorkoutRequest, user: dict = Depends(ge
         "elevation_gain_m": data.elevation_gain_m,
         "splits": [s.dict() for s in (data.splits or [])],
         "locations": [l.dict() for l in data.locations],
+        "avg_hr_bpm": data.avg_hr_bpm,
+        "max_hr_bpm": data.max_hr_bpm,
+        "hr_device_name": data.hr_device_name,
+        "heart_rate_samples": [s.dict() for s in (data.heart_rate_samples or [])],
         "completed_at": datetime.now(timezone.utc),
     }
     # ── Detect Personal Best BEFORE inserting (compare against previous sessions)

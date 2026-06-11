@@ -1,0 +1,31 @@
+{
+  "summary": "Backend-only test of extended CompleteWorkoutRequest schema with BLE HRM fields (RunHub 1.6.2). 4/4 pytest assertions PASS against public URL. Backward compatibility verified (legacy payloads without HR fields succeed; doc persisted with avg_hr_bpm=null, max_hr_bpm=null, hr_device_name=null, heart_rate_samples=[]). HR payload with avg_hr_bpm=145.3, max_hr_bpm=178.0, hr_device_name='Polar H10', and 2 samples ({bpm:142, ts:1717999999000} + {bpm:148, ts:1718000000000}) returns 200 and full HR data is echoed in response. GET /api/workouts/{session_id} returns the same HR fields correctly persisted in MongoDB. No-auth returns 401. Non-existent session returns 404.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_hr_workout_complete.py",
+    "/app/test_reports/pytest/iteration_4_hr.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Schema correctly typed: HRSampleIn(bpm: float, timestamp_ms: float); all 4 new HR fields on CompleteWorkoutRequest are Optional / default_factory=list, preserving backward compatibility.",
+    "Endpoint at server.py:2028 builds the persistence doc explicitly mapping HR fields (lines 2046-2049) - clean, no implicit serialization issues.",
+    "GET /api/workouts/{session_id} (server.py:2160) returns the full doc with _id excluded; HR fields are returned as-is from Mongo."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_hr_workout_complete.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "skipped (backend-only)"},
+  "seed_data_creation": "Created 2 test workout sessions in admin's workout history (TEST_legacy_no_hr and TEST_with_hr_polar_h10). Not cleaned up - low impact on admin account.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "BLE HRM extension on CompleteWorkoutRequest is production-ready. All 4 fields (avg_hr_bpm, max_hr_bpm, hr_device_name, heart_rate_samples) accept input, persist to MongoDB workout_sessions, and are returned by both POST /api/workouts/complete and GET /api/workouts/{session_id}. Backward compatibility verified for legacy clients."
+}

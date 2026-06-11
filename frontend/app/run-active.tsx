@@ -9,7 +9,8 @@ import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import Svg, { Polyline } from 'react-native-svg';
 import { api } from '../src/api';
-import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, activityMeta, ActivityType, getActivityLabel, getStepTypeLabel } from '../src/theme';
+import { colors as oldColors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, activityMeta, ActivityType, getActivityLabel, getStepTypeLabel } from '../src/theme';
+import { tokens as dsTokens, FontProvider } from '../src/design-system';
 import { RouteMap } from '../src/RouteMap';
 import { InterstitialAd, useShouldShowAds } from '../src/Ads';
 import { interstitialManager } from '../src/adMobReal';
@@ -25,12 +26,39 @@ import { fetchWeather, WeatherSnapshot } from '../src/weather';
 import { loadRunSettings, RunSettings, DEFAULT_SETTINGS, VoiceFrequency } from '../src/runSettings';
 import { useT } from '../src/i18n';
 import { hasTierAccess, useTierAccess } from '../src/PremiumGate';
+import { HrmPickerModal } from '../src/HrmPickerModal';
+
+// ── Scientific Light shim (RunHub 1.6.2) ──────────────
+const colors = {
+  primary: dsTokens.brand.primary,
+  primaryDark: dsTokens.brand.dark,
+  primarySubtle: dsTokens.brand.subtle,
+  background: dsTokens.neutral.background,
+  surface: dsTokens.neutral.card,
+  surfaceSoft: dsTokens.neutral.surfaceSoft,
+  border: dsTokens.neutral.border,
+  textPrimary: dsTokens.text.primary,
+  textSecondary: dsTokens.text.secondary,
+  textMuted: dsTokens.text.muted,
+  success: dsTokens.semantic.success,
+  warning: dsTokens.semantic.warning,
+  danger: dsTokens.semantic.danger,
+  info: dsTokens.semantic.info,
+};
 
 type Step = {
   type: string; duration_seconds: number; description: string; target_pace?: string | null;
 };
 
 export default function RunActive() {
+  return (
+    <FontProvider>
+      <RunActiveInner />
+    </FontProvider>
+  );
+}
+
+function RunActiveInner() {
   const params = useLocalSearchParams<{ title?: string; workout_id?: string; plan_id?: string; steps?: string; activity_type?: string }>();
   const router = useRouter();
   const { t } = useT();
@@ -70,6 +98,22 @@ export default function RunActive() {
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_SETTINGS);
   const [currentPaceStatus, setCurrentPaceStatus] = useState<PaceStatus>('unknown');
+
+  // ── BLE HRM state (RunHub 1.6.2) ─────────────────────────────────────
+  const [hrPickerVisible, setHrPickerVisible] = useState(false);
+  const [hrDeviceName, setHrDeviceName] = useState<string | null>(null);
+  const [currentHr, setCurrentHr] = useState<number | null>(null);
+  const hrSamplesRef = useRef<{ bpm: number; timestamp_ms: number }[]>([]);
+  const hrDisconnectRef = useRef<null | (() => Promise<void>)>(null);
+
+  // Cleanup BLE on unmount
+  useEffect(() => {
+    return () => {
+      if (hrDisconnectRef.current) {
+        hrDisconnectRef.current().catch(() => {});
+      }
+    };
+  }, []);
 
   const lastKmCompletedRef = useRef<number>(0);
   const last5MinAnnouncedRef = useRef<number>(0);
@@ -449,6 +493,13 @@ export default function RunActive() {
     setRunning(false);
     const pace = distance > 0 ? (elapsed / 60) / distance : null;
     try {
+      const hrSamples = hrSamplesRef.current;
+      const avgHr = hrSamples.length > 0
+        ? hrSamples.reduce((a, s) => a + s.bpm, 0) / hrSamples.length
+        : null;
+      const maxHr = hrSamples.length > 0
+        ? Math.max(...hrSamples.map(s => s.bpm))
+        : null;
       const { data } = await api.post('/workouts/complete', {
         title,
         workout_id: params.workout_id,
@@ -466,6 +517,10 @@ export default function RunActive() {
           pace_min_per_km: Number(s.paceMinPerKm.toFixed(3)),
         })),
         locations: coords,
+        avg_hr_bpm: avgHr,
+        max_hr_bpm: maxHr,
+        hr_device_name: hrDeviceName,
+        heart_rate_samples: hrSamples,
       });
       if (data.newly_awarded_badges && data.newly_awarded_badges.length > 0) {
         const names = data.newly_awarded_badges.join(', ');
@@ -616,12 +671,12 @@ export default function RunActive() {
     : distance.toFixed(2);
   const heroUnit = hasSteps && currentStep ? 'rimanenti' : 'KM';
 
-  // Pace color: green if on target, red if outside, white if no target
+  // Pace color: green if on target, blue if too fast, red if too slow, primary text otherwise
   const paceColor =
-    paceState === 'onTarget' ? '#34D399'
-    : paceState === 'tooFast' ? '#3B82F6'
-    : paceState === 'tooSlow' ? '#FF6B6B'
-    : '#fff';
+    paceState === 'onTarget' ? colors.success
+    : paceState === 'tooFast' ? colors.info
+    : paceState === 'tooSlow' ? colors.danger
+    : colors.textPrimary;
 
   return (
     <View style={styles.safe}>
@@ -634,9 +689,24 @@ export default function RunActive() {
             onPress={confirmExit}
             activeOpacity={0.7}
           >
-            <Ionicons name="close" size={22} color="#fff" />
+            <Ionicons name="close" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.topTitle} numberOfLines={1} testID="active-run-title">{title}</Text>
+          <TouchableOpacity
+            testID="hrm-toggle"
+            style={[styles.topBtn, currentHr ? { borderColor: dsTokens.brand.primary } : null]}
+            onPress={() => setHrPickerVisible(true)}
+            activeOpacity={0.7}
+          >
+            {currentHr ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Ionicons name="heart" size={14} color={dsTokens.brand.primary} />
+                <Text style={{ fontSize: 11, color: colors.textPrimary, fontFamily: dsTokens.fontFamily.monoBold }}>{currentHr}</Text>
+              </View>
+            ) : (
+              <Ionicons name="heart-outline" size={20} color={colors.textMuted} />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             testID="audio-toggle"
             style={styles.topBtn}
@@ -645,7 +715,7 @@ export default function RunActive() {
           >
             <Ionicons
               name={audioEnabled ? 'volume-high' : 'volume-mute'}
-              size={20} color={audioEnabled ? stepColor : 'rgba(255,255,255,0.5)'}
+              size={20} color={audioEnabled ? stepColor : colors.textMuted}
             />
           </TouchableOpacity>
         </View>
@@ -661,9 +731,9 @@ export default function RunActive() {
             </Text>
             {paceState !== 'unknown' ? (
               <View style={[styles.paceChip, {
-                backgroundColor: paceState === 'onTarget' ? 'rgba(52,211,153,0.18)'
-                  : paceState === 'tooFast' ? 'rgba(59,130,246,0.18)'
-                  : 'rgba(255,107,107,0.18)',
+                backgroundColor: paceState === 'onTarget' ? 'rgba(34,197,94,0.10)'
+                  : paceState === 'tooFast' ? 'rgba(59,130,246,0.10)'
+                  : 'rgba(239,68,68,0.10)',
                 borderColor: paceColor,
               }]}>
                 <Text style={[styles.paceChipText, { color: paceColor }]}>
@@ -678,7 +748,7 @@ export default function RunActive() {
           </Text>
         )}
         <View style={styles.heroRow}>
-          <Text style={[styles.heroValue, { color: '#fff' }]}>{heroValue}</Text>
+          <Text style={styles.heroValue}>{heroValue}</Text>
           <Text style={styles.heroUnit}>{heroUnit}</Text>
         </View>
         {hasSteps && currentStep ? (
@@ -711,8 +781,8 @@ export default function RunActive() {
           <StatItem value={speedDisplay} label={speedLabel} valueColor={paceColor} />
           <StatItem value={String(liveCalories)} label={t('run_active.kcal_label')} />
         </View>
-        {/* Secondary row: elevation + last km */}
-        {(elevationGain > 0 || splits.length > 0) ? (
+        {/* Secondary row: elevation + last km + HR */}
+        {(elevationGain > 0 || splits.length > 0 || currentHr) ? (
           <View style={styles.statsGridSecondary}>
             {elevationGain > 0 ? (
               <StatItem value={`${elevationGain}`} label={t('run_active.elevation_label')} small />
@@ -722,6 +792,14 @@ export default function RunActive() {
                 value={formatPace(splits[splits.length - 1].paceMinPerKm)}
                 label={`${t('run_active.last_km_label')} (${splits.length})`}
                 small
+              />
+            ) : null}
+            {currentHr ? (
+              <StatItem
+                value={String(currentHr)}
+                label="FC BPM"
+                small
+                valueColor={dsTokens.brand.primary}
               />
             ) : null}
           </View>
@@ -740,14 +818,14 @@ export default function RunActive() {
               const isFaster = s.paceMinPerKm < avgPace;
               return (
                 <View key={`s-${i}`} style={[styles.splitChip, {
-                  borderColor: isFaster ? 'rgba(52,211,153,0.5)' : 'rgba(255,107,107,0.4)',
+                  borderColor: isFaster ? 'rgba(34,197,94,0.45)' : 'rgba(239,68,68,0.35)',
                 }]}>
                   <Text style={styles.splitChipKm}>KM {s.km}</Text>
                   <Text style={styles.splitChipPace}>{formatPace(s.paceMinPerKm)}</Text>
                   <Ionicons
                     name={isFaster ? 'trending-up' : 'trending-down'}
                     size={11}
-                    color={isFaster ? '#34D399' : '#FF6B6B'}
+                    color={isFaster ? colors.success : colors.danger}
                   />
                 </View>
               );
@@ -762,7 +840,7 @@ export default function RunActive() {
           <>
             <RouteMap coords={coords} height={undefined as any} fullHeight />
             <View style={styles.gpsBadge}>
-              <View style={[styles.gpsDot, { backgroundColor: '#34D399' }]} />
+              <View style={[styles.gpsDot, { backgroundColor: colors.success }]} />
               <Text style={styles.gpsBadgeText}>GPS · {coords.length}</Text>
             </View>
             {/* Weather widget */}
@@ -781,8 +859,8 @@ export default function RunActive() {
             <View style={styles.gpsStatusRow}>
               <View style={[styles.gpsDot, {
                 backgroundColor: hasLocationPermission === true
-                  ? '#FBBF24'
-                  : hasLocationPermission === false ? '#FF6B6B' : 'rgba(255,255,255,0.4)'
+                  ? colors.warning
+                  : hasLocationPermission === false ? colors.danger : colors.border
               }]} />
               <Text style={styles.gpsStatusText}>
                 {hasLocationPermission === true
@@ -813,7 +891,7 @@ export default function RunActive() {
             activeOpacity={0.85}
             disabled={isPaused || !running}
           >
-            <Ionicons name="flag" size={20} color="#fff" />
+            <Ionicons name="flag" size={20} color={colors.textPrimary} />
             <Text style={styles.lapLabel}>LAP</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -822,7 +900,7 @@ export default function RunActive() {
             onPress={() => { setIsPaused(p => !p); setAutoPaused(false); }}
             activeOpacity={0.85}
           >
-            <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color="#0F1115" />
+            <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color="#FFFFFF" />
             <Text style={styles.pauseLabel}>{isPaused ? t('run.ui_resume') : t('run.ui_pause')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -838,6 +916,20 @@ export default function RunActive() {
       </SafeAreaView>
 
       <InterstitialAd visible={showAd} onClose={onAdClose} skipAfter={5} />
+
+      {/* BLE HRM Picker — RunHub 1.6.2 */}
+      <HrmPickerModal
+        visible={hrPickerVisible}
+        onClose={() => setHrPickerVisible(false)}
+        onConnected={(deviceName, registerListener, disconnect) => {
+          setHrDeviceName(deviceName);
+          hrDisconnectRef.current = disconnect;
+          registerListener((sample) => {
+            setCurrentHr(Math.round(sample.bpm));
+            hrSamplesRef.current.push(sample);
+          });
+        }}
+      />
     </View>
   );
 }
@@ -907,21 +999,26 @@ function RoutePreview({ coords }: { coords: { lat: number; lng: number }[] }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#000000' },
+  safe: { flex: 1, backgroundColor: colors.background },
 
   // Top bar flottante (sopra mappa)
-  topBarWrap: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
+  topBarWrap: {
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.sm,
   },
   topBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
   },
   topTitle: {
-    color: '#fff', fontSize: 15, flex: 1, letterSpacing: -0.2,
+    color: colors.textPrimary, fontSize: 14, flex: 1, letterSpacing: -0.2,
     fontFamily: fonts.bold,
   },
 
@@ -930,24 +1027,25 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    backgroundColor: '#000000',
+    backgroundColor: colors.background,
   },
   stepBadge: {
-    fontSize: 11, letterSpacing: 1.8, marginBottom: 4,
+    fontSize: 10, letterSpacing: 1.8, marginBottom: 4,
     fontFamily: fonts.headingBold,
   },
   heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   heroValue: {
-    color: '#fff', fontSize: 68, letterSpacing: -3,
-    fontFamily: fonts.heading,
+    color: colors.textPrimary, fontSize: 72, letterSpacing: -3.5,
+    fontFamily: dsTokens.fontFamily.monoBold,
     fontVariant: ['tabular-nums'],
+    lineHeight: 76,
   },
   heroUnit: {
-    color: 'rgba(255,255,255,0.5)', fontSize: 16, letterSpacing: 1,
+    color: colors.primary, fontSize: 16, letterSpacing: 1,
     fontFamily: fonts.headingBold,
   },
   stepDescInline: {
-    color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2,
+    color: colors.textSecondary, fontSize: 13, marginTop: 2,
     fontFamily: fonts.medium,
   },
 
@@ -955,7 +1053,7 @@ const styles = StyleSheet.create({
   progressTrack: { flexDirection: 'row', gap: 3, marginTop: spacing.md },
   progressSeg: {
     flex: 1, height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden',
+    backgroundColor: colors.surfaceSoft, overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 2 },
 
@@ -963,18 +1061,18 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row', justifyContent: 'space-between',
     marginTop: spacing.lg, paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)',
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
   statItem: { flex: 1 },
   statItemSmall: { flex: 0, minWidth: 90 },
   statValue: {
-    color: '#fff', fontSize: 24, letterSpacing: -0.5,
-    fontFamily: fonts.heading,
+    color: colors.textPrimary, fontSize: 22, letterSpacing: -0.5,
+    fontFamily: dsTokens.fontFamily.monoBold,
     fontVariant: ['tabular-nums'],
   },
-  statValueSmall: { fontSize: 18 },
+  statValueSmall: { fontSize: 16 },
   statLabel: {
-    color: 'rgba(255,255,255,0.45)', fontSize: 9,
+    color: colors.textMuted, fontSize: 9,
     letterSpacing: 1.5, marginTop: 4,
     fontFamily: fonts.headingBold,
   },
@@ -1012,30 +1110,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
     borderRadius: radius.md,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
   },
   splitChipKm: {
-    color: 'rgba(255,255,255,0.55)', fontSize: 9, letterSpacing: 1,
+    color: colors.textMuted, fontSize: 9, letterSpacing: 1,
     fontFamily: fonts.headingBold,
   },
   splitChipPace: {
-    color: '#fff', fontSize: 13,
-    fontFamily: fonts.headingBold,
+    color: colors.textPrimary, fontSize: 13,
+    fontFamily: dsTokens.fontFamily.monoBold,
     fontVariant: ['tabular-nums'],
   },
 
   // Map
-  mapBox: { flex: 1, position: 'relative', backgroundColor: '#0A0A0A' },
+  mapBox: { flex: 1, position: 'relative', backgroundColor: colors.surfaceSoft },
   gpsBadge: {
     position: 'absolute', top: 12, right: 12,
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.78)',
+    backgroundColor: colors.surface,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   gpsBadgeText: {
-    color: '#fff', fontSize: 10, letterSpacing: 1,
+    color: colors.textPrimary, fontSize: 10, letterSpacing: 1,
     fontFamily: fonts.headingBold,
   },
 
@@ -1043,33 +1146,39 @@ const styles = StyleSheet.create({
   weatherBadge: {
     position: 'absolute', top: 12, left: 12,
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(0,0,0,0.78)',
+    backgroundColor: colors.surface,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   weatherEmoji: { fontSize: 18 },
   weatherTemp: {
-    color: '#fff', fontSize: 13, lineHeight: 14,
-    fontFamily: fonts.headingBold,
+    color: colors.textPrimary, fontSize: 13, lineHeight: 14,
+    fontFamily: dsTokens.fontFamily.monoBold,
     fontVariant: ['tabular-nums'],
   },
   weatherWind: {
-    color: 'rgba(255,255,255,0.55)', fontSize: 9, letterSpacing: 0.5,
+    color: colors.textSecondary, fontSize: 9, letterSpacing: 0.5,
     fontFamily: fonts.medium,
   },
   mapPlaceholder: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     padding: spacing.xl, gap: spacing.md,
+    backgroundColor: colors.surfaceSoft,
   },
   gpsStatusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   gpsDot: { width: 8, height: 8, borderRadius: 4 },
   gpsStatusText: {
-    color: '#fff', fontSize: 11, letterSpacing: 1.2,
+    color: colors.textSecondary, fontSize: 11, letterSpacing: 1.2,
     fontFamily: fonts.headingBold,
   },
   placeholderText: {
-    color: 'rgba(255,255,255,0.6)', fontSize: 12, textAlign: 'center',
+    color: colors.textMuted, fontSize: 12, textAlign: 'center',
     fontFamily: fonts.medium,
   },
   retryBtn: {
@@ -1078,9 +1187,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 4,
   },
   retryText: {
     color: '#fff', fontSize: 12, letterSpacing: 1,
@@ -1090,48 +1199,51 @@ const styles = StyleSheet.create({
   // Bottom controls flottanti
   controlsWrap: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingBottom: 0, backgroundColor: 'transparent',
+    paddingBottom: 0,
+    backgroundColor: colors.background,
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
   controls: {
     flexDirection: 'row', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md,
   },
   pauseBtn: {
-    flex: 2, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF',
+    flex: 2, height: 60, borderRadius: 30,
+    backgroundColor: colors.textPrimary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
   },
   pauseLabel: {
-    color: '#000', fontSize: 14, letterSpacing: 1.5,
+    color: '#fff', fontSize: 14, letterSpacing: 1.5,
     fontFamily: fonts.headingBold,
   },
 
   // Lap button
   lapBtn: {
     width: 60, height: 60, borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center', gap: 2,
   },
   lapBtnDisabled: {
     opacity: 0.4,
   },
   lapLabel: {
-    color: '#fff', fontSize: 9, letterSpacing: 1.5,
+    color: colors.textPrimary, fontSize: 9, letterSpacing: 1.5,
     fontFamily: fonts.headingBold,
   },
   stopBtn: {
     flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.primary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   stopLabel: {
     color: '#fff', fontSize: 13, letterSpacing: 1.5,
@@ -1140,16 +1252,16 @@ const styles = StyleSheet.create({
 
   // Legacy compat
   metricBox: { flex: 1, backgroundColor: 'transparent', padding: spacing.md, alignItems: 'center' },
-  metricVal: { color: '#fff', fontSize: 24, fontFamily: fonts.heading },
-  metricLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, letterSpacing: 2, marginTop: 2, fontFamily: fonts.headingBold },
+  metricVal: { color: colors.textPrimary, fontSize: 24, fontFamily: dsTokens.fontFamily.monoBold },
+  metricLabel: { color: colors.textMuted, fontSize: 10, letterSpacing: 2, marginTop: 2, fontFamily: fonts.headingBold },
 
   // Route preview legacy
   routeBox: {
     marginTop: spacing.md, padding: spacing.sm,
-    borderRadius: radius.lg, backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: radius.lg, backgroundColor: colors.surface,
   },
   routeLabel: {
-    color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: 1.5,
+    color: colors.textMuted, fontSize: 10, letterSpacing: 1.5,
     fontFamily: fonts.headingBold,
     marginTop: 4,
   },
