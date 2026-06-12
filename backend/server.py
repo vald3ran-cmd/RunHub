@@ -63,6 +63,21 @@ async def health_check():
     """Public health check endpoint for Render / uptime monitors."""
     return {"status": "ok", "service": "runhub-backend", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+
+@api_router.get("/test-files/sample-gpx")
+async def download_test_gpx():
+    """Download di un file GPX di test (3.5 km Roma) per testare l'import."""
+    from fastapi.responses import FileResponse
+    import os
+    path = "/app/frontend/assets/test-files/runhub-test-3.5km.gpx"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Test file non disponibile")
+    return FileResponse(
+        path,
+        media_type="application/gpx+xml",
+        filename="runhub-test-3.5km.gpx",
+    )
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
