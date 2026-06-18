@@ -2277,8 +2277,8 @@ async def import_activity_file(
     base_title = filename.rsplit(".", 1)[0][:80] or "Sessione importata"
     activity = parsed.get("activity_type") or "run"
     locations_min = parsed.get("locations") or []
-    # Convertiamo le locazioni nel formato SessionLocation (lat/lon/timestamp opzionale)
-    locations_doc = [{"lat": pt["lat"], "lon": pt["lon"]} for pt in locations_min if pt.get("lat") is not None]
+    # Convertiamo le locazioni nel formato SessionLocation (lat/lng) — il frontend usa "lng"
+    locations_doc = [{"lat": pt["lat"], "lng": pt["lon"]} for pt in locations_min if pt.get("lat") is not None]
 
     doc = {
         "session_id": session_id,
@@ -2404,7 +2404,7 @@ async def workouts_import_batch(
             "hr_samples_count": len(w.heart_rate_samples),
             "splits": [],
             "locations": [
-                {"lat": p.latitude, "lon": p.longitude}
+                {"lat": p.latitude, "lng": p.longitude}
                 for p in w.route_points
             ],
             "completed_at": started,
@@ -4310,6 +4310,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_migrations():
+    """One-shot migrations on backend boot (RunHub 1.6.2)."""
+    try:
+        # Migration: locations.lon → locations.lng (file import bug fix)
+        sessions_to_fix = await db.workout_sessions.find(
+            {"locations.lon": {"$exists": True}},
+            {"session_id": 1, "locations": 1},
+        ).to_list(length=5000)
+        if sessions_to_fix:
+            fixed = 0
+            for s in sessions_to_fix:
+                new_locs = []
+                for loc in (s.get("locations") or []):
+                    if "lon" in loc and "lng" not in loc:
+                        new_locs.append({"lat": loc.get("lat"), "lng": loc.get("lon")})
+                    else:
+                        new_locs.append(loc)
+                await db.workout_sessions.update_one(
+                    {"session_id": s["session_id"]},
+                    {"$set": {"locations": new_locs}},
+                )
+                fixed += 1
+            logger.info(f"[migration] Fixed lon→lng in {fixed} sessions")
+        else:
+            logger.info("[migration] No sessions with lon field — DB clean")
+    except Exception as e:
+        logger.warning(f"[migration] startup migration error (non-fatal): {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown():
