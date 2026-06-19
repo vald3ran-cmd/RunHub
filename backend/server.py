@@ -78,6 +78,20 @@ async def download_test_gpx():
         filename="runhub-test-3.5km.gpx",
     )
 
+
+@api_router.get("/play-store-assets/{filename}")
+async def download_play_store_asset(filename: str):
+    """Download asset Play Store (icon-512.png, feature-graphic-1024x500.png)."""
+    from fastapi.responses import FileResponse
+    import os
+    allowed = {"icon-512.png", "feature-graphic-1024x500.png"}
+    if filename not in allowed:
+        raise HTTPException(status_code=404, detail="Asset non disponibile")
+    path = f"/app/frontend/assets/play-store/{filename}"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Asset non trovato")
+    return FileResponse(path, media_type="image/png", filename=filename)
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
