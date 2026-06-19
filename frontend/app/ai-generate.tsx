@@ -8,13 +8,38 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
 import { useAuth } from '../src/auth';
-import { colors, spacing, radius } from '../src/theme';
+import { colors as oldColors, spacing, radius } from '../src/theme';
+import { tokens as dsTokens, FontProvider } from '../src/design-system';
+
+// ── Scientific Light shim (RunHub 1.6.2) ──────────────
+const colors = {
+  primary: dsTokens.brand.primary,
+  primaryDark: dsTokens.brand.dark,
+  primaryMuted: 'rgba(255,107,26,0.10)',
+  background: dsTokens.neutral.background,
+  surface: dsTokens.neutral.card,
+  surfaceSoft: dsTokens.neutral.surfaceSoft,
+  border: dsTokens.neutral.border,
+  textPrimary: dsTokens.text.primary,
+  textSecondary: dsTokens.text.secondary,
+  textMuted: dsTokens.text.muted,
+  success: dsTokens.semantic.success,
+  danger: dsTokens.semantic.danger,
+};
 import { useT, useLocale } from '../src/i18n';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 180_000; // 3 minutes hard cap
 
 export default function AIGenerate() {
+  return (
+    <FontProvider>
+      <AIGenerateInner />
+    </FontProvider>
+  );
+}
+
+function AIGenerateInner() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useT();
@@ -306,29 +331,65 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary,
     alignSelf: 'center', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md,
   },
-  title: { color: colors.textPrimary, fontSize: 32, fontWeight: '900', textAlign: 'center', marginTop: spacing.md, letterSpacing: -1 },
-  sub: { color: colors.textSecondary, textAlign: 'center', marginTop: 4 },
-  warnBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary },
-  warnText: { color: colors.textPrimary, flex: 1, fontSize: 12 },
-  label: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.lg, marginBottom: spacing.sm },
+  title: {
+    color: colors.textPrimary, fontSize: 28, textAlign: 'center',
+    marginTop: spacing.md, letterSpacing: -1,
+    fontFamily: dsTokens.fontFamily.monoBold,
+  },
+  sub: {
+    color: colors.textSecondary, textAlign: 'center', marginTop: 4,
+    fontSize: 13,
+    fontFamily: dsTokens.fontFamily.regular,
+  },
+  warnBox: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginTop: spacing.lg, padding: spacing.md,
+    backgroundColor: 'rgba(255,107,26,0.06)',
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary,
+  },
+  warnText: {
+    color: colors.textPrimary, flex: 1, fontSize: 12,
+    fontFamily: dsTokens.fontFamily.regular,
+  },
+  label: {
+    color: colors.textMuted, fontSize: 10, letterSpacing: 1.8,
+    marginTop: spacing.lg, marginBottom: spacing.sm,
+    fontFamily: dsTokens.fontFamily.headingBold,
+  },
   pillRow: { flexDirection: 'row', gap: spacing.sm },
-  pill: { flex: 1, paddingVertical: spacing.md, paddingHorizontal: 4, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  pill: {
+    flex: 1, paddingVertical: spacing.md, paddingHorizontal: 4,
+    borderRadius: radius.md, backgroundColor: colors.surface,
+    alignItems: 'center', borderWidth: 1, borderColor: colors.border,
+  },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  pillText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  pillText: {
+    color: colors.textSecondary, fontSize: 11, letterSpacing: 1,
+    fontFamily: dsTokens.fontFamily.headingBold,
+  },
   pillTextActive: { color: '#fff' },
-  input: { backgroundColor: colors.surface, color: colors.textPrimary, padding: spacing.md, borderRadius: radius.md, fontSize: 16, borderWidth: 1, borderColor: colors.border },
+  input: {
+    backgroundColor: colors.surface, color: colors.textPrimary,
+    padding: spacing.md, borderRadius: radius.md, fontSize: 15,
+    borderWidth: 1, borderColor: colors.border,
+    fontFamily: dsTokens.fontFamily.regular,
+  },
   gridRow: { flexDirection: 'row', gap: spacing.sm },
   generateBtn: {
     backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.pill,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.xl,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    marginTop: spacing.xl,
   },
-  generateText: { color: '#fff', fontWeight: '900', letterSpacing: 2, fontSize: 16 },
+  generateText: {
+    color: '#fff', letterSpacing: 1.8, fontSize: 14,
+    fontFamily: dsTokens.fontFamily.headingBold,
+  },
 
   /* --------- Progress Overlay (shown during AI generation) --------- */
   overlay: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(15,23,42,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
@@ -336,44 +397,45 @@ const styles = StyleSheet.create({
   overlayCard: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.background,
+    borderRadius: 20,
     padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
   },
   overlayIconBox: {
-    width: 88, height: 88, borderRadius: 44,
+    width: 80, height: 80, borderRadius: 40,
     backgroundColor: colors.primary,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: spacing.lg,
   },
   overlayTitle: {
     color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16, letterSpacing: 0.5,
     textAlign: 'center',
     marginBottom: spacing.sm,
+    fontFamily: dsTokens.fontFamily.headingBold,
   },
   overlaySub: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'center',
     marginBottom: spacing.lg,
+    fontFamily: dsTokens.fontFamily.regular,
   },
   progressTrack: {
     width: '100%',
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: colors.surfaceSoft,
+    borderRadius: 3,
     overflow: 'hidden',
     marginBottom: spacing.sm,
   },
   progressFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   overlayEta: {
     color: colors.textMuted,

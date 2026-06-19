@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
 
   // Hero section (sopra mappa)
   heroSection: {
-    paddingTop: 80,
+    paddingTop: 110,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     backgroundColor: colors.background,
@@ -1206,47 +1206,40 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: 'row', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md,
+    alignItems: 'center',
   },
   pauseBtn: {
-    flex: 2, height: 60, borderRadius: 30,
-    backgroundColor: colors.textPrimary,
+    flex: 1, height: 52, borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5, borderColor: colors.textPrimary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
   },
   pauseLabel: {
-    color: '#fff', fontSize: 14, letterSpacing: 1.5,
+    color: colors.textPrimary, fontSize: 12, letterSpacing: 1.8,
     fontFamily: fonts.headingBold,
   },
 
-  // Lap button
+  // Lap button — minimal circle
   lapBtn: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 52, height: 52, borderRadius: 14,
     backgroundColor: colors.surface,
-    borderWidth: 1.5, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center', gap: 2,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center', gap: 1,
   },
   lapBtnDisabled: {
     opacity: 0.4,
   },
   lapLabel: {
-    color: colors.textPrimary, fontSize: 9, letterSpacing: 1.5,
+    color: colors.textSecondary, fontSize: 8, letterSpacing: 1.4,
     fontFamily: fonts.headingBold,
+    marginTop: 1,
   },
   stopBtn: {
-    flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.primary,
+    flex: 1, height: 52, borderRadius: 14, backgroundColor: colors.primary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
   },
   stopLabel: {
-    color: '#fff', fontSize: 13, letterSpacing: 1.5,
+    color: '#fff', fontSize: 12, letterSpacing: 1.8,
     fontFamily: fonts.headingBold,
   },
 

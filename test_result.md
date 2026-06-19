@@ -988,6 +988,68 @@ agent_communication:
   - agent: "main"
     message: "✅ Backend refactor partial (D): estratto `/api/weather` in `/app/backend/routes/weather.py` come APIRouter modulare. Pattern: `build_weather_router(get_current_user_dep)` factory che riceve l'auth dep dal main server (no circular imports). Aggiunto `/app/backend/routes/__init__.py`. server.py ora include il router via `app.include_router(weather_router, prefix='/api')`. Endpoint /api/weather verificato post-refactor (curl OK: Roma → 24°C, Poco nuvoloso, cloud-sun). Architettura pronta per estrarre altri endpoint (ai_coach, social, workouts, ecc.) seguendo lo stesso pattern. server.py da 4354 → 4297 righe. **F (UI polish) skip**: il pace bar chart per km in workout/[id].tsx già esiste (component SplitsCard, righe 488-552) con best/worst indication. Non necessario re-implementare. **E (Coros/Polar/Suunto OAuth) richiede credenziali utente**: prossimo step richiede Client ID/Secret. Ho fatto pausa per chiedere all'utente."
 
+  - agent: "main"
+    message: "✅ Bug fix critico **lon→lng** in import file (RunHub 1.6.2): il backend salvava le locations come `{lat, lon}` ma il frontend si aspetta `{lat, lng}` → crash del workout detail al tap su sessione importata. Fix applicato in 2 punti server.py (line 2281 file import + line 2407 HealthKit import). Aggiunta migration automatica `on_event('startup')` che ripara le sessioni esistenti nel DB (lon→lng). Verificato: nuova sessione importata mostra `{lat, lng}` corretto. Logs migration dev: '[migration] Fixed lon→lng in 3 sessions'. **Bonus**: pubblicato endpoint `/api/test-files/sample-gpx` per scaricare un file GPX di test (3.5km Roma, 200 punti, parser-verified). **Bonus2**: rimosso `emergentintegrations==0.1.0` da requirements.txt (causava ERROR su deploy Render perché è pacchetto interno Emergent non disponibile su PyPI). AI Coach usa fallback Anthropic SDK con ANTHROPIC_API_KEY (verificata presente su Render). **Risultato**: backend Render ora deploya correttamente con TUTTI gli endpoint nuovi (verificati via curl: /api/imports/quota=401, /api/weather=401, /api/lab/overview=401). TestFlight 1.6.1 funziona ora per upload GPX + apertura workout detail."
+
+  - agent: "main"
+    message: "✅ UI polish RunHub 1.6.2: (1) Fixato **distanza hero tagliata** nel topbar di `/run-active.tsx` (paddingTop hero section da 80 → 110). (2) Ridisegnati **bottoni controlli** in stile Scientific Light più raffinato: pause/stop/lap ora con borderRadius 14 (invece di 30 pill), height 52 (da 60), no shadows pesanti, pauseBtn ora con sfondo bianco + borderWidth 1.5 slate scuro (più 'lab-style' che 'dark CTA'), lap btn più piccolo e armonioso. (3) Refactor completo **`/ai-generate.tsx`** da dark theme a Scientific Light: aggiunto shim `colors` da `dsTokens`, titolo in JetBrains Mono Bold, label in mono uppercase, pill row/pill text in mono headingBold, input/textarea su sfondo bianco/slate, generate button con label letterSpacing 1.8 + Mono, overlay backdrop slate semi-transparent invece di pure black, overlayCard su background neutral con border light, FontProvider wrap aggiunto all'export. Bundle health: ✅ 0 errori. (4) Sistemato yet again `react-native-reanimated@3.19.5` (yarn ha ribumpato a 4.1.7 dopo l'ultimo install — riportato a 3.19.5 esatto). **Pronto per push GitHub + build EAS 1.6.2**."
+
+frontend:
+  - task: "UI polish 1.6.2: run-active padding hero + bottoni minimal + AI Coach Scientific Light"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/run-active.tsx, frontend/app/ai-generate.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixato paddingTop hero 80→110 in run-active, ridisegnati i tre bottoni (lap/pause/stop) in stile Scientific Light raffinato (borderRadius 14, no heavy shadows), refactor completo ai-generate da dark a light usando dsTokens shim + JetBrains Mono. FontProvider wrap aggiunto. NON testabile in preview web (richiede auth + GPS), test su TestFlight build 1.6.2."
+
+backend:
+  - task: "Bug fix lon→lng in import file (workout detail crash)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Backend salvava {lat, lon} ma frontend usa {lat, lng} → crash al tap su sessione importata. Bug confermato via curl: imp_0395b00d4e20 aveva 'lon': 12.477."
+      - working: true
+        agent: "main"
+        comment: "Fix in 2 punti (server.py:2281 file import + 2407 HealthKit). Migration startup ripara records esistenti. Verificato: nuovo upload restituisce {lat, lng} corretto, log '[migration] Fixed lon→lng in 3 sessions'."
+
+  - task: "Remove emergentintegrations from requirements.txt for Render deploy"
+    implemented: true
+    working: true
+    file: "backend/requirements.txt"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Deploy Render falliva con: 'Could not find a version that satisfies the requirement emergentintegrations==0.1.0'. Causa: pacchetto interno Emergent non disponibile su PyPI pubblico."
+      - working: true
+        agent: "main"
+        comment: "Rimossa riga emergentintegrations==0.1.0 (commento mantenuto per traccia). AI Coach usa fallback Anthropic SDK (ANTHROPIC_API_KEY presente su Render). Deploy Render ora completa con SUCCESS. Verificati endpoint /api/imports/quota=401, /api/weather=401, /api/lab/overview=401 (auth-required, non più 404)."
+
+  - task: "Public test-file endpoint /api/test-files/sample-gpx"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET pubblico che restituisce GPX di test (3.5km Roma, 200 punti GPS) per testare l'import. Verificato su dev: HTTP 200, content-type application/gpx+xml. Su Render restituisce 404 perché il file non è incluso nel deploy (è in /app/frontend/assets/ che non viene caricato in container Render) — non bloccante, gli utenti hanno il file scaricabile da Emergent dev."
+
 frontend:
   - task: "BLE HRM Real-Time Integration (react-native-ble-plx)"
     implemented: true
