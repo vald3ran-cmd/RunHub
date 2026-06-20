@@ -1081,15 +1081,22 @@ const styles = StyleSheet.create({
   splitTime: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
   splitBarWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
+    overflow: 'hidden',
   },
   splitBar: {
     height: 22, borderRadius: 6,
     justifyContent: 'center',
     paddingHorizontal: 8,
     minWidth: 60,
+    maxWidth: '70%',
+    flexShrink: 0,
   },
   splitBarLabel: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  splitTag: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+  splitTag: {
+    color: colors.textSecondary, fontSize: 10, fontWeight: '700',
+    flexShrink: 1,
+    flex: 1,
+  },
 
   // Fun equivalents
   equivLine: {

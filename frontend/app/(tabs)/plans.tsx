@@ -6,7 +6,24 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../src/api';
-import { colors, spacing, radius, fonts } from '../../src/theme';
+import { colors as oldColors, spacing, radius, fonts } from '../../src/theme';
+import { tokens as dsTokens, FontProvider } from '../../src/design-system';
+
+// ── Scientific Light shim (RunHub 1.6.4) ──────────────
+const colors = {
+  primary: dsTokens.brand.primary,
+  primaryDark: dsTokens.brand.dark,
+  background: dsTokens.neutral.background,
+  surface: dsTokens.neutral.card,
+  surfaceSoft: dsTokens.neutral.surfaceSoft,
+  border: dsTokens.neutral.border,
+  textPrimary: dsTokens.text.primary,
+  textSecondary: dsTokens.text.secondary,
+  textMuted: dsTokens.text.muted,
+  success: dsTokens.semantic.success,
+  warning: dsTokens.semantic.warning,
+  danger: dsTokens.semantic.danger,
+};
 import { SparklesIcon } from '../../src/icons/BrandIcons';
 import { useT } from '../../src/i18n';
 import { tBackend } from '../../src/i18n/backendStrings';
@@ -45,6 +62,14 @@ function pickFallback(title: string, level: string): string {
 type Tab = 'forYou' | 'all';
 
 export default function Plans() {
+  return (
+    <FontProvider>
+      <PlansInner />
+    </FontProvider>
+  );
+}
+
+function PlansInner() {
   const { t, locale } = useT();
   const [predefined, setPredefined] = useState<Plan[]>([]);
   const [custom, setCustom] = useState<Plan[]>([]);

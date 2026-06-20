@@ -2,7 +2,7 @@
   "expo": {
     "name": "RunHub",
     "slug": "runhub",
-    "version": "1.6.4",
+    "version": "1.6.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "runhub",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "76",
+      "buildNumber": "77",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
