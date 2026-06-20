@@ -16,6 +16,7 @@ import {
   Card, KpiTile, InsightCard, ZoneBar, LineChart,
 } from '../../src/design-system';
 import { api } from '../../src/api';
+import { AdBanner } from '../../src/Ads';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -292,6 +293,7 @@ function LabInner() {
           </Card>
         )}
 
+        <AdBanner />
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>

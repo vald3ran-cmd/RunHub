@@ -14,6 +14,7 @@ import {
   Calendar, Target, Sparkles, ChevronRight, TrendingUp, Plus, Trophy,
 } from 'lucide-react-native';
 import { tokens, FontProvider, Card } from '../../src/design-system';
+import { AdBanner } from '../../src/Ads';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -41,6 +42,7 @@ function AllenamentiInner() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {mode === 'piano' ? <PianoView router={router} /> : <ObiettiviView router={router} />}
+        <AdBanner />
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>

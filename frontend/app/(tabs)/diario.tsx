@@ -10,6 +10,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, Filter, GitCompare } from 'lucide-react-native';
 import { tokens, FontProvider, SessionCard, Chip } from '../../src/design-system';
 import { api } from '../../src/api';
+import { AdBanner } from '../../src/Ads';
 
 const { brand, neutral, text, spacing, typography } = tokens;
 
@@ -249,6 +250,7 @@ function DiarioInner() {
           </View>
         ))}
 
+        <AdBanner />
         <View style={{ height: 40 }} />
       </ScrollView>
 
