@@ -2199,9 +2199,9 @@ async def workout_detail(session_id: str, user: dict = Depends(get_current_user)
 # ----------------- File Import (.fit / .gpx / .tcx) — Batch 2 -----------------
 # Quota mensile per tier (numero di file importati al mese)
 IMPORT_QUOTA_BY_TIER = {
-    "free": 5,
-    "starter": 30,
-    "performance": -1,  # -1 = illimitato
+    "free": 15,
+    "starter": -1,       # -1 = illimitato
+    "performance": -1,
     "elite": -1,
 }
 

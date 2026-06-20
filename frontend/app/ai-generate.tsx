@@ -89,7 +89,10 @@ function AIGenerateInner() {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const onGenerate = async () => {
-    if (!user?.is_premium) {
+    // AI Coach richiede tier Performance+ (è la feature competitiva più costosa)
+    const userTier = (user?.tier || 'free').toLowerCase();
+    const tierOrder: Record<string, number> = { free: 0, starter: 1, performance: 2, elite: 3 };
+    if ((tierOrder[userTier] ?? 0) < tierOrder.performance) {
       Alert.alert(t('ai_generate.premium_required_title'), t('ai_generate.premium_required_msg'), [
         { text: t('common.later') },
         { text: t('ai_generate.upgrade'), onPress: () => router.replace('/premium') },
