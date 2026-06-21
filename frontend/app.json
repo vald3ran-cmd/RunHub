@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "77",
+      "buildNumber": "78",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -23,6 +23,7 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "UIDeviceFamily": [1],
         "NSLocationWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSUserTrackingUsageDescription": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi.",
