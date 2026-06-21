@@ -17,6 +17,7 @@ import {
 } from '../../src/design-system';
 import { api } from '../../src/api';
 import { AdBanner } from '../../src/Ads';
+import { useT } from '../../src/i18n';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -44,6 +45,7 @@ type LabOverview = {
 
 function LabInner() {
   const router = useRouter();
+  const { t } = useT();
   const [data, setData] = useState<LabOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,7 +138,7 @@ function LabInner() {
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={styles.lastUpdate}>Ultimo aggiornamento: {formatLastUpdate(data.last_update)}</Text>
+      <Text style={styles.lastUpdate}>{t('lab.last_update', { time: formatLastUpdate(data.last_update) })}</Text>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -145,7 +147,7 @@ function LabInner() {
       >
         {/* HERO RUN SCORE */}
         <View style={styles.hero}>
-          <Text style={styles.heroLabel}>RUN SCORE</Text>
+          <Text style={styles.heroLabel}>{t('lab.run_score')}</Text>
           <View style={styles.heroBody}>
             <View>
               <Text style={styles.heroLetter}>{data.run_score_letter || '—'}</Text>
@@ -164,11 +166,11 @@ function LabInner() {
           <View style={styles.heroTrend}>
             <TrendingUp size={14} color={data.weekly_delta_pct >= 0 ? semantic.success : semantic.danger} strokeWidth={2.4} />
             <Text style={styles.heroTrendText}>
-              {data.weekly_delta_pct >= 0 ? 'IN CRESCITA' : 'IN CALO'}{' '}
+              {data.weekly_delta_pct >= 0 ? t('lab.trend_up') : t('lab.trend_down')}{' '}
               <Text style={{ color: data.weekly_delta_pct >= 0 ? semantic.success : semantic.danger, fontFamily: typography.kpiLabel.fontFamily }}>
                 {data.weekly_delta_pct >= 0 ? '+' : ''}{data.weekly_delta_pct}%
               </Text>
-              {' · '}Settimana: {data.weekly_km.toFixed(1)} km · {data.weekly_count} sessioni
+              {' · '}{t('lab.week')}: {data.weekly_km.toFixed(1)} km · {data.weekly_count} {t('lab.sessions')}
             </Text>
           </View>
         </View>
@@ -191,9 +193,9 @@ function LabInner() {
         {/* 3 KPI */}
         {data.kpi ? (
           <View style={styles.kpiRow}>
-            <KpiTile label="CARICO" value={data.kpi.carico_pct} helper={data.kpi.carico_pct > 80 ? 'Alto' : data.kpi.carico_pct > 50 ? 'Tollerabile' : 'Basso'} status={data.kpi.carico_pct > 80 ? 'danger' : data.kpi.carico_pct > 50 ? 'warning' : 'success'} progress={data.kpi.carico_pct} />
-            <KpiTile label="RECUPERO" value={data.kpi.recupero_pct} helper={data.kpi.recupero_pct > 70 ? 'Ottimo' : data.kpi.recupero_pct > 40 ? 'Buono' : 'Limitato'} status={data.kpi.recupero_pct > 70 ? 'success' : data.kpi.recupero_pct > 40 ? 'warning' : 'danger'} progress={data.kpi.recupero_pct} />
-            <KpiTile label="FATICA" value={data.kpi.fatica_pct} helper={data.kpi.fatica_pct < 50 ? 'Gestibile' : data.kpi.fatica_pct < 75 ? 'Alta' : 'Eccessiva'} status={data.kpi.fatica_pct < 50 ? 'success' : data.kpi.fatica_pct < 75 ? 'warning' : 'danger'} progress={data.kpi.fatica_pct} />
+            <KpiTile label={t('lab.load')} value={data.kpi.carico_pct} helper={data.kpi.carico_pct > 80 ? t('lab.load_high') : data.kpi.carico_pct > 50 ? t('lab.load_med') : t('lab.load_low')} status={data.kpi.carico_pct > 80 ? 'danger' : data.kpi.carico_pct > 50 ? 'warning' : 'success'} progress={data.kpi.carico_pct} />
+            <KpiTile label={t('lab.recovery')} value={data.kpi.recupero_pct} helper={data.kpi.recupero_pct > 70 ? t('lab.recovery_good') : data.kpi.recupero_pct > 40 ? t('lab.recovery_ok') : t('lab.recovery_bad')} status={data.kpi.recupero_pct > 70 ? 'success' : data.kpi.recupero_pct > 40 ? 'warning' : 'danger'} progress={data.kpi.recupero_pct} />
+            <KpiTile label={t('lab.fatigue')} value={data.kpi.fatica_pct} helper={data.kpi.fatica_pct < 50 ? t('lab.fatigue_ok') : data.kpi.fatica_pct < 75 ? t('lab.fatigue_med') : t('lab.fatigue_high')} status={data.kpi.fatica_pct < 50 ? 'success' : data.kpi.fatica_pct < 75 ? 'warning' : 'danger'} progress={data.kpi.fatica_pct} />
           </View>
         ) : null}
 
@@ -201,8 +203,8 @@ function LabInner() {
         {data.training_load ? (
           <Card>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>TRAINING LOAD</Text>
-              <Text style={styles.sectionSub}>ultime 8 settimane</Text>
+              <Text style={styles.sectionTitle}>{t('lab.training_load')}</Text>
+              <Text style={styles.sectionSub}>{t('lab.last_8_weeks')}</Text>
             </View>
             <LineChart
               series={[
@@ -214,9 +216,9 @@ function LabInner() {
               showGrid
             />
             <View style={styles.legend}>
-              <LegendDot color={brand.primary} label="CTL · forma" value={String(data.training_load.ctl)} />
-              <LegendDot color={semantic.danger} label="ATL · fatica" value={String(data.training_load.atl)} />
-              <LegendDot color={semantic.info} label="TSB · forma netta" value={String(data.training_load.tsb)} />
+              <LegendDot color={brand.primary} label={t('lab.ctl_label')} value={String(data.training_load.ctl)} />
+              <LegendDot color={semantic.danger} label={t('lab.atl_label')} value={String(data.training_load.atl)} />
+              <LegendDot color={semantic.info} label={t('lab.tsb_label')} value={String(data.training_load.tsb)} />
             </View>
           </Card>
         ) : null}

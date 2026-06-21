@@ -1136,5 +1136,33 @@
     "pl_trail_desc": "6 settimane per prepararsi a una gara trail. Focus su salite, discese tecniche, forza gambe.",
     "pl_progressione_10_title": "Regola del +10% — Sicurezza",
     "pl_progressione_10_desc": "4 settimane di carico progressivo sicuro (+10%/settimana). Previene infortuni e costruisce base aerobica."
+  },
+  "lab": {
+    "last_update": "Ultimo aggiornamento: {time}",
+    "run_score": "RUN SCORE",
+    "trend_up": "IN CRESCITA",
+    "trend_down": "IN CALO",
+    "week": "Settimana",
+    "sessions": "sessioni",
+    "load": "CARICO",
+    "recovery": "RECUPERO",
+    "fatigue": "FATICA",
+    "load_high": "Alto",
+    "load_med": "Tollerabile",
+    "load_low": "Basso",
+    "recovery_good": "Ottimo",
+    "recovery_ok": "Buono",
+    "recovery_bad": "Limitato",
+    "fatigue_ok": "Gestibile",
+    "fatigue_med": "Alta",
+    "fatigue_high": "Eccessiva",
+    "training_load": "TRAINING LOAD",
+    "last_8_weeks": "ultime 8 settimane",
+    "ctl_label": "CTL · forma",
+    "atl_label": "ATL · fatica",
+    "tsb_label": "TSB · forma netta",
+    "empty_title": "Lab vuoto",
+    "empty_body": "Importa le tue sessioni o registra una corsa per popolare la dashboard",
+    "empty_import_cta": "Importa sessioni da Apple Watch / Garmin per vedere la distribuzione delle zone cardiache."
   }
 }

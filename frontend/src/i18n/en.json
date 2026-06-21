@@ -1136,5 +1136,33 @@
     "pl_trail_desc": "6 weeks to prepare for a trail race. Focus on climbs, technical descents, leg strength.",
     "pl_progressione_10_title": "+10% Rule — Safety",
     "pl_progressione_10_desc": "4 weeks of safe progressive loading (+10%/week). Prevents injuries and builds aerobic base."
+  },
+  "lab": {
+    "last_update": "Last update: {time}",
+    "run_score": "RUN SCORE",
+    "trend_up": "TRENDING UP",
+    "trend_down": "TRENDING DOWN",
+    "week": "Week",
+    "sessions": "sessions",
+    "load": "LOAD",
+    "recovery": "RECOVERY",
+    "fatigue": "FATIGUE",
+    "load_high": "High",
+    "load_med": "Tolerable",
+    "load_low": "Low",
+    "recovery_good": "Optimal",
+    "recovery_ok": "Good",
+    "recovery_bad": "Limited",
+    "fatigue_ok": "Manageable",
+    "fatigue_med": "High",
+    "fatigue_high": "Excessive",
+    "training_load": "TRAINING LOAD",
+    "last_8_weeks": "last 8 weeks",
+    "ctl_label": "CTL · fitness",
+    "atl_label": "ATL · fatigue",
+    "tsb_label": "TSB · form",
+    "empty_title": "Empty Lab",
+    "empty_body": "Import your sessions or record a run to populate the dashboard",
+    "empty_import_cta": "Import sessions from Apple Watch / Garmin to see HR zones distribution."
   }
 }
