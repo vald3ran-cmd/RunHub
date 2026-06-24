@@ -11,6 +11,7 @@ import { Search, Filter, GitCompare } from 'lucide-react-native';
 import { tokens, FontProvider, SessionCard, Chip } from '../../src/design-system';
 import { api } from '../../src/api';
 import { AdBanner } from '../../src/Ads';
+import { useT, t as tStatic } from '../../src/i18n';
 
 const { brand, neutral, text, spacing, typography } = tokens;
 
@@ -31,7 +32,7 @@ type SessionItem = {
 
 type FilterKey = 'all' | 'apple_watch' | 'garmin' | 'phone' | 'file';
 
-const MONTH_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const MONTH_KEYS = ['month_jan','month_feb','month_mar','month_apr','month_may','month_jun','month_jul','month_aug','month_sep','month_oct','month_nov','month_dec'];
 
 function fmtDuration(sec: number): string {
   sec = Math.max(0, Math.floor(sec || 0));
@@ -52,21 +53,21 @@ function fmtRelativeDate(iso: string): string {
   const dt = new Date(iso);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - dt.getTime()) / 86400000);
-  if (diffDays === 0) return 'oggi';
-  if (diffDays === 1) return 'ieri';
-  if (diffDays < 7) return `${diffDays} giorni fa`;
-  return `${dt.getDate()} ${MONTH_IT[dt.getMonth()].slice(0, 3).toLowerCase()}`;
+  if (diffDays === 0) return tStatic('diario.relative_today');
+  if (diffDays === 1) return tStatic('diario.relative_yesterday');
+  if (diffDays < 7) return tStatic('diario.relative_days_ago', { n: diffDays });
+  return `${dt.getDate()} ${tStatic(`diario.${MONTH_KEYS[dt.getMonth()]}`).slice(0, 3).toLowerCase()}`;
 }
 
 function zoneFromPace(pace?: number | null, activity?: string): string {
-  if (activity === 'bike') return 'Bici';
-  if (activity === 'walk') return 'Camminata';
-  if (!pace || pace <= 0) return 'Run';
-  if (pace < 4.5) return 'Z5 · VO2max';
-  if (pace < 5.0) return 'Z4 · Soglia';
-  if (pace < 5.5) return 'Z3 · Tempo';
-  if (pace < 6.5) return 'Z2 · Aerobica';
-  return 'Z1 · Recupero';
+  if (activity === 'bike') return tStatic('diario.zone_bike');
+  if (activity === 'walk') return tStatic('diario.zone_walk');
+  if (!pace || pace <= 0) return tStatic('diario.zone_run');
+  if (pace < 4.5) return tStatic('diario.zone_z5');
+  if (pace < 5.0) return tStatic('diario.zone_z4');
+  if (pace < 5.5) return tStatic('diario.zone_z3');
+  if (pace < 6.5) return tStatic('diario.zone_z2');
+  return tStatic('diario.zone_z1');
 }
 
 function scoreFromDistance(km: number, pace?: number | null): { letter: string; value: number } {
@@ -91,6 +92,10 @@ function sourceFromImport(importSource?: string | null): Source {
 
 function DiarioInner() {
   const router = useRouter();
+  const { t, locale: _locale } = useT();
+  // Subscribe to locale changes so the static tStatic() calls in helpers/useMemo
+  // re-evaluate when language switches.
+  void _locale;
   const [filter, setFilter] = useState<FilterKey>('all');
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -111,7 +116,7 @@ function DiarioInner() {
         const score = scoreFromDistance(km, pace);
         return {
           id: s.session_id,
-          title: s.title || 'Sessione',
+          title: s.title || tStatic('diario.session_default'),
           distanceKm: km,
           durationStr: fmtDuration(dur),
           paceStr: fmtPace(pace),
@@ -119,7 +124,7 @@ function DiarioInner() {
           scoreLetter: score.letter,
           scoreValue: score.value,
           dateLabel: fmtRelativeDate(completedAt),
-          monthKey: `${MONTH_IT[dt.getMonth()]} ${dt.getFullYear()}`,
+          monthKey: `${tStatic(`diario.${MONTH_KEYS[dt.getMonth()]}`)} ${dt.getFullYear()}`,
           source: sourceFromImport(s.import_source),
         };
       });
@@ -167,9 +172,9 @@ function DiarioInner() {
       {/* HEADER */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Diario</Text>
+          <Text style={styles.title}>{t('diario.title')}</Text>
           <Text style={styles.subtitle}>
-            {filtered.length} sessioni · {totalKm.toFixed(1)} km totali
+            {t('diario.subtitle', { n: filtered.length, km: totalKm.toFixed(1) })}
           </Text>
         </View>
         <TouchableOpacity
@@ -177,14 +182,14 @@ function DiarioInner() {
           onPress={() => { setCompareMode(v => !v); setSelected(new Set()); }}
         >
           <GitCompare size={16} color={compareMode ? '#fff' : text.primary} strokeWidth={2} />
-          <Text style={[styles.compareBtnText, compareMode && { color: '#fff' }]}>Confronta</Text>
+          <Text style={[styles.compareBtnText, compareMode && { color: '#fff' }]}>{t('diario.compare_btn')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* SEARCH BAR */}
       <View style={styles.searchBar}>
         <Search size={16} color={text.muted} strokeWidth={2} />
-        <Text style={styles.searchPlaceholder}>Cerca sessione, distanza, data…</Text>
+        <Text style={styles.searchPlaceholder}>{t('diario.search_placeholder')}</Text>
         <View style={styles.filterIconWrap}>
           <Filter size={14} color={text.muted} strokeWidth={2} />
         </View>
@@ -192,11 +197,11 @@ function DiarioInner() {
 
       {/* FILTER CHIPS */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-        <Chip label="Tutte" selected={filter === 'all'} onPress={() => setFilter('all')} />
-        <Chip label="Apple Watch" selected={filter === 'apple_watch'} onPress={() => setFilter('apple_watch')} />
-        <Chip label="Garmin / Health Connect" selected={filter === 'garmin'} onPress={() => setFilter('garmin')} />
-        <Chip label="Telefono" selected={filter === 'phone'} onPress={() => setFilter('phone')} />
-        <Chip label="File" selected={filter === 'file'} onPress={() => setFilter('file')} />
+        <Chip label={t('diario.filter_all')} selected={filter === 'all'} onPress={() => setFilter('all')} />
+        <Chip label={t('diario.filter_apple_watch')} selected={filter === 'apple_watch'} onPress={() => setFilter('apple_watch')} />
+        <Chip label={t('diario.filter_garmin')} selected={filter === 'garmin'} onPress={() => setFilter('garmin')} />
+        <Chip label={t('diario.filter_phone')} selected={filter === 'phone'} onPress={() => setFilter('phone')} />
+        <Chip label={t('diario.filter_file')} selected={filter === 'file'} onPress={() => setFilter('file')} />
       </ScrollView>
 
       <ScrollView
@@ -210,14 +215,14 @@ function DiarioInner() {
           </View>
         ) : grouped.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Nessuna sessione</Text>
+            <Text style={styles.emptyTitle}>{t('diario.empty_title')}</Text>
             <Text style={styles.emptyBody}>
               {sessions.length === 0
-                ? 'Importa la tua prima sessione o registra una corsa per iniziare.'
-                : 'Nessuna sessione corrisponde al filtro selezionato.'}
+                ? t('diario.empty_body_first')
+                : t('diario.empty_body_filter')}
             </Text>
             <TouchableOpacity style={styles.emptyCta} onPress={() => router.push('/(tabs)/importa')}>
-              <Text style={styles.emptyCtaText}>VAI A IMPORTA</Text>
+              <Text style={styles.emptyCtaText}>{t('diario.empty_cta')}</Text>
             </TouchableOpacity>
           </View>
         ) : grouped.map(([month, items]) => (
@@ -258,7 +263,7 @@ function DiarioInner() {
       {compareMode && selected.size > 0 ? (
         <View style={styles.compareBar}>
           <Text style={styles.compareBarText}>
-            {selected.size === 1 ? '1 selezionata · scegline ancora una' : '2 selezionate'}
+            {selected.size === 1 ? t('diario.compare_one_selected') : t('diario.compare_two_selected')}
           </Text>
           <TouchableOpacity
             disabled={selected.size !== 2}
@@ -268,7 +273,7 @@ function DiarioInner() {
               if (first) router.push(`/workout/${first}`);
             }}
           >
-            <Text style={styles.compareBarBtnText}>CONFRONTA</Text>
+            <Text style={styles.compareBarBtnText}>{t('diario.compare_cta')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react-native';
 import { tokens, FontProvider, Card } from '../../src/design-system';
 import { AdBanner } from '../../src/Ads';
+import { useT } from '../../src/i18n';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -22,6 +23,7 @@ type Mode = 'piano' | 'obiettivi';
 
 function AllenamentiInner() {
   const router = useRouter();
+  const { t } = useT();
   const [mode, setMode] = useState<Mode>('piano');
 
   return (
@@ -30,18 +32,18 @@ function AllenamentiInner() {
 
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.title}>Allenamenti</Text>
-        <Text style={styles.subtitle}>Il tuo piano. I tuoi obiettivi. Una sola schermata.</Text>
+        <Text style={styles.title}>{t('workouts.title')}</Text>
+        <Text style={styles.subtitle}>{t('workouts.subtitle')}</Text>
       </View>
 
       {/* SEGMENTED CONTROL */}
       <View style={styles.segment}>
-        <SegmentBtn label="PIANO" Icon={Calendar} active={mode === 'piano'} onPress={() => setMode('piano')} />
-        <SegmentBtn label="OBIETTIVI" Icon={Target} active={mode === 'obiettivi'} onPress={() => setMode('obiettivi')} />
+        <SegmentBtn label={t('workouts.seg_plan')} Icon={Calendar} active={mode === 'piano'} onPress={() => setMode('piano')} />
+        <SegmentBtn label={t('workouts.seg_goals')} Icon={Target} active={mode === 'obiettivi'} onPress={() => setMode('obiettivi')} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {mode === 'piano' ? <PianoView router={router} /> : <ObiettiviView router={router} />}
+        {mode === 'piano' ? <PianoView router={router} t={t} /> : <ObiettiviView router={router} t={t} />}
         <AdBanner />
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -49,19 +51,19 @@ function AllenamentiInner() {
   );
 }
 
-function PianoView({ router }: { router: any }) {
+function PianoView({ router, t }: { router: any; t: (k: string, opts?: any) => string }) {
   return (
     <>
       {/* TODAY CARD */}
       <Card>
-        <Text style={styles.kicker}>OGGI · MARTEDÌ 9 GIU</Text>
+        <Text style={styles.kicker}>{t('workouts.today_kicker')}</Text>
         <View style={styles.todayRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.todayTitle}>Easy Run 8 km</Text>
-            <Text style={styles.todayMeta}>Z2 · Aerobica · ~45 min</Text>
+            <Text style={styles.todayTitle}>{t('workouts.today_title')}</Text>
+            <Text style={styles.todayMeta}>{t('workouts.today_meta')}</Text>
           </View>
           <View style={styles.todayBadge}>
-            <Text style={styles.todayBadgeText}>PROGRAMMATO</Text>
+            <Text style={styles.todayBadgeText}>{t('workouts.today_badge')}</Text>
           </View>
         </View>
         <View style={styles.todayCtaRow}>
@@ -69,10 +71,10 @@ function PianoView({ router }: { router: any }) {
             style={styles.primaryCta}
             onPress={() => router.push('/(tabs)/run')}
           >
-            <Text style={styles.primaryCtaText}>AVVIA SESSIONE</Text>
+            <Text style={styles.primaryCtaText}>{t('workouts.start_session')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.ghostCta}>
-            <Text style={styles.ghostCtaText}>Salta</Text>
+            <Text style={styles.ghostCtaText}>{t('workouts.skip')}</Text>
           </TouchableOpacity>
         </View>
       </Card>
@@ -80,8 +82,8 @@ function PianoView({ router }: { router: any }) {
       {/* WEEK OVERVIEW */}
       <Card>
         <View style={styles.weekHead}>
-          <Text style={styles.sectionTitle}>SETTIMANA 24</Text>
-          <Text style={styles.sectionSub}>3 di 5 completate</Text>
+          <Text style={styles.sectionTitle}>{t('workouts.week_label')}</Text>
+          <Text style={styles.sectionSub}>{t('workouts.week_done')}</Text>
         </View>
         <View style={styles.weekRow}>
           {['L','M','M','G','V','S','D'].map((d, i) => {
@@ -107,9 +109,9 @@ function PianoView({ router }: { router: any }) {
       <Card>
         <View style={styles.planHead}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>PIANO ATTIVO</Text>
-            <Text style={styles.planTitle}>10K sotto 50 min · 8 settimane</Text>
-            <Text style={styles.planMeta}>Settimana 4 di 8  ·  50% completato</Text>
+            <Text style={styles.kicker}>{t('workouts.plan_active_kicker')}</Text>
+            <Text style={styles.planTitle}>{t('workouts.plan_active_title')}</Text>
+            <Text style={styles.planMeta}>{t('workouts.plan_active_meta')}</Text>
           </View>
           <ChevronRight size={20} color={text.muted} strokeWidth={2} />
         </View>
@@ -128,8 +130,8 @@ function PianoView({ router }: { router: any }) {
           <Sparkles size={20} color={brand.primary} strokeWidth={2.2} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.aiTitle}>Vuoi un piano basato sui tuoi dati?</Text>
-          <Text style={styles.aiBody}>L&apos;AI Coach legge le tue ultime 4 settimane e adatta il piano a te.</Text>
+          <Text style={styles.aiTitle}>{t('workouts.ai_title')}</Text>
+          <Text style={styles.aiBody}>{t('workouts.ai_body')}</Text>
         </View>
         <ChevronRight size={18} color={brand.primary} strokeWidth={2.4} />
       </TouchableOpacity>
@@ -140,14 +142,14 @@ function PianoView({ router }: { router: any }) {
         style={styles.linkRow}
         onPress={() => router.push('/(tabs)/plans')}
       >
-        <Text style={styles.linkRowText}>Sfoglia i piani predefiniti</Text>
+        <Text style={styles.linkRowText}>{t('workouts.browse_plans')}</Text>
         <ChevronRight size={16} color={text.muted} strokeWidth={2} />
       </TouchableOpacity>
     </>
   );
 }
 
-function ObiettiviView({ router }: { router: any }) {
+function ObiettiviView({ router, t }: { router: any; t: (k: string, opts?: any) => string }) {
   return (
     <>
       {/* MAIN GOAL */}
@@ -157,26 +159,26 @@ function ObiettiviView({ router }: { router: any }) {
             <Trophy size={20} color={brand.primary} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>OBIETTIVO PRINCIPALE</Text>
-            <Text style={styles.goalTitle}>10K sotto 50:00</Text>
-            <Text style={styles.goalMeta}>entro 15 settembre 2026</Text>
+            <Text style={styles.kicker}>{t('workouts.main_goal_kicker')}</Text>
+            <Text style={styles.goalTitle}>{t('workouts.main_goal_title')}</Text>
+            <Text style={styles.goalMeta}>{t('workouts.main_goal_meta')}</Text>
           </View>
         </View>
 
         <View style={styles.probaWrap}>
-          <Text style={styles.probaLabel}>PROBABILITÀ DI RIUSCITA</Text>
+          <Text style={styles.probaLabel}>{t('workouts.proba_label')}</Text>
           <View style={styles.probaRow}>
             <Text style={styles.probaValue}>76<Text style={styles.probaUnit}>%</Text></Text>
             <View style={styles.probaBadge}>
               <TrendingUp size={12} color={semantic.success} strokeWidth={2.5} />
-              <Text style={styles.probaBadgeText}>SEI IN TIME</Text>
+              <Text style={styles.probaBadgeText}>{t('workouts.proba_badge')}</Text>
             </View>
           </View>
           <View style={styles.probaTrack}>
             <View style={[styles.probaFill, { width: '76%' }]} />
           </View>
           <Text style={styles.probaHint}>
-            Trend attuale: 46:20 · Margine 3:40  ·  Continua così.
+            {t('workouts.proba_hint')}
           </Text>
         </View>
       </Card>
@@ -188,20 +190,20 @@ function ObiettiviView({ router }: { router: any }) {
         onPress={() => router.push('/race-predictor')}
       >
         <View style={{ flex: 1 }}>
-          <Text style={styles.predictorTitle}>Race Predictor</Text>
-          <Text style={styles.predictorBody}>Calcola tempi gara su 5K / 10K / 21K / 42K basati sul tuo trend.</Text>
+          <Text style={styles.predictorTitle}>{t('workouts.predictor_title')}</Text>
+          <Text style={styles.predictorBody}>{t('workouts.predictor_body')}</Text>
         </View>
         <ChevronRight size={20} color={brand.primary} strokeWidth={2.4} />
       </TouchableOpacity>
 
       {/* GOAL LIST */}
-      <Text style={styles.sectionLabel}>ALTRI OBIETTIVI</Text>
+      <Text style={styles.sectionLabel}>{t('workouts.other_goals')}</Text>
       <Card>
         <View style={styles.smallGoalRow}>
           <View style={[styles.smallGoalDot, { backgroundColor: semantic.success }]} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.smallGoalTitle}>Correre 5 volte questa settimana</Text>
-            <Text style={styles.smallGoalMeta}>3/5 completate</Text>
+            <Text style={styles.smallGoalTitle}>{t('workouts.goal_5_week_title')}</Text>
+            <Text style={styles.smallGoalMeta}>{t('workouts.goal_5_week_meta')}</Text>
           </View>
           <Text style={styles.smallGoalPct}>60%</Text>
         </View>
@@ -209,8 +211,8 @@ function ObiettiviView({ router }: { router: any }) {
         <View style={styles.smallGoalRow}>
           <View style={[styles.smallGoalDot, { backgroundColor: semantic.warning }]} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.smallGoalTitle}>Volume mensile 150 km</Text>
-            <Text style={styles.smallGoalMeta}>92/150 km</Text>
+            <Text style={styles.smallGoalTitle}>{t('workouts.goal_volume_title')}</Text>
+            <Text style={styles.smallGoalMeta}>{t('workouts.goal_volume_meta')}</Text>
           </View>
           <Text style={styles.smallGoalPct}>61%</Text>
         </View>
@@ -219,7 +221,7 @@ function ObiettiviView({ router }: { router: any }) {
       {/* ADD GOAL */}
       <TouchableOpacity style={styles.addGoalBtn}>
         <Plus size={16} color={brand.primary} strokeWidth={2.4} />
-        <Text style={styles.addGoalText}>AGGIUNGI OBIETTIVO</Text>
+        <Text style={styles.addGoalText}>{t('workouts.add_goal')}</Text>
       </TouchableOpacity>
     </>
   );
