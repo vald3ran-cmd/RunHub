@@ -18,6 +18,7 @@ import {
 import { api } from '../../src/api';
 import { AdBanner } from '../../src/Ads';
 import { useT } from '../../src/i18n';
+import { WeatherForecast } from '../../src/components/WeatherForecast';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -198,6 +199,9 @@ function LabInner() {
             <KpiTile label={t('lab.fatigue')} value={data.kpi.fatica_pct} helper={data.kpi.fatica_pct < 50 ? t('lab.fatigue_ok') : data.kpi.fatica_pct < 75 ? t('lab.fatigue_med') : t('lab.fatigue_high')} status={data.kpi.fatica_pct < 50 ? 'success' : data.kpi.fatica_pct < 75 ? 'warning' : 'danger'} progress={data.kpi.fatica_pct} />
           </View>
         ) : null}
+
+        {/* WEATHER FORECAST 7 DAYS */}
+        <WeatherForecast />
 
         {/* TRAINING LOAD */}
         {data.training_load ? (

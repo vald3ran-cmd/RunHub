@@ -1163,7 +1163,21 @@
     "tsb_label": "TSB · forma neta",
     "empty_title": "Lab vacío",
     "empty_body": "Importa tus sesiones o registra una carrera para llenar el panel",
-    "empty_import_cta": "Importa sesiones desde Apple Watch / Garmin para ver las zonas cardíacas."
+    "empty_import_cta": "Importa sesiones desde Apple Watch / Garmin para ver las zonas cardíacas.",
+    "weather_title": "METEO 7 DÍAS",
+    "weather_sub_now": "Ahora · {{temp}}°",
+    "weather_sub_no_loc": "Ubicación no disponible",
+    "weather_empty_title": "Ubicación no disponible",
+    "weather_empty_body": "Importa una sesión con GPS para ver las previsiones meteo de tu zona.",
+    "weather_loading": "Cargando previsiones…",
+    "weather_today": "HOY",
+    "weather_dow_mon": "LUN",
+    "weather_dow_tue": "MAR",
+    "weather_dow_wed": "MIÉ",
+    "weather_dow_thu": "JUE",
+    "weather_dow_fri": "VIE",
+    "weather_dow_sat": "SÁB",
+    "weather_dow_sun": "DOM"
   },
   "import": {
     "title": "Importar",

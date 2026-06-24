@@ -1163,7 +1163,21 @@
     "tsb_label": "TSB · form",
     "empty_title": "Empty Lab",
     "empty_body": "Import your sessions or record a run to populate the dashboard",
-    "empty_import_cta": "Import sessions from Apple Watch / Garmin to see HR zones distribution."
+    "empty_import_cta": "Import sessions from Apple Watch / Garmin to see HR zones distribution.",
+    "weather_title": "7-DAY WEATHER",
+    "weather_sub_now": "Now · {{temp}}°",
+    "weather_sub_no_loc": "Location unavailable",
+    "weather_empty_title": "Location unavailable",
+    "weather_empty_body": "Import a session with GPS to see weather forecasts for your area.",
+    "weather_loading": "Loading forecast…",
+    "weather_today": "TODAY",
+    "weather_dow_mon": "MON",
+    "weather_dow_tue": "TUE",
+    "weather_dow_wed": "WED",
+    "weather_dow_thu": "THU",
+    "weather_dow_fri": "FRI",
+    "weather_dow_sat": "SAT",
+    "weather_dow_sun": "SUN"
   },
   "import": {
     "title": "Import",

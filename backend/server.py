@@ -4314,7 +4314,7 @@ app.include_router(api_router)
 # These will gradually receive endpoints extracted from server.py for scaling.
 from routes.weather import build_weather_router
 
-weather_router = build_weather_router(get_current_user)
+weather_router = build_weather_router(get_current_user, db=db)
 app.include_router(weather_router, prefix="/api")
 
 app.add_middleware(
