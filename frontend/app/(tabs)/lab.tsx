@@ -22,6 +22,8 @@ import { WeatherForecast } from '../../src/components/WeatherForecast';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
+type ScorePoint = { date: string; score: number };
+
 type LabOverview = {
   has_data: boolean;
   sessions_count: number;
@@ -51,6 +53,9 @@ function LabInner() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scoreHistory, setScoreHistory] = useState<ScorePoint[]>([]);
+  const [historyDays, setHistoryDays] = useState<30 | 60 | 90>(30);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchOverview = useCallback(async () => {
     try {
@@ -66,7 +71,22 @@ function LabInner() {
     }
   }, []);
 
-  useEffect(() => { fetchOverview(); }, [fetchOverview]);
+  const fetchScoreHistory = useCallback(async (days: 30 | 60 | 90) => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get('/lab/run-score-history', { params: { days } });
+      setScoreHistory(res.data.points || []);
+    } catch (e) {
+      console.warn('[lab] score history error:', e);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOverview();
+    fetchScoreHistory(30);
+  }, [fetchOverview, fetchScoreHistory]);
 
   // refresh on focus (assicura aggiornamento dopo aver chiuso una sessione)
   useFocusEffect(useCallback(() => {
@@ -175,6 +195,17 @@ function LabInner() {
             </Text>
           </View>
         </View>
+
+        <RunScoreHistoryCard
+          points={scoreHistory}
+          days={historyDays}
+          onChangeDays={(d) => {
+            setHistoryDays(d);
+            fetchScoreHistory(d);
+          }}
+          loading={historyLoading}
+          t={t}
+        />
 
         {/* AI INSIGHT (mostra solo se ha senso) */}
         {data.weekly_km > 0 ? (
@@ -324,6 +355,107 @@ function PredCol({ distance, time }: { distance: string; time: string }) {
     </View>
   );
 }
+
+function RunScoreHistoryCard({
+  points, days, onChangeDays, loading, t,
+}: {
+  points: ScorePoint[];
+  days: 30 | 60 | 90;
+  onChangeDays: (d: 30 | 60 | 90) => void;
+  loading: boolean;
+  t: (k: string) => string;
+}) {
+  const scores = points.map(p => p.score);
+  const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  const max = scores.length > 0 ? Math.round(Math.max(...scores)) : 0;
+  const trend = scores.length >= 2 ? scores[scores.length - 1] - scores[0] : 0;
+
+  return (
+    <Card>
+      <View style={hsStyles.header}>
+        <View>
+          <Text style={hsStyles.title}>TRAIETTORIA RUN SCORE</Text>
+          <Text style={hsStyles.sub}>ultimi {days} giorni</Text>
+        </View>
+        <View style={hsStyles.pills}>
+          {([30, 60, 90] as const).map(d => (
+            <TouchableOpacity
+              key={d}
+              style={[hsStyles.pill, days === d && hsStyles.pillActive]}
+              onPress={() => onChangeDays(d)}
+            >
+              <Text style={[hsStyles.pillText, days === d && hsStyles.pillTextActive]}>
+                {d}g
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={hsStyles.kpiRow}>
+        <View style={hsStyles.kpi}>
+          <Text style={hsStyles.kpiValue}>{avg}</Text>
+          <Text style={hsStyles.kpiLabel}>MEDIA</Text>
+        </View>
+        <View style={hsStyles.kpi}>
+          <Text style={hsStyles.kpiValue}>{max}</Text>
+          <Text style={hsStyles.kpiLabel}>PICCO</Text>
+        </View>
+        <View style={hsStyles.kpi}>
+          <Text style={[hsStyles.kpiValue, { color: trend >= 0 ? semantic.success : semantic.danger }]}>
+            {trend >= 0 ? '+' : ''}{trend.toFixed(1)}
+          </Text>
+          <Text style={hsStyles.kpiLabel}>TREND</Text>
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={hsStyles.loadingWrap}>
+          <ActivityIndicator size="small" color={brand.primary} />
+        </View>
+      ) : scores.length > 1 ? (
+        <LineChart
+          series={[{ data: scores, color: brand.primary, strokeWidth: 2.5 }]}
+          height={130}
+          showGrid
+        />
+      ) : (
+        <View style={hsStyles.empty}>
+          <Text style={hsStyles.emptyText}>
+            Registra almeno 2 corse per vedere la traiettoria.
+          </Text>
+        </View>
+      )}
+
+      {points.length >= 2 ? (
+        <View style={hsStyles.dateRow}>
+          <Text style={hsStyles.dateLabel}>{points[0].date}</Text>
+          <Text style={hsStyles.dateLabel}>{points[points.length - 1].date}</Text>
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+const hsStyles = StyleSheet.create({
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
+  title: { ...typography.kpiLabel, color: text.primary },
+  sub: { ...typography.caption, color: text.muted, marginTop: 2 },
+  pills: { flexDirection: 'row', gap: 4, backgroundColor: neutral.surfaceSoft, borderRadius: 999, padding: 3 },
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  pillActive: { backgroundColor: brand.primary },
+  pillText: { ...typography.caption, color: text.muted, fontWeight: '700' },
+  pillTextActive: { color: '#fff' },
+  kpiRow: { flexDirection: 'row', marginBottom: spacing.md },
+  kpi: { flex: 1, alignItems: 'center' },
+  kpiValue: { ...typography.kpiValue, color: text.primary, fontSize: 22 },
+  kpiLabel: { ...typography.kpiLabel, color: text.muted, fontSize: 9, marginTop: 2 },
+  loadingWrap: { height: 130, alignItems: 'center', justifyContent: 'center' },
+  empty: { height: 80, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { ...typography.caption, color: text.muted, textAlign: 'center' },
+  dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  dateLabel: { ...typography.caption, color: text.muted, fontSize: 10 },
+});
 
 export default function LabScreen() {
   return (

@@ -1,387 +1,430 @@
-/**
- * Allenamenti — Toggle PIANO ↔ OBIETTIVI.
- * - PIANO: piano corrente (predefinito o AI) + sessione di oggi/settimana.
- * - OBIETTIVI: gare/target con probabilità raggiungimento.
- *
- * Per ora UI placeholder con dati mock + CTA verso le pagine esistenti
- * (plans, race-predictor, ai-generate). Verrà completamente collegata in 1.6.x.
- */
-import React, { useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import React, { useState, useCallback } from 'react';
 import {
-  Calendar, Target, Sparkles, ChevronRight, TrendingUp, Plus, Trophy,
+  ScrollView, View, Text, StyleSheet, TouchableOpacity,
+  StatusBar, ActivityIndicator, Alert, TextInput, Modal,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect } from 'expo-router';
+import {
+  Calendar, Target, Sparkles, ChevronRight, Plus, Trash2,
+  TrendingUp, Flag, Zap, Clock,
 } from 'lucide-react-native';
 import { tokens, FontProvider, Card } from '../../src/design-system';
 import { AdBanner } from '../../src/Ads';
+import { api } from '../../src/api';
 import { useT } from '../../src/i18n';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
+type GoalType = 'pace' | 'distance' | 'race';
+type Goal = {
+  goal_id: string;
+  title: string;
+  type: GoalType;
+  target_value?: number;
+  target_date: string;
+  probability: number;
+};
 type Mode = 'piano' | 'obiettivi';
 
 function AllenamentiInner() {
   const router = useRouter();
   const { t } = useT();
   const [mode, setMode] = useState<Mode>('piano');
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loadingGoals, setLoadingGoals] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const fetchGoals = useCallback(async () => {
+    setLoadingGoals(true);
+    try {
+      const { data } = await api.get('/goals');
+      setGoals(data || []);
+    } catch (e) {
+      console.warn('[allenamenti] goals error:', e);
+    } finally {
+      setLoadingGoals(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    fetchGoals();
+  }, [fetchGoals]));
+
+  const deleteGoal = async (goal_id: string) => {
+    Alert.alert('Elimina obiettivo', 'Sei sicuro?', [
+      { text: 'Annulla', style: 'cancel' },
+      {
+        text: 'Elimina', style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/goals/${goal_id}`);
+            setGoals(prev => prev.filter(g => g.goal_id !== goal_id));
+          } catch {
+            Alert.alert('Errore', 'Impossibile eliminare obiettivo.');
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={neutral.background} />
 
-      {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.title}>{t('workouts.title')}</Text>
-        <Text style={styles.subtitle}>{t('workouts.subtitle')}</Text>
+        <Text style={styles.title}>Allenamenti</Text>
+        <Text style={styles.subtitle}>Il tuo piano. I tuoi obiettivi.</Text>
       </View>
 
-      {/* SEGMENTED CONTROL */}
       <View style={styles.segment}>
-        <SegmentBtn label={t('workouts.seg_plan')} Icon={Calendar} active={mode === 'piano'} onPress={() => setMode('piano')} />
-        <SegmentBtn label={t('workouts.seg_goals')} Icon={Target} active={mode === 'obiettivi'} onPress={() => setMode('obiettivi')} />
+        <SegmentBtn label="PIANO" Icon={Calendar} active={mode === 'piano'} onPress={() => setMode('piano')} />
+        <SegmentBtn label="OBIETTIVI" Icon={Target} active={mode === 'obiettivi'} onPress={() => setMode('obiettivi')} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {mode === 'piano' ? <PianoView router={router} t={t} /> : <ObiettiviView router={router} t={t} />}
+        {mode === 'piano' ? (
+          <PianoView router={router} />
+        ) : (
+          <ObiettiviView
+            goals={goals}
+            loading={loadingGoals}
+            onDelete={deleteGoal}
+            onAdd={() => setShowAddModal(true)}
+            router={router}
+          />
+        )}
         <AdBanner />
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <AddGoalModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSaved={() => { setShowAddModal(false); fetchGoals(); }}
+      />
     </SafeAreaView>
   );
 }
 
-function PianoView({ router, t }: { router: any; t: (k: string, opts?: any) => string }) {
+// ── PIANO VIEW ──
+function PianoView({ router }: { router: any }) {
   return (
     <>
-      {/* TODAY CARD */}
       <Card>
-        <Text style={styles.kicker}>{t('workouts.today_kicker')}</Text>
-        <View style={styles.todayRow}>
+        <Text style={styles.kicker}>I TUOI PIANI</Text>
+        <Text style={styles.todayTitle}>Piani di allenamento</Text>
+        <Text style={styles.todayMeta}>Predefiniti o generati dall'AI Coach</Text>
+        <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/plans')} activeOpacity={0.85}>
+          <Text style={styles.ctaBtnText}>VEDI PIANI</Text>
+          <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+        </TouchableOpacity>
+      </Card>
+
+      <Card>
+        <View style={styles.aiRow}>
+          <Sparkles size={20} color={brand.primary} strokeWidth={2} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.todayTitle}>{t('workouts.today_title')}</Text>
-            <Text style={styles.todayMeta}>{t('workouts.today_meta')}</Text>
-          </View>
-          <View style={styles.todayBadge}>
-            <Text style={styles.todayBadgeText}>{t('workouts.today_badge')}</Text>
+            <Text style={styles.aiTitle}>AI Coach</Text>
+            <Text style={styles.aiSub}>Genera un piano su misura basato sui tuoi dati reali</Text>
           </View>
         </View>
-        <View style={styles.todayCtaRow}>
-          <TouchableOpacity
-            style={styles.primaryCta}
-            onPress={() => router.push('/(tabs)/run')}
-          >
-            <Text style={styles.primaryCtaText}>{t('workouts.start_session')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ghostCta}>
-            <Text style={styles.ghostCtaText}>{t('workouts.skip')}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/ai-generate')} activeOpacity={0.85}>
+          <Text style={styles.ctaBtnText}>GENERA PIANO AI</Text>
+          <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+        </TouchableOpacity>
       </Card>
 
-      {/* WEEK OVERVIEW */}
       <Card>
-        <View style={styles.weekHead}>
-          <Text style={styles.sectionTitle}>{t('workouts.week_label')}</Text>
-          <Text style={styles.sectionSub}>{t('workouts.week_done')}</Text>
-        </View>
-        <View style={styles.weekRow}>
-          {['L','M','M','G','V','S','D'].map((d, i) => {
-            const done = i < 3;
-            const today = i === 1;
-            const planned = !done && i % 2 === 1;
-            return (
-              <View key={i} style={styles.weekDay}>
-                <Text style={styles.weekDayLabel}>{d}</Text>
-                <View style={[
-                  styles.weekDot,
-                  done && { backgroundColor: semantic.success },
-                  planned && { backgroundColor: brand.subtle, borderColor: brand.primary, borderWidth: 1.5 },
-                  today && { borderColor: brand.primary, borderWidth: 2 },
-                ]} />
-              </View>
-            );
-          })}
-        </View>
-      </Card>
-
-      {/* ACTIVE PLAN */}
-      <Card>
-        <View style={styles.planHead}>
+        <View style={styles.aiRow}>
+          <TrendingUp size={20} color={semantic.info} strokeWidth={2} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>{t('workouts.plan_active_kicker')}</Text>
-            <Text style={styles.planTitle}>{t('workouts.plan_active_title')}</Text>
-            <Text style={styles.planMeta}>{t('workouts.plan_active_meta')}</Text>
+            <Text style={styles.aiTitle}>Previsione gara</Text>
+            <Text style={styles.aiSub}>Stima i tuoi tempi su 5K, 10K, mezza e maratona</Text>
           </View>
-          <ChevronRight size={20} color={text.muted} strokeWidth={2} />
         </View>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '50%' }]} />
-        </View>
+        <TouchableOpacity
+          style={[styles.ctaBtn, { backgroundColor: semantic.info }]}
+          onPress={() => router.push('/race-predictor')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.ctaBtnText}>APRI PREVISIONE</Text>
+          <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+        </TouchableOpacity>
       </Card>
-
-      {/* AI BANNER */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => router.push('/ai-generate')}
-        style={styles.aiBanner}
-      >
-        <View style={styles.aiIconWrap}>
-          <Sparkles size={20} color={brand.primary} strokeWidth={2.2} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.aiTitle}>{t('workouts.ai_title')}</Text>
-          <Text style={styles.aiBody}>{t('workouts.ai_body')}</Text>
-        </View>
-        <ChevronRight size={18} color={brand.primary} strokeWidth={2.4} />
-      </TouchableOpacity>
-
-      {/* PREDEFINED PLANS */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={styles.linkRow}
-        onPress={() => router.push('/(tabs)/plans')}
-      >
-        <Text style={styles.linkRowText}>{t('workouts.browse_plans')}</Text>
-        <ChevronRight size={16} color={text.muted} strokeWidth={2} />
-      </TouchableOpacity>
     </>
   );
 }
 
-function ObiettiviView({ router, t }: { router: any; t: (k: string, opts?: any) => string }) {
+// ── OBIETTIVI VIEW ──
+function ObiettiviView({ goals, loading, onDelete, onAdd, router }: {
+  goals: Goal[]; loading: boolean;
+  onDelete: (id: string) => void;
+  onAdd: () => void;
+  router: any;
+}) {
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={brand.primary} />
+      </View>
+    );
+  }
+
   return (
     <>
-      {/* MAIN GOAL */}
-      <Card>
-        <View style={styles.goalHeader}>
-          <View style={styles.goalIcon}>
-            <Trophy size={20} color={brand.primary} strokeWidth={2.2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>{t('workouts.main_goal_kicker')}</Text>
-            <Text style={styles.goalTitle}>{t('workouts.main_goal_title')}</Text>
-            <Text style={styles.goalMeta}>{t('workouts.main_goal_meta')}</Text>
-          </View>
-        </View>
-
-        <View style={styles.probaWrap}>
-          <Text style={styles.probaLabel}>{t('workouts.proba_label')}</Text>
-          <View style={styles.probaRow}>
-            <Text style={styles.probaValue}>76<Text style={styles.probaUnit}>%</Text></Text>
-            <View style={styles.probaBadge}>
-              <TrendingUp size={12} color={semantic.success} strokeWidth={2.5} />
-              <Text style={styles.probaBadgeText}>{t('workouts.proba_badge')}</Text>
-            </View>
-          </View>
-          <View style={styles.probaTrack}>
-            <View style={[styles.probaFill, { width: '76%' }]} />
-          </View>
-          <Text style={styles.probaHint}>
-            {t('workouts.proba_hint')}
-          </Text>
-        </View>
-      </Card>
-
-      {/* RACE PREDICTOR LINK */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.predictorCard}
-        onPress={() => router.push('/race-predictor')}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={styles.predictorTitle}>{t('workouts.predictor_title')}</Text>
-          <Text style={styles.predictorBody}>{t('workouts.predictor_body')}</Text>
-        </View>
-        <ChevronRight size={20} color={brand.primary} strokeWidth={2.4} />
+      <TouchableOpacity style={styles.addGoalBtn} onPress={onAdd} activeOpacity={0.85}>
+        <Plus size={16} color="#fff" strokeWidth={2.5} />
+        <Text style={styles.addGoalBtnText}>AGGIUNGI OBIETTIVO</Text>
       </TouchableOpacity>
 
-      {/* GOAL LIST */}
-      <Text style={styles.sectionLabel}>{t('workouts.other_goals')}</Text>
-      <Card>
-        <View style={styles.smallGoalRow}>
-          <View style={[styles.smallGoalDot, { backgroundColor: semantic.success }]} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.smallGoalTitle}>{t('workouts.goal_5_week_title')}</Text>
-            <Text style={styles.smallGoalMeta}>{t('workouts.goal_5_week_meta')}</Text>
+      {goals.length === 0 ? (
+        <Card>
+          <View style={styles.emptyGoals}>
+            <Flag size={32} color={text.muted} strokeWidth={1.5} />
+            <Text style={styles.emptyGoalsTitle}>Nessun obiettivo</Text>
+            <Text style={styles.emptyGoalsSub}>
+              Aggiungi un obiettivo — gara, pace target o distanza — e vedrai la probabilità di raggiungerlo basata sui tuoi dati reali.
+            </Text>
           </View>
-          <Text style={styles.smallGoalPct}>60%</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.smallGoalRow}>
-          <View style={[styles.smallGoalDot, { backgroundColor: semantic.warning }]} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.smallGoalTitle}>{t('workouts.goal_volume_title')}</Text>
-            <Text style={styles.smallGoalMeta}>{t('workouts.goal_volume_meta')}</Text>
-          </View>
-          <Text style={styles.smallGoalPct}>61%</Text>
-        </View>
-      </Card>
-
-      {/* ADD GOAL */}
-      <TouchableOpacity style={styles.addGoalBtn}>
-        <Plus size={16} color={brand.primary} strokeWidth={2.4} />
-        <Text style={styles.addGoalText}>{t('workouts.add_goal')}</Text>
-      </TouchableOpacity>
+        </Card>
+      ) : (
+        goals.map(goal => <GoalCard key={goal.goal_id} goal={goal} onDelete={onDelete} />)
+      )}
     </>
   );
 }
 
-function SegmentBtn({ label, Icon, active, onPress }:
-  { label: string; Icon: any; active: boolean; onPress: () => void }) {
+// ── GOAL CARD ──
+function GoalCard({ goal, onDelete }: { goal: Goal; onDelete: (id: string) => void }) {
+  const prob = goal.probability;
+  const probColor = prob >= 70 ? semantic.success : prob >= 40 ? semantic.warning : semantic.danger;
+  const Icon = goal.type === 'pace' ? Zap : goal.type === 'distance' ? TrendingUp : Flag;
+
+  const daysLeft = (() => {
+    try {
+      const d = Math.ceil((new Date(goal.target_date).getTime() - Date.now()) / 86400000);
+      return d > 0 ? d : 0;
+    } catch { return 0; }
+  })();
+
+  const targetLabel = (() => {
+    if (goal.type === 'pace' && goal.target_value) {
+      const m = Math.floor(goal.target_value);
+      const s = Math.round((goal.target_value - m) * 60);
+      return `Pace ${m}:${String(s).padStart(2, '0')} /km`;
+    }
+    if (goal.type === 'distance' && goal.target_value) return `${goal.target_value} km`;
+    return goal.title;
+  })();
+
   return (
-    <TouchableOpacity
-      style={[styles.segBtn, active && styles.segBtnActive]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Icon size={15} color={active ? '#fff' : text.secondary} strokeWidth={2.2} />
+    <Card>
+      <View style={styles.goalHeader}>
+        <View style={[styles.goalIconBox, { backgroundColor: brand.subtle }]}>
+          <Icon size={18} color={brand.primary} strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.goalTitle}>{goal.title}</Text>
+          <Text style={styles.goalTarget}>{targetLabel}</Text>
+        </View>
+        <TouchableOpacity onPress={() => onDelete(goal.goal_id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Trash2 size={16} color={text.muted} strokeWidth={2} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.probRow}>
+        <Text style={[styles.probValue, { color: probColor }]}>{prob}%</Text>
+        <Text style={styles.probLabel}>probabilità</Text>
+      </View>
+      <View style={styles.probTrack}>
+        <View style={[styles.probFill, { width: `${prob}%` as any, backgroundColor: probColor }]} />
+      </View>
+
+      <View style={styles.goalFooter}>
+        <View style={styles.goalFooterItem}>
+          <Clock size={12} color={text.muted} strokeWidth={2} />
+          <Text style={styles.goalFooterText}>{daysLeft} giorni al traguardo</Text>
+        </View>
+        <Text style={styles.goalDate}>
+          {new Date(goal.target_date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </Text>
+      </View>
+    </Card>
+  );
+}
+
+// ── ADD GOAL MODAL ──
+function AddGoalModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState<GoalType>('race');
+  const [targetValue, setTargetValue] = useState('');
+  const [targetDate, setTargetDate] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!title.trim() || !targetDate.trim()) {
+      Alert.alert('Campi mancanti', 'Inserisci almeno titolo e data target.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post('/goals', {
+        title: title.trim(),
+        type,
+        target_value: targetValue ? parseFloat(targetValue) : undefined,
+        target_date: targetDate,
+      });
+      setTitle(''); setType('race'); setTargetValue(''); setTargetDate('');
+      onSaved();
+    } catch {
+      Alert.alert('Errore', 'Impossibile salvare obiettivo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={styles.modalSafe} edges={['top']}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Nuovo obiettivo</Text>
+          <TouchableOpacity onPress={onClose}><Text style={styles.modalClose}>Annulla</Text></TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalBody}>
+          <Text style={styles.fieldLabel}>TITOLO</Text>
+          <TextInput style={styles.fieldInput} value={title} onChangeText={setTitle}
+            placeholder="es. Maratona di Roma" placeholderTextColor={text.muted} />
+
+          <Text style={styles.fieldLabel}>TIPO</Text>
+          <View style={styles.typeRow}>
+            {(['race', 'pace', 'distance'] as GoalType[]).map(tp => (
+              <TouchableOpacity
+                key={tp}
+                style={[styles.typeBtn, type === tp && styles.typeBtnActive]}
+                onPress={() => setType(tp)}
+              >
+                <Text style={[styles.typeBtnText, type === tp && styles.typeBtnTextActive]}>
+                  {tp === 'race' ? 'GARA' : tp === 'pace' ? 'PACE' : 'DISTANZA'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {type === 'pace' && (
+            <>
+              <Text style={styles.fieldLabel}>PACE TARGET (min/km, es. 5.5 = 5:30)</Text>
+              <TextInput style={styles.fieldInput} value={targetValue} onChangeText={setTargetValue}
+                placeholder="5.5" placeholderTextColor={text.muted} keyboardType="decimal-pad" />
+            </>
+          )}
+          {type === 'distance' && (
+            <>
+              <Text style={styles.fieldLabel}>DISTANZA TARGET (km)</Text>
+              <TextInput style={styles.fieldInput} value={targetValue} onChangeText={setTargetValue}
+                placeholder="21.1" placeholderTextColor={text.muted} keyboardType="decimal-pad" />
+            </>
+          )}
+
+          <Text style={styles.fieldLabel}>DATA TARGET (YYYY-MM-DD)</Text>
+          <TextInput style={styles.fieldInput} value={targetDate} onChangeText={setTargetDate}
+            placeholder="2026-10-15" placeholderTextColor={text.muted} />
+
+          <TouchableOpacity style={styles.saveGoalBtn} onPress={save} disabled={saving} activeOpacity={0.85}>
+            {saving ? <ActivityIndicator size="small" color="#fff" /> :
+              <Text style={styles.saveGoalBtnText}>SALVA OBIETTIVO</Text>}
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+// ── HELPERS ──
+function SegmentBtn({ label, Icon, active, onPress }: { label: string; Icon: any; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.segBtn, active && styles.segBtnActive]} onPress={onPress} activeOpacity={0.8}>
+      <Icon size={14} color={active ? '#fff' : text.secondary} strokeWidth={2.2} />
       <Text style={[styles.segBtnText, active && { color: '#fff' }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 export default function AllenamentiScreen() {
-  return (
-    <FontProvider>
-      <AllenamentiInner />
-    </FontProvider>
-  );
+  return <FontProvider><AllenamentiInner /></FontProvider>;
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: neutral.background },
-  header: { paddingHorizontal: spacing.marginApp, paddingTop: spacing.sm, paddingBottom: spacing.sm },
-  title: { ...typography.sectionTitle, color: text.primary, fontSize: 28 },
+  header: { paddingHorizontal: spacing.marginApp, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  title: { ...typography.sectionTitle, color: text.primary, fontSize: 26 },
   subtitle: { ...typography.caption, color: text.muted, marginTop: 2 },
-
   segment: {
-    flexDirection: 'row',
-    marginHorizontal: spacing.marginApp,
-    backgroundColor: neutral.surfaceSoft,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: spacing.md,
+    flexDirection: 'row', marginHorizontal: spacing.marginApp,
+    backgroundColor: neutral.surfaceSoft, borderRadius: 999,
+    padding: 4, gap: 4, marginBottom: spacing.sm,
   },
-  segBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10, borderRadius: 10,
-  },
+  segBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 999 },
   segBtnActive: { backgroundColor: brand.primary },
   segBtnText: { ...typography.kpiLabel, color: text.secondary, fontSize: 11 },
+  scroll: { padding: spacing.marginApp, paddingTop: spacing.sm, gap: spacing.gapSection },
+  center: { padding: 40, alignItems: 'center' },
 
-  scroll: { paddingHorizontal: spacing.marginApp, gap: spacing.md },
-
-  kicker: { ...typography.kpiLabel, color: text.muted, fontSize: 10 },
-
-  todayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 6 },
+  kicker: { ...typography.kpiLabel, color: text.muted, fontSize: 10, marginBottom: 6 },
   todayTitle: { ...typography.bodyBold, color: text.primary, fontSize: 18 },
-  todayMeta: { ...typography.caption, color: text.secondary, marginTop: 2 },
-  todayBadge: {
-    paddingHorizontal: 8, paddingVertical: 4,
-    backgroundColor: brand.subtle, borderRadius: 999,
+  todayMeta: { ...typography.caption, color: text.secondary, marginTop: 4 },
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, backgroundColor: brand.primary,
+    paddingVertical: 12, borderRadius: 999, marginTop: spacing.md,
   },
-  todayBadgeText: { ...typography.kpiLabel, color: brand.dark, fontSize: 9 },
-  todayCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: spacing.md },
-  primaryCta: {
-    flex: 1, paddingVertical: 12,
-    backgroundColor: brand.primary, borderRadius: radius.button,
-    alignItems: 'center',
-  },
-  primaryCtaText: { ...typography.kpiLabel, color: '#fff', fontSize: 11 },
-  ghostCta: { paddingHorizontal: 14, paddingVertical: 12 },
-  ghostCtaText: { ...typography.body, color: text.muted, fontSize: 13 },
-
-  weekHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.md },
-  sectionTitle: { ...typography.kpiLabel, color: text.primary },
-  sectionSub: { ...typography.caption, color: text.muted },
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  weekDay: { alignItems: 'center', gap: 6 },
-  weekDayLabel: { ...typography.kpiLabel, color: text.muted, fontSize: 10 },
-  weekDot: {
-    width: 24, height: 24, borderRadius: 999,
-    backgroundColor: neutral.surfaceSoft,
-  },
-
-  planHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  planTitle: { ...typography.bodyBold, color: text.primary, fontSize: 15, marginTop: 4 },
-  planMeta: { ...typography.caption, color: text.muted, marginTop: 2 },
-  progressTrack: {
-    height: 6, backgroundColor: neutral.surfaceSoft, borderRadius: 999,
-    marginTop: spacing.md, overflow: 'hidden',
-  },
-  progressFill: { height: 6, backgroundColor: brand.primary, borderRadius: 999 },
-
-  aiBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: brand.subtle, borderRadius: radius.card,
-    borderWidth: 1, borderColor: brand.light,
-    padding: spacing.md,
-  },
-  aiIconWrap: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-  },
-  aiTitle: { ...typography.bodyBold, color: text.primary, fontSize: 14 },
-  aiBody: { ...typography.caption, color: text.secondary, marginTop: 2, fontSize: 12 },
-
-  linkRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, paddingHorizontal: spacing.md,
-    backgroundColor: neutral.card, borderRadius: 12,
-    borderWidth: 1, borderColor: neutral.border,
-  },
-  linkRowText: { ...typography.body, color: text.primary, flex: 1, fontSize: 14 },
-
-  // OBIETTIVI
-  goalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
-  goalIcon: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: brand.subtle, alignItems: 'center', justifyContent: 'center',
-  },
-  goalTitle: { ...typography.kpiValue, color: text.primary, fontSize: 22, marginTop: 4 },
-  goalMeta: { ...typography.caption, color: text.muted, marginTop: 2 },
-
-  probaWrap: { gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: neutral.border },
-  probaLabel: { ...typography.kpiLabel, color: text.muted, fontSize: 10, marginTop: spacing.sm },
-  probaRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
-  probaValue: { ...typography.heroMetric, color: brand.primary, fontSize: 42 },
-  probaUnit: { ...typography.body, color: text.muted, fontSize: 16 },
-  probaBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4,
-    backgroundColor: '#ECFDF5', borderRadius: 999,
-  },
-  probaBadgeText: { ...typography.kpiLabel, color: semantic.success, fontSize: 9 },
-  probaTrack: { height: 6, backgroundColor: neutral.surfaceSoft, borderRadius: 999, marginTop: 4 },
-  probaFill: { height: 6, backgroundColor: brand.primary, borderRadius: 999 },
-  probaHint: { ...typography.caption, color: text.secondary, marginTop: 6, fontSize: 12 },
-
-  predictorCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: '#0F172A', borderRadius: radius.card,
-    padding: spacing.lg,
-  },
-  predictorTitle: { ...typography.bodyBold, color: '#fff', fontSize: 16 },
-  predictorBody: { ...typography.caption, color: '#94A3B8', marginTop: 4, fontSize: 12 },
-
-  sectionLabel: {
-    ...typography.kpiLabel, color: text.muted, fontSize: 10,
-    marginTop: spacing.sm,
-  },
-
-  smallGoalRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  smallGoalDot: { width: 10, height: 10, borderRadius: 999 },
-  smallGoalTitle: { ...typography.body, color: text.primary, fontSize: 13 },
-  smallGoalMeta: { ...typography.caption, color: text.muted, marginTop: 2 },
-  smallGoalPct: { ...typography.monoInline, color: text.primary, fontSize: 13 },
-  divider: { height: 1, backgroundColor: neutral.border, marginVertical: spacing.sm },
+  ctaBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 11 },
+  aiRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
+  aiTitle: { ...typography.bodyBold, color: text.primary },
+  aiSub: { ...typography.caption, color: text.secondary, marginTop: 2 },
 
   addGoalBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 14, backgroundColor: neutral.card,
-    borderWidth: 1, borderStyle: 'dashed', borderColor: brand.primary,
-    borderRadius: radius.card,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: brand.primary,
+    paddingVertical: 14, borderRadius: 999,
   },
-  addGoalText: { ...typography.kpiLabel, color: brand.primary, fontSize: 11 },
+  addGoalBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 12 },
+
+  emptyGoals: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
+  emptyGoalsTitle: { ...typography.bodyBold, color: text.primary, fontSize: 18 },
+  emptyGoalsSub: { ...typography.body, color: text.secondary, textAlign: 'center', lineHeight: 21 },
+
+  goalHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.md },
+  goalIconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  goalTitle: { ...typography.bodyBold, color: text.primary },
+  goalTarget: { ...typography.caption, color: text.secondary, marginTop: 2 },
+
+  probRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 6 },
+  probValue: { ...typography.kpiValue, fontSize: 28 },
+  probLabel: { ...typography.caption, color: text.muted },
+  probTrack: { height: 6, borderRadius: 999, backgroundColor: neutral.surfaceSoft, overflow: 'hidden', marginBottom: spacing.md },
+  probFill: { height: '100%', borderRadius: 999 },
+
+  goalFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  goalFooterItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  goalFooterText: { ...typography.caption, color: text.muted },
+  goalDate: { ...typography.caption, color: text.muted },
+
+  modalSafe: { flex: 1, backgroundColor: neutral.background },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.marginApp, borderBottomWidth: 1, borderBottomColor: neutral.border },
+  modalTitle: { ...typography.bodyBold, color: text.primary, fontSize: 18 },
+  modalClose: { color: brand.primary, fontSize: 16, fontWeight: '600' },
+  modalBody: { padding: spacing.marginApp },
+  fieldLabel: { ...typography.kpiLabel, color: text.muted, fontSize: 10, marginBottom: 6, marginTop: spacing.md },
+  fieldInput: { borderWidth: 1, borderColor: neutral.border, borderRadius: 10, padding: 12, color: text.primary, fontSize: 15, backgroundColor: neutral.card },
+  typeRow: { flexDirection: 'row', gap: 8 },
+  typeBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: neutral.border, alignItems: 'center' },
+  typeBtnActive: { backgroundColor: brand.primary, borderColor: brand.primary },
+  typeBtnText: { ...typography.kpiLabel, color: text.secondary, fontSize: 10 },
+  typeBtnTextActive: { color: '#fff' },
+  saveGoalBtn: { backgroundColor: brand.primary, paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.xl },
+  saveGoalBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 12 },
 });

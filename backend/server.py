@@ -2196,6 +2196,56 @@ async def workout_detail(session_id: str, user: dict = Depends(get_current_user)
     return doc
 
 
+@api_router.get("/workouts/{session_id}/similar")
+async def get_similar_workout(session_id: str, user: dict = Depends(get_current_user)):
+    """Trova la sessione più simile per distanza e tipo, escludendo quella corrente."""
+    current = await db.workout_sessions.find_one(
+        {"session_id": session_id, "user_id": user["user_id"]},
+        {"_id": 0, "distance_km": 1, "activity_type": 1, "completed_at": 1}
+    )
+    if not current:
+        raise HTTPException(status_code=404, detail="Sessione non trovata.")
+
+    dist = float(current.get("distance_km") or 0)
+    activity_type = current.get("activity_type") or "run"
+
+    if dist <= 0:
+        return {"found": False}
+
+    candidates = await db.workout_sessions.find(
+        {
+            "user_id": user["user_id"],
+            "session_id": {"$ne": session_id},
+            "activity_type": activity_type,
+            "distance_km": {"$gte": dist * 0.6, "$lte": dist * 1.4},
+            "duration_seconds": {"$gt": 0},
+        },
+        {"_id": 0, "session_id": 1, "distance_km": 1, "duration_seconds": 1,
+         "avg_pace_min_per_km": 1, "calories": 1, "completed_at": 1}
+    ).sort("completed_at", -1).to_list(length=20)
+
+    if not candidates:
+        return {"found": False}
+
+    best = min(candidates, key=lambda s: abs(float(s.get("distance_km") or 0) - dist))
+    best["found"] = True
+    return best
+
+
+@api_router.patch("/workouts/{session_id}/notes")
+async def update_workout_notes(session_id: str, body: dict, user=Depends(get_current_user)):
+    notes = body.get("notes", "")
+    if len(notes) > 2000:
+        raise HTTPException(status_code=400, detail="Note troppo lunghe (max 2000 caratteri).")
+    result = await db.workout_sessions.update_one(
+        {"session_id": session_id, "user_id": user["user_id"]},
+        {"$set": {"notes": notes, "updated_at": datetime.utcnow().isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Sessione non trovata.")
+    return {"ok": True, "notes": notes}
+
+
 # ----------------- File Import (.fit / .gpx / .tcx) — Batch 2 -----------------
 # Quota mensile per tier (numero di file importati al mese)
 IMPORT_QUOTA_BY_TIER = {
@@ -2908,6 +2958,154 @@ async def lab_overview(user: dict = Depends(get_current_user)):
         "last_session": last_session,
         "last_update": now.isoformat(),
     }
+
+
+@api_router.get("/lab/run-score-history")
+async def get_run_score_history(days: int = 30, user: dict = Depends(get_current_user)):
+    """Restituisce lo storico del Run Score giorno per giorno."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    sessions = await db.workout_sessions.find(
+        {"user_id": user["user_id"], "completed_at": {"$gte": cutoff}},
+        {"_id": 0, "completed_at": 1, "distance_km": 1, "duration_seconds": 1,
+         "avg_pace_min_per_km": 1, "avg_hr_bpm": 1}
+    ).sort("completed_at", 1).to_list(length=200)
+
+    if not sessions:
+        return {"points": [], "days": days}
+
+    points = []
+    for s in sessions:
+        dist = float(s.get("distance_km") or 0)
+        dur = float(s.get("duration_seconds") or 0)
+        pace = float(s.get("avg_pace_min_per_km") or 0)
+        if dist <= 0 or dur <= 0:
+            continue
+        dist_score = min(100, (dist / 15) * 100) * 0.4
+        pace_score = (max(0, 1 - (pace - 4) / 6) * 100) * 0.4 if pace > 0 else 30
+        dur_score = min(100, (dur / 3600) * 100) * 0.2
+        score = round(dist_score + pace_score + dur_score, 1)
+        points.append({
+            "date": s["completed_at"][:10],
+            "score": score
+        })
+
+    return {"points": points, "days": days}
+
+
+# ---------- Goals ----------
+
+def compute_goal_probability(goal: dict, avg_pace: float, avg_dist: float) -> int:
+    """Calcola probabilità 0-100 di raggiungere l'obiettivo."""
+    goal_type = goal.get("type")
+    target_date = goal.get("target_date", "")
+
+    try:
+        days_left = (datetime.fromisoformat(target_date) - datetime.utcnow()).days
+    except Exception:
+        days_left = 60
+
+    if days_left < 0:
+        return 0
+
+    if goal_type == "pace":
+        target_pace = float(goal.get("target_value") or 6.0)
+        if avg_pace <= 0:
+            return 30
+        diff = avg_pace - target_pace
+        if diff <= 0:
+            prob = 95
+        elif diff < 0.5:
+            prob = 80
+        elif diff < 1.0:
+            prob = 60
+        elif diff < 1.5:
+            prob = 40
+        else:
+            prob = 20
+        if days_left > 60:
+            prob = min(97, prob + 10)
+        elif days_left < 14:
+            prob = max(5, prob - 15)
+        return prob
+
+    elif goal_type == "distance":
+        target_dist = float(goal.get("target_value") or 10.0)
+        if avg_dist <= 0:
+            return 30
+        ratio = avg_dist / target_dist
+        if ratio >= 1:
+            prob = 93
+        elif ratio >= 0.8:
+            prob = 75
+        elif ratio >= 0.6:
+            prob = 55
+        elif ratio >= 0.4:
+            prob = 35
+        else:
+            prob = 18
+        if days_left > 60:
+            prob = min(97, prob + 8)
+        elif days_left < 14:
+            prob = max(5, prob - 10)
+        return prob
+
+    else:  # race
+        return max(10, min(90, 50 + (days_left // 5)))
+
+
+@api_router.get("/goals")
+async def get_goals(user: dict = Depends(get_current_user)):
+    """Restituisce gli obiettivi dell'utente con probabilità calcolata."""
+    goals = await db.goals.find(
+        {"user_id": user["user_id"]},
+        {"_id": 0}
+    ).sort("target_date", 1).to_list(length=20)
+
+    sessions = await db.workout_sessions.find(
+        {"user_id": user["user_id"], "activity_type": {"$in": ["run", None]},
+         "avg_pace_min_per_km": {"$gt": 0}},
+        {"_id": 0, "avg_pace_min_per_km": 1, "distance_km": 1}
+    ).sort("completed_at", -1).to_list(length=10)
+
+    paces = [float(s["avg_pace_min_per_km"]) for s in sessions if s.get("avg_pace_min_per_km")]
+    avg_pace = sum(paces) / len(paces) if paces else 0
+
+    dists = [float(s["distance_km"]) for s in sessions if s.get("distance_km")]
+    avg_dist = sum(dists) / len(dists) if dists else 0
+
+    for goal in goals:
+        goal["probability"] = compute_goal_probability(goal, avg_pace, avg_dist)
+
+    return goals
+
+
+@api_router.post("/goals")
+async def create_goal(body: dict, user: dict = Depends(get_current_user)):
+    """Crea un nuovo obiettivo."""
+    goal = {
+        "goal_id": str(uuid.uuid4()),
+        "user_id": user["user_id"],
+        "title": body.get("title", "Obiettivo"),
+        "type": body.get("type", "race"),
+        "target_value": body.get("target_value"),
+        "target_date": body.get("target_date", ""),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    await db.goals.insert_one(goal)
+    goal.pop("_id", None)
+    return goal
+
+
+@api_router.delete("/goals/{goal_id}")
+async def delete_goal(goal_id: str, user: dict = Depends(get_current_user)):
+    """Elimina un obiettivo."""
+    result = await db.goals.delete_one(
+        {"goal_id": goal_id, "user_id": user["user_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Obiettivo non trovato.")
+    return {"ok": True}
 
 
 # ---------- Personal Bests (FREE — calcolati on-the-fly) ----------

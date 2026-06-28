@@ -577,7 +577,13 @@
     "equiv_choco_many": "barras",
     "equiv_steps": "👟 Aproximadamente {{n}} pasos totales",
     "equiv_field": "⚽ {{n}} veces el largo de un campo de fútbol",
-    "equiv_burj": "🏙️ {{n}} veces la altura del Burj Khalifa escalada"
+    "equiv_burj": "🏙️ {{n}} veces la altura del Burj Khalifa escalada",
+    "notes_title": "NOTAS",
+    "notes_placeholder": "¿Cómo te sentiste? Clima, terreno, observaciones...",
+    "notes_save": "GUARDAR NOTAS",
+    "notes_saved": "✓ GUARDADAS",
+    "notes_save_error": "No se pudieron guardar las notas. Inténtalo de nuevo.",
+    "compare_no_similar": "No se encontró ninguna sesión similar. Registra más carreras para activar la comparación."
   },
   "gate": {
     "unlock_with": "Desbloquear con {{tier}}",

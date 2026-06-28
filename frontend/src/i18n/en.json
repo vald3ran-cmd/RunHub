@@ -577,7 +577,13 @@
     "equiv_choco_many": "bars",
     "equiv_steps": "👟 About {{n}} total steps",
     "equiv_field": "⚽ {{n}} times the length of a football field",
-    "equiv_burj": "🏙️ {{n}} times the height of Burj Khalifa climbed"
+    "equiv_burj": "🏙️ {{n}} times the height of Burj Khalifa climbed",
+    "notes_title": "NOTES",
+    "notes_placeholder": "How did you feel? Weather, terrain, observations...",
+    "notes_save": "SAVE NOTES",
+    "notes_saved": "✓ SAVED",
+    "notes_save_error": "Could not save notes. Please try again.",
+    "compare_no_similar": "No similar session found. Record more runs to activate comparison."
   },
   "gate": {
     "unlock_with": "Unlock with {{tier}}",

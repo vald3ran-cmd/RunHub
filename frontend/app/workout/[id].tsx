@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Alert, Platform, Image,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Alert, Platform, Image, TextInput,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ import { AnimatedCounter } from '../../src/uiPolish';
 import { haptics } from '../../src/uiPolish';
 import {
   ChevronLeft, Share2, CheckCircle2, MapPin, Clock, Flame, Zap, Award,
-  BarChart3, Activity as ActivityIcon, GitCompare, TrendingDown, Mountain,
+  BarChart3, Activity as ActivityIcon, GitCompare, TrendingDown, Mountain, MessageSquare,
 } from 'lucide-react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useT } from '../../src/i18n';
@@ -347,6 +347,8 @@ function WorkoutDetailInner() {
 
             {/* Fun equivalents (Performance+) */}
             <FunEquivalentsCard session={session} t={t} />
+
+            <NotesCard session={session} sessionId={id} t={t} />
           </>
         ) : null}
 
@@ -552,6 +554,62 @@ function SplitsCard({ session, t }: { session: any; t: (k: string, o?: any) => s
 }
 
 // ─────────────────────────────────────────────────────────────
+// NOTES CARD
+// ─────────────────────────────────────────────────────────────
+function NotesCard({ session, sessionId, t }: { session: any; sessionId: string; t: Function }) {
+  const [notes, setNotes] = useState<string>(session.notes || '');
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const save = async () => {
+    if (status === 'saving') return;
+    setStatus('saving');
+    try {
+      await api.patch(`/workouts/${sessionId}/notes`, { notes });
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 2000);
+    } catch {
+      setStatus('idle');
+      Alert.alert(t('common.error'), t('workout_detail.notes_save_error'));
+    }
+  };
+
+  return (
+    <View style={styles.statsCard}>
+      <View style={styles.cardSectionHeader}>
+        <MessageSquare size={14} color={colors.textSecondary} strokeWidth={2.2} />
+        <Text style={styles.cardSectionTitle}>{t('workout_detail.notes_title')}</Text>
+      </View>
+      <TextInput
+        style={styles.notesInput}
+        value={notes}
+        onChangeText={(v) => { setNotes(v); setStatus('idle'); }}
+        placeholder={t('workout_detail.notes_placeholder')}
+        placeholderTextColor={colors.textMuted}
+        multiline
+        maxLength={2000}
+        textAlignVertical="top"
+      />
+      <View style={styles.notesFooter}>
+        <Text style={styles.notesCount}>{notes.length} / 2000</Text>
+        <TouchableOpacity
+          style={[styles.notesSaveBtn, status === 'saved' && { backgroundColor: colors.success }]}
+          onPress={save}
+          disabled={status === 'saving'}
+          activeOpacity={0.85}
+        >
+          {status === 'saving' ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.notesSaveBtnText}>
+              {status === 'saved' ? t('workout_detail.notes_saved') : t('workout_detail.notes_save')}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // FUN EQUIVALENTS CARD
 // ─────────────────────────────────────────────────────────────
 function FunEquivalentsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
@@ -811,6 +869,27 @@ function GapDecouplingCard({ session, t }: { session: any; t: (k: string, o?: an
 // ─────────────────────────────────────────────────────────────
 function ConfrontoCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
   const { hasAccess } = useTierAccess('starter');
+  const [similar, setSimilar] = useState<any>(null);
+  const [loadingSimilar, setLoadingSimilar] = useState(true);
+  const [noData, setNoData] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get(`/workouts/${session.session_id}/similar`);
+        if (data?.found) {
+          setSimilar(data);
+        } else {
+          setNoData(true);
+        }
+      } catch {
+        setNoData(true);
+      } finally {
+        setLoadingSimilar(false);
+      }
+    })();
+  }, [session.session_id]);
+
   if (!hasAccess) {
     return (
       <LockedTeaser
@@ -820,43 +899,81 @@ function ConfrontoCard({ session, t }: { session: any; t: (k: string, o?: any) =
       />
     );
   }
-  // Mock data: confronto con sessione simile (placeholder finché non integri logica reale)
+
+  if (loadingSimilar) {
+    return (
+      <View style={styles.statsCard}>
+        <View style={styles.cardSectionHeader}>
+          <Text style={styles.cardSectionTitle}>
+            {(t('workout_detail.compare_section') || 'CONFRONTO').toUpperCase()}
+          </Text>
+        </View>
+        <View style={{ padding: 20, alignItems: 'center' }}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (noData || !similar) {
+    return (
+      <View style={styles.statsCard}>
+        <View style={styles.cardSectionHeader}>
+          <Text style={styles.cardSectionTitle}>
+            {(t('workout_detail.compare_section') || 'CONFRONTO').toUpperCase()}
+          </Text>
+        </View>
+        <Text style={styles.splitsEmpty}>
+          {t('workout_detail.compare_no_similar') ||
+            'Nessuna sessione simile trovata nello storico. Registra altre corse per attivare il confronto.'}
+        </Text>
+      </View>
+    );
+  }
+
   const cur = {
     distance: Number(session.distance_km || 0),
     duration: Number(session.duration_seconds || 0),
     pace: Number(session.avg_pace_min_per_km || 0),
     kcal: Number(session.calories || 0),
   };
-  // Sessione precedente "simile" (mock — 5% peggio in pace, stesso distance)
   const prev = {
-    distance: cur.distance * 0.97,
-    duration: cur.duration * 1.05,
-    pace: cur.pace ? cur.pace * 1.04 : 0,
-    kcal: cur.kcal * 0.94,
+    distance: Number(similar.distance_km || 0),
+    duration: Number(similar.duration_seconds || 0),
+    pace: Number(similar.avg_pace_min_per_km || 0),
+    kcal: Number(similar.calories || 0),
   };
+
+  const prevDate = similar.completed_at
+    ? new Date(similar.completed_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+    : '—';
 
   const Row = ({ label, curVal, prevVal, unit, betterIsLower }:
     { label: string; curVal: number; prevVal: number; unit: string; betterIsLower: boolean }) => {
+    if (curVal <= 0 && prevVal <= 0) return null;
     const diff = curVal - prevVal;
     const better = betterIsLower ? diff < 0 : diff > 0;
     const same = Math.abs(diff) < 0.01;
     const tone = same ? colors.textMuted : better ? colors.success : colors.danger;
     const sign = diff > 0 ? '+' : '';
+    const decimals = unit === 'kcal' ? 0 : unit === 'km' ? 2 : 2;
     return (
       <View style={styles.compRow}>
         <Text style={styles.compLabel}>{label}</Text>
         <View style={styles.compValuesRow}>
           <View style={styles.compValueCol}>
             <Text style={styles.compValueSmall}>QUESTA</Text>
-            <Text style={styles.compValueBig}>{curVal.toFixed(unit === 'kcal' || unit === 'km' ? 1 : 2)} {unit}</Text>
+            <Text style={styles.compValueBig}>{curVal.toFixed(decimals)} {unit}</Text>
           </View>
           <Text style={styles.compArrow}>→</Text>
           <View style={styles.compValueCol}>
-            <Text style={styles.compValueSmall}>PRECEDENTE</Text>
-            <Text style={[styles.compValueBig, { color: colors.textMuted }]}>{prevVal.toFixed(unit === 'kcal' || unit === 'km' ? 1 : 2)} {unit}</Text>
+            <Text style={styles.compValueSmall}>{prevDate.toUpperCase()}</Text>
+            <Text style={[styles.compValueBig, { color: colors.textMuted }]}>
+              {prevVal.toFixed(decimals)} {unit}
+            </Text>
           </View>
           <Text style={[styles.compDelta, { color: tone }]}>
-            {same ? '=' : `${sign}${diff.toFixed(unit === 'kcal' ? 0 : 2)}`}
+            {same ? '=' : `${sign}${diff.toFixed(decimals)}`}
           </Text>
         </View>
       </View>
@@ -866,29 +983,24 @@ function ConfrontoCard({ session, t }: { session: any; t: (k: string, o?: any) =
   return (
     <View style={styles.statsCard}>
       <View style={styles.cardSectionHeader}>
-        <Text style={styles.cardSectionTitle}>{(t('workout_detail.compare_section') || 'CONFRONTO CON SESSIONE SIMILE').toUpperCase()}</Text>
-        <View style={styles.mockBadge}><Text style={styles.mockBadgeText}>BETA</Text></View>
+        <Text style={styles.cardSectionTitle}>
+          {(t('workout_detail.compare_section') || 'CONFRONTO CON SESSIONE SIMILE').toUpperCase()}
+        </Text>
       </View>
 
       <Row label={t('workout_detail.compare_distance') || 'Distanza'} curVal={cur.distance} prevVal={prev.distance} unit="km" betterIsLower={false} />
       <View style={styles.divider} />
       <Row label={t('workout_detail.compare_duration') || 'Durata'} curVal={cur.duration / 60} prevVal={prev.duration / 60} unit="min" betterIsLower={true} />
       <View style={styles.divider} />
-      {cur.pace > 0 ? (
+      {cur.pace > 0 || prev.pace > 0 ? (
         <>
           <Row label={t('workout_detail.compare_pace') || 'Pace medio'} curVal={cur.pace} prevVal={prev.pace} unit="min/km" betterIsLower={true} />
           <View style={styles.divider} />
         </>
       ) : null}
-      {cur.kcal > 0 ? (
+      {cur.kcal > 0 || prev.kcal > 0 ? (
         <Row label={t('workout_detail.compare_kcal') || 'Calorie'} curVal={cur.kcal} prevVal={prev.kcal} unit="kcal" betterIsLower={false} />
       ) : null}
-
-      <View style={styles.mockFooter}>
-        <Text style={styles.mockFooterText}>
-          {(t('workout_detail.compare_mock_note') || '✱ Confronto su sessione simile per distanza/tipo. Lo storico completo arriva post-import.')}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -1377,6 +1489,42 @@ const styles = StyleSheet.create({
   },
   scV2FooterBrand: {
     color: dsTokens.brand.primary,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 12,
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 21,
+    minHeight: 100,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  notesFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  notesCount: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  notesSaveBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  notesSaveBtnText: {
+    color: '#fff',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,
