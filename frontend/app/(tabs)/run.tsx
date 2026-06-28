@@ -6,18 +6,17 @@
  *   persistiti in AsyncStorage 'runhub.run.settings.v1'
  * - Diagnostica GPS → naviga a /gps-test esistente
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, StatusBar, Modal, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChevronLeft, ChevronRight, X, Check } from 'lucide-react-native';
+import { ChevronLeft, Settings, Target, ChevronRight, X, Check } from 'lucide-react-native';
 import { tokens, FontProvider } from '../../src/design-system';
-import { useT } from '../../src/i18n';
 
-const { brand, neutral, text, spacing, typography, radius } = tokens;
+const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
 type ActivityKey = 'run' | 'walk' | 'bike';
 
@@ -27,21 +26,27 @@ const THEMES: Record<ActivityKey, { primary: string; subtle: string; light: stri
   bike: { primary: '#2563EB',     subtle: '#DBEAFE',    light: '#BFDBFE' },
 };
 
-// Static icon requires (must stay outside component for Metro bundler)
-const ACT_ICONS: Record<ActivityKey, any> = {
-  run:  require('../../assets/lab/activity/corsa.png'),
-  walk: require('../../assets/lab/activity/camminata.png'),
-  bike: require('../../assets/lab/activity/bici.png'),
-};
-
-const FREE_TITLE_KEY: Record<ActivityKey, string> = {
-  run:  'run.free_run',
-  walk: 'run.walk_free',
-  bike: 'run.bike_free',
-};
+const ACTIVITIES: Array<{
+  key: ActivityKey;
+  name: string;
+  icon: any;
+  ctaLabel: string;
+  description: string;
+}> = [
+  { key: 'run',  name: 'Corsa',      icon: require('../../assets/lab/activity/corsa.png'),
+    ctaLabel: 'AVVIA CORSA',
+    description: 'Traccia distanza, tempo e passo con GPS. Ideale per allenamenti aerobici e tempo run.' },
+  { key: 'walk', name: 'Camminata',  icon: require('../../assets/lab/activity/camminata.png'),
+    ctaLabel: 'AVVIA CAMMINATA',
+    description: 'Monitora i tuoi passi, la distanza e le calorie bruciate durante una passeggiata.' },
+  { key: 'bike', name: 'Bici',       icon: require('../../assets/lab/activity/bici.png'),
+    ctaLabel: 'AVVIA BICI',
+    description: 'Registra velocità, distanza e dislivello durante un\'uscita in bicicletta.' },
+];
 
 const ICON_GPS         = require('../../assets/lab/icons/gps.png');
 const ICON_PERCORSO    = require('../../assets/lab/icons/percorso.png');
+const ICON_TEMPO       = require('../../assets/lab/icons/tempo.png');
 const ICON_VELOCITA    = require('../../assets/lab/icons/velocita.png');
 const ICON_POSIZIONE   = require('../../assets/lab/icons/posizione.png');
 const ICON_SETTINGS    = require('../../assets/lab/icons/impostazioni.png');
@@ -61,34 +66,13 @@ const DEFAULT_SETTINGS: RunSettings = {
   unit: 'km', countdown: 3, autoPause: true, screenOn: true, audioCue: true, vibration: true,
 };
 
-// Explicit key maps — never dynamic template strings to avoid t() runtime misses
-const ACT_NAME_KEY: Record<ActivityKey, string> = {
-  run:  'run.activity_run_title',
-  walk: 'run.activity_walk_title',
-  bike: 'run.activity_bike_title',
-};
-const ACT_DESC_KEY: Record<ActivityKey, string> = {
-  run:  'run.activity_run_sub',
-  walk: 'run.activity_walk_sub',
-  bike: 'run.activity_bike_sub',
-};
-
 function RunInner() {
   const router = useRouter();
-  const { t } = useT();
   const [selected, setSelected] = useState<ActivityKey>('run');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_SETTINGS);
   const theme = THEMES[selected];
-
-  const activities = useMemo(() => (['run', 'walk', 'bike'] as ActivityKey[]).map(key => ({
-    key,
-    icon: ACT_ICONS[key],
-    name: t(ACT_NAME_KEY[key]) || key,
-    description: t(ACT_DESC_KEY[key]) || '',
-  })), [t]);
-
-  const current = activities.find(a => a.key === selected) ?? activities[0];
+  const current = ACTIVITIES.find(a => a.key === selected)!;
 
   useEffect(() => {
     (async () => {
@@ -107,10 +91,7 @@ function RunInner() {
   const startSession = () => {
     router.push({
       pathname: '/run-active',
-      params: {
-        title: t(FREE_TITLE_KEY[selected]),
-        activity_type: selected,
-      },
+      params: { title: current.name, activity_type: selected },
     });
   };
 
@@ -134,34 +115,36 @@ function RunInner() {
           <Image source={require('../../assets/lab/logo-symbol.png')} style={styles.logo} />
           <Text style={styles.brandText}>RUNHUB <Text style={{ color: brand.primary }}>LAB</Text></Text>
         </View>
-        <Text style={[styles.kicker, { color: theme.primary }]}>{t('run.tab_eyebrow')}</Text>
+        <Text style={[styles.kicker, { color: theme.primary }]}>ALLENAMENTO LIBERO</Text>
 
         {/* TITLE */}
-        <Text style={styles.title}>{t('run.tab_title')}</Text>
-        <Text style={styles.subtitle}>{t('run.tab_subtitle')}</Text>
+        <Text style={styles.title}>Scegli l&apos;attività</Text>
+        <Text style={styles.subtitle}>
+          Seleziona il tipo di allenamento e parti, senza un piano predefinito.
+        </Text>
 
         {/* ACTIVITY GRID 3 columns */}
         <View style={styles.grid}>
-          {activities.map(act => {
+          {ACTIVITIES.map(act => {
             const isSel = act.key === selected;
-            const th = THEMES[act.key];
+            const t = THEMES[act.key];
             return (
               <TouchableOpacity
                 key={act.key}
                 style={[
                   styles.actCard,
-                  isSel && { borderColor: th.primary, borderWidth: 2 },
+                  isSel && { borderColor: t.primary, borderWidth: 2 },
                 ]}
                 onPress={() => setSelected(act.key)}
                 activeOpacity={0.85}
               >
-                <View style={[styles.actIconWrap, { backgroundColor: th.subtle }]}>
+                <View style={[styles.actIconWrap, { backgroundColor: t.subtle }]}>
                   <Image source={act.icon} style={styles.actIcon} resizeMode="contain" />
                 </View>
-                <Text style={[styles.actName, isSel && { color: th.primary }]}>{act.name}</Text>
-                {isSel ? <View style={[styles.actUnderline, { backgroundColor: th.primary }]} /> : null}
+                <Text style={[styles.actName, isSel && { color: t.primary }]}>{act.name}</Text>
+                {isSel ? <View style={[styles.actUnderline, { backgroundColor: t.primary }]} /> : null}
                 {isSel ? (
-                  <View style={[styles.actCheck, { backgroundColor: th.primary }]}>
+                  <View style={[styles.actCheck, { backgroundColor: t.primary }]}>
                     <Check size={12} color="#fff" strokeWidth={3} />
                   </View>
                 ) : null}
@@ -183,16 +166,16 @@ function RunInner() {
           </View>
 
           <View style={styles.statsRow}>
-            <StatCol icon={ICON_GPS}      label={t('run.detail_stat_tracking')} value="GPS" />
-            <StatCol icon={ICON_PERCORSO} label={t('run.detail_stat_distance')} value={t('run.detail_stat_time_value')} />
-            <StatCol icon={ICON_VELOCITA} label={t('run.detail_stat_pace')}     value="Live" />
+            <StatCol icon={ICON_GPS}      label="Tracciamento" value="GPS" />
+            <StatCol icon={ICON_PERCORSO} label="Distanza"     value="Tempo" />
+            <StatCol icon={ICON_VELOCITA} label="Passo"        value="Live" />
           </View>
 
           <View style={styles.permCard}>
             <Image source={ICON_POSIZIONE} style={styles.permIcon} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.permTitle}>{t('run.perm_title')}</Text>
-              <Text style={styles.permDesc}>{t('run.location_info')}</Text>
+              <Text style={styles.permTitle}>Usa la tua posizione</Text>
+              <Text style={styles.permDesc}>Permesso necessario per tracciare il percorso.</Text>
             </View>
           </View>
         </View>
@@ -204,15 +187,13 @@ function RunInner() {
           activeOpacity={0.88}
         >
           <Image source={current.icon} style={styles.ctaIcon} resizeMode="contain" />
-          <Text style={styles.ctaText}>
-            {t('run.start_with', { name: current.name.toUpperCase() })}
-          </Text>
+          <Text style={styles.ctaText}>{current.ctaLabel}</Text>
         </TouchableOpacity>
 
         {/* DIAGNOSTICA */}
         <TouchableOpacity style={styles.diagLink} onPress={() => router.push('/gps-test')}>
           <Image source={ICON_DIAGNOSTICA} style={styles.diagIcon} />
-          <Text style={styles.diagText}>{t('run.gps_diagnostic')}</Text>
+          <Text style={styles.diagText}>Diagnostica GPS</Text>
           <ChevronRight size={14} color={text.muted} strokeWidth={2} />
         </TouchableOpacity>
 
@@ -246,7 +227,6 @@ function StatCol({ icon, label, value }: { icon: any; label: string; value: stri
 function SettingsModal({
   visible, onClose, settings, onChange,
 }: { visible: boolean; onClose: () => void; settings: RunSettings; onChange: (s: RunSettings) => void }) {
-  const { t } = useT();
   const set = <K extends keyof RunSettings>(k: K, v: RunSettings[K]) =>
     onChange({ ...settings, [k]: v });
 
@@ -255,27 +235,24 @@ function SettingsModal({
       <View style={styles.modalBackdrop}>
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('run.settings_title')}</Text>
+            <Text style={styles.modalTitle}>Impostazioni sessione</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <X size={20} color={text.primary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={styles.modalSection}>{t('run.settings_section_session')}</Text>
+            <Text style={styles.modalSection}>🏃 SESSIONE</Text>
 
-            <Row label={t('run.settings_unit')}>
+            <Row label="Unità di misura">
               <SegmentedControl
                 value={settings.unit}
-                options={[
-                  { v: 'km', l: t('run.settings_unit_km') },
-                  { v: 'mi', l: t('run.settings_unit_mi') },
-                ]}
+                options={[{ v: 'km', l: 'Km' }, { v: 'mi', l: 'Miglia' }]}
                 onChange={(v) => set('unit', v as 'km' | 'mi')}
               />
             </Row>
 
-            <Row label={t('run.settings_countdown')}>
+            <Row label="Countdown all'avvio">
               <SegmentedControl
                 value={String(settings.countdown)}
                 options={[{ v: '0', l: 'Off' }, { v: '3', l: '3s' }, { v: '5', l: '5s' }]}
@@ -283,35 +260,19 @@ function SettingsModal({
               />
             </Row>
 
-            <SwitchRow
-              label={t('run.settings_autopause')}
-              desc={t('run.settings_autopause_desc')}
-              value={settings.autoPause}
-              onChange={(v) => set('autoPause', v)}
-            />
+            <SwitchRow label="Auto-pausa" desc="Pausa automatica se ti fermi >8 secondi"
+              value={settings.autoPause} onChange={(v) => set('autoPause', v)} />
 
-            <SwitchRow
-              label={t('run.settings_screen_on')}
-              desc={t('run.settings_screen_on_desc')}
-              value={settings.screenOn}
-              onChange={(v) => set('screenOn', v)}
-            />
+            <SwitchRow label="Schermo sempre acceso" desc="Evita che il display si spenga durante la corsa"
+              value={settings.screenOn} onChange={(v) => set('screenOn', v)} />
 
-            <Text style={styles.modalSection}>{t('run.settings_section_feedback')}</Text>
+            <Text style={styles.modalSection}>🔔 FEEDBACK</Text>
 
-            <SwitchRow
-              label={t('run.settings_audio_cue')}
-              desc={t('run.settings_audio_cue_desc')}
-              value={settings.audioCue}
-              onChange={(v) => set('audioCue', v)}
-            />
+            <SwitchRow label="Audio cue ogni km" desc="Annuncio vocale tempo/pace ad ogni chilometro"
+              value={settings.audioCue} onChange={(v) => set('audioCue', v)} />
 
-            <SwitchRow
-              label={t('run.settings_vibration')}
-              desc={t('run.settings_vibration_desc')}
-              value={settings.vibration}
-              onChange={(v) => set('vibration', v)}
-            />
+            <SwitchRow label="Vibrazione" desc="Feedback tattile per checkpoint e alert"
+              value={settings.vibration} onChange={(v) => set('vibration', v)} />
           </ScrollView>
         </View>
       </View>
