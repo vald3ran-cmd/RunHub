@@ -348,4 +348,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   compareBarBtnText: { ...typography.kpiLabel, color: '#fff', fontSize: 11 },
+
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
 });
