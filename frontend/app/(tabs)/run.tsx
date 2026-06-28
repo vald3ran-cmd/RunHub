@@ -61,7 +61,17 @@ const DEFAULT_SETTINGS: RunSettings = {
   unit: 'km', countdown: 3, autoPause: true, screenOn: true, audioCue: true, vibration: true,
 };
 
-const ACT_KEYS: ActivityKey[] = ['run', 'walk', 'bike'];
+// Explicit key maps — never dynamic template strings to avoid t() runtime misses
+const ACT_NAME_KEY: Record<ActivityKey, string> = {
+  run:  'run.activity_run_title',
+  walk: 'run.activity_walk_title',
+  bike: 'run.activity_bike_title',
+};
+const ACT_DESC_KEY: Record<ActivityKey, string> = {
+  run:  'run.activity_run_sub',
+  walk: 'run.activity_walk_sub',
+  bike: 'run.activity_bike_sub',
+};
 
 function RunInner() {
   const router = useRouter();
@@ -71,14 +81,14 @@ function RunInner() {
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_SETTINGS);
   const theme = THEMES[selected];
 
-  const activities = useMemo(() => ACT_KEYS.map(key => ({
+  const activities = useMemo(() => (['run', 'walk', 'bike'] as ActivityKey[]).map(key => ({
     key,
     icon: ACT_ICONS[key],
-    name: t(`run.activity_${key}_title`),
-    description: t(`run.activity_${key}_sub`),
+    name: t(ACT_NAME_KEY[key]) || key,
+    description: t(ACT_DESC_KEY[key]) || '',
   })), [t]);
 
-  const current = activities.find(a => a.key === selected)!;
+  const current = activities.find(a => a.key === selected) ?? activities[0];
 
   useEffect(() => {
     (async () => {
