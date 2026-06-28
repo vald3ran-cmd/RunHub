@@ -52,16 +52,16 @@ function AllenamentiInner() {
   }, [fetchGoals]));
 
   const deleteGoal = async (goal_id: string) => {
-    Alert.alert('Elimina obiettivo', 'Sei sicuro?', [
-      { text: 'Annulla', style: 'cancel' },
+    Alert.alert(t('workouts.delete_goal_title'), t('workouts.delete_goal_confirm'), [
+      { text: t('workouts.cancel'), style: 'cancel' },
       {
-        text: 'Elimina', style: 'destructive',
+        text: t('workouts.delete_confirm_btn'), style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/goals/${goal_id}`);
             setGoals(prev => prev.filter(g => g.goal_id !== goal_id));
           } catch {
-            Alert.alert('Errore', 'Impossibile eliminare obiettivo.');
+            Alert.alert(t('workouts.error'), t('workouts.delete_goal_error'));
           }
         },
       },
@@ -73,13 +73,13 @@ function AllenamentiInner() {
       <StatusBar barStyle="dark-content" backgroundColor={neutral.background} />
 
       <View style={styles.header}>
-        <Text style={styles.title}>Allenamenti</Text>
-        <Text style={styles.subtitle}>Il tuo piano. I tuoi obiettivi.</Text>
+        <Text style={styles.title}>{t('workouts.title')}</Text>
+        <Text style={styles.subtitle}>{t('workouts.subtitle')}</Text>
       </View>
 
       <View style={styles.segment}>
-        <SegmentBtn label="PIANO" Icon={Calendar} active={mode === 'piano'} onPress={() => setMode('piano')} />
-        <SegmentBtn label="OBIETTIVI" Icon={Target} active={mode === 'obiettivi'} onPress={() => setMode('obiettivi')} />
+        <SegmentBtn label={t('workouts.seg_plan')} Icon={Calendar} active={mode === 'piano'} onPress={() => setMode('piano')} />
+        <SegmentBtn label={t('workouts.seg_goals')} Icon={Target} active={mode === 'obiettivi'} onPress={() => setMode('obiettivi')} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -109,14 +109,15 @@ function AllenamentiInner() {
 
 // ── PIANO VIEW ──
 function PianoView({ router }: { router: any }) {
+  const { t } = useT();
   return (
     <>
       <Card>
-        <Text style={styles.kicker}>I TUOI PIANI</Text>
-        <Text style={styles.todayTitle}>Piani di allenamento</Text>
-        <Text style={styles.todayMeta}>Predefiniti o generati dall'AI Coach</Text>
+        <Text style={styles.kicker}>{t('workouts.your_plans_kicker')}</Text>
+        <Text style={styles.todayTitle}>{t('workouts.plans_title')}</Text>
+        <Text style={styles.todayMeta}>{t('workouts.plans_meta')}</Text>
         <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/plans')} activeOpacity={0.85}>
-          <Text style={styles.ctaBtnText}>VEDI PIANI</Text>
+          <Text style={styles.ctaBtnText}>{t('workouts.view_plans')}</Text>
           <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
         </TouchableOpacity>
       </Card>
@@ -125,12 +126,12 @@ function PianoView({ router }: { router: any }) {
         <View style={styles.aiRow}>
           <Sparkles size={20} color={brand.primary} strokeWidth={2} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.aiTitle}>AI Coach</Text>
-            <Text style={styles.aiSub}>Genera un piano su misura basato sui tuoi dati reali</Text>
+            <Text style={styles.aiTitle}>{t('workouts.ai_coach_title')}</Text>
+            <Text style={styles.aiSub}>{t('workouts.ai_coach_sub')}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/ai-generate')} activeOpacity={0.85}>
-          <Text style={styles.ctaBtnText}>GENERA PIANO AI</Text>
+          <Text style={styles.ctaBtnText}>{t('workouts.generate_ai_plan')}</Text>
           <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
         </TouchableOpacity>
       </Card>
@@ -139,8 +140,8 @@ function PianoView({ router }: { router: any }) {
         <View style={styles.aiRow}>
           <TrendingUp size={20} color={semantic.info} strokeWidth={2} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.aiTitle}>Previsione gara</Text>
-            <Text style={styles.aiSub}>Stima i tuoi tempi su 5K, 10K, mezza e maratona</Text>
+            <Text style={styles.aiTitle}>{t('workouts.race_predictor_title')}</Text>
+            <Text style={styles.aiSub}>{t('workouts.race_predictor_sub')}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -148,7 +149,7 @@ function PianoView({ router }: { router: any }) {
           onPress={() => router.push('/race-predictor')}
           activeOpacity={0.85}
         >
-          <Text style={styles.ctaBtnText}>APRI PREVISIONE</Text>
+          <Text style={styles.ctaBtnText}>{t('workouts.open_predictor')}</Text>
           <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
         </TouchableOpacity>
       </Card>
@@ -163,6 +164,8 @@ function ObiettiviView({ goals, loading, onDelete, onAdd, router }: {
   onAdd: () => void;
   router: any;
 }) {
+  const { t } = useT();
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -175,17 +178,15 @@ function ObiettiviView({ goals, loading, onDelete, onAdd, router }: {
     <>
       <TouchableOpacity style={styles.addGoalBtn} onPress={onAdd} activeOpacity={0.85}>
         <Plus size={16} color="#fff" strokeWidth={2.5} />
-        <Text style={styles.addGoalBtnText}>AGGIUNGI OBIETTIVO</Text>
+        <Text style={styles.addGoalBtnText}>{t('workouts.add_goal')}</Text>
       </TouchableOpacity>
 
       {goals.length === 0 ? (
         <Card>
           <View style={styles.emptyGoals}>
             <Flag size={32} color={text.muted} strokeWidth={1.5} />
-            <Text style={styles.emptyGoalsTitle}>Nessun obiettivo</Text>
-            <Text style={styles.emptyGoalsSub}>
-              Aggiungi un obiettivo — gara, pace target o distanza — e vedrai la probabilità di raggiungerlo basata sui tuoi dati reali.
-            </Text>
+            <Text style={styles.emptyGoalsTitle}>{t('workouts.no_goals_title')}</Text>
+            <Text style={styles.emptyGoalsSub}>{t('workouts.no_goals_sub')}</Text>
           </View>
         </Card>
       ) : (
@@ -197,6 +198,7 @@ function ObiettiviView({ goals, loading, onDelete, onAdd, router }: {
 
 // ── GOAL CARD ──
 function GoalCard({ goal, onDelete }: { goal: Goal; onDelete: (id: string) => void }) {
+  const { t } = useT();
   const prob = goal.probability;
   const probColor = prob >= 70 ? semantic.success : prob >= 40 ? semantic.warning : semantic.danger;
   const Icon = goal.type === 'pace' ? Zap : goal.type === 'distance' ? TrendingUp : Flag;
@@ -235,7 +237,7 @@ function GoalCard({ goal, onDelete }: { goal: Goal; onDelete: (id: string) => vo
 
       <View style={styles.probRow}>
         <Text style={[styles.probValue, { color: probColor }]}>{prob}%</Text>
-        <Text style={styles.probLabel}>probabilità</Text>
+        <Text style={styles.probLabel}>{t('workouts.probability')}</Text>
       </View>
       <View style={styles.probTrack}>
         <View style={[styles.probFill, { width: `${prob}%` as any, backgroundColor: probColor }]} />
@@ -244,7 +246,7 @@ function GoalCard({ goal, onDelete }: { goal: Goal; onDelete: (id: string) => vo
       <View style={styles.goalFooter}>
         <View style={styles.goalFooterItem}>
           <Clock size={12} color={text.muted} strokeWidth={2} />
-          <Text style={styles.goalFooterText}>{daysLeft} giorni al traguardo</Text>
+          <Text style={styles.goalFooterText}>{daysLeft} {t('workouts.days_to_goal')}</Text>
         </View>
         <Text style={styles.goalDate}>
           {new Date(goal.target_date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -258,6 +260,7 @@ function GoalCard({ goal, onDelete }: { goal: Goal; onDelete: (id: string) => vo
 function AddGoalModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useT();
   const [title, setTitle] = useState('');
   const [type, setType] = useState<GoalType>('race');
   const [targetValue, setTargetValue] = useState('');
@@ -266,7 +269,7 @@ function AddGoalModal({ visible, onClose, onSaved }: {
 
   const save = async () => {
     if (!title.trim() || !targetDate.trim()) {
-      Alert.alert('Campi mancanti', 'Inserisci almeno titolo e data target.');
+      Alert.alert(t('workouts.missing_fields_title'), t('workouts.missing_fields_body'));
       return;
     }
     setSaving(true);
@@ -280,26 +283,32 @@ function AddGoalModal({ visible, onClose, onSaved }: {
       setTitle(''); setType('race'); setTargetValue(''); setTargetDate('');
       onSaved();
     } catch {
-      Alert.alert('Errore', 'Impossibile salvare obiettivo.');
+      Alert.alert(t('workouts.error'), t('workouts.save_goal_error'));
     } finally {
       setSaving(false);
     }
+  };
+
+  const typeLabel = (tp: GoalType) => {
+    if (tp === 'race') return t('workouts.type_race');
+    if (tp === 'pace') return t('workouts.type_pace');
+    return t('workouts.type_distance');
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.modalSafe} edges={['top']}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Nuovo obiettivo</Text>
-          <TouchableOpacity onPress={onClose}><Text style={styles.modalClose}>Annulla</Text></TouchableOpacity>
+          <Text style={styles.modalTitle}>{t('workouts.new_goal')}</Text>
+          <TouchableOpacity onPress={onClose}><Text style={styles.modalClose}>{t('workouts.cancel')}</Text></TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalBody}>
-          <Text style={styles.fieldLabel}>TITOLO</Text>
+          <Text style={styles.fieldLabel}>{t('workouts.field_title')}</Text>
           <TextInput style={styles.fieldInput} value={title} onChangeText={setTitle}
-            placeholder="es. Maratona di Roma" placeholderTextColor={text.muted} />
+            placeholder={t('workouts.field_title_placeholder')} placeholderTextColor={text.muted} />
 
-          <Text style={styles.fieldLabel}>TIPO</Text>
+          <Text style={styles.fieldLabel}>{t('workouts.field_type')}</Text>
           <View style={styles.typeRow}>
             {(['race', 'pace', 'distance'] as GoalType[]).map(tp => (
               <TouchableOpacity
@@ -308,7 +317,7 @@ function AddGoalModal({ visible, onClose, onSaved }: {
                 onPress={() => setType(tp)}
               >
                 <Text style={[styles.typeBtnText, type === tp && styles.typeBtnTextActive]}>
-                  {tp === 'race' ? 'GARA' : tp === 'pace' ? 'PACE' : 'DISTANZA'}
+                  {typeLabel(tp)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -316,26 +325,26 @@ function AddGoalModal({ visible, onClose, onSaved }: {
 
           {type === 'pace' && (
             <>
-              <Text style={styles.fieldLabel}>PACE TARGET (min/km, es. 5.5 = 5:30)</Text>
+              <Text style={styles.fieldLabel}>{t('workouts.field_pace_target')}</Text>
               <TextInput style={styles.fieldInput} value={targetValue} onChangeText={setTargetValue}
                 placeholder="5.5" placeholderTextColor={text.muted} keyboardType="decimal-pad" />
             </>
           )}
           {type === 'distance' && (
             <>
-              <Text style={styles.fieldLabel}>DISTANZA TARGET (km)</Text>
+              <Text style={styles.fieldLabel}>{t('workouts.field_distance_target')}</Text>
               <TextInput style={styles.fieldInput} value={targetValue} onChangeText={setTargetValue}
                 placeholder="21.1" placeholderTextColor={text.muted} keyboardType="decimal-pad" />
             </>
           )}
 
-          <Text style={styles.fieldLabel}>DATA TARGET (YYYY-MM-DD)</Text>
+          <Text style={styles.fieldLabel}>{t('workouts.field_date_target')}</Text>
           <TextInput style={styles.fieldInput} value={targetDate} onChangeText={setTargetDate}
             placeholder="2026-10-15" placeholderTextColor={text.muted} />
 
           <TouchableOpacity style={styles.saveGoalBtn} onPress={save} disabled={saving} activeOpacity={0.85}>
             {saving ? <ActivityIndicator size="small" color="#fff" /> :
-              <Text style={styles.saveGoalBtnText}>SALVA OBIETTIVO</Text>}
+              <Text style={styles.saveGoalBtnText}>{t('workouts.save_goal')}</Text>}
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
