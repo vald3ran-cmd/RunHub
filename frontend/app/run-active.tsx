@@ -63,13 +63,18 @@ function RunActiveInner() {
   const router = useRouter();
   const { t } = useT();
   const { hasAccess: hasPerformance } = useTierAccess('performance');
-  const title = params.title || t('run.free_run');
-  const steps: Step[] = params.steps ? JSON.parse(String(params.steps)) : [];
-  const hasSteps = steps.length > 0;
   const activityType: ActivityType =
     (params.activity_type === 'walk' || params.activity_type === 'bike' || params.activity_type === 'run')
       ? params.activity_type as ActivityType
       : 'run';
+  const FREE_TITLE: Record<ActivityType, string> = {
+    run:  t('run.free_run'),
+    walk: t('run.walk_free'),
+    bike: t('run.bike_free'),
+  };
+  const title = params.title || FREE_TITLE[activityType];
+  const steps: Step[] = params.steps ? JSON.parse(String(params.steps)) : [];
+  const hasSteps = steps.length > 0;
   const activity = activityMeta[activityType];
 
   const [elapsed, setElapsed] = useState(0);
