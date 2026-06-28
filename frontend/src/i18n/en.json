@@ -55,7 +55,7 @@
     "lab": "Lab",
     "diario": "Journal",
     "importa": "Import",
-    "allenamenti": "Workouts"
+    "allenamenti": "Training"
   },
   "home": {
     "greeting": "Hi {{name}}!",
@@ -289,12 +289,12 @@
     "goals_monthly": "MONTHLY"
   },
   "run": {
-    "step_warmup": "WARM UP",
+    "step_warmup": "WARM-UP",
     "step_run": "RUN",
     "step_recovery": "RECOVERY",
     "step_sprint": "SPRINT",
     "step_walk": "WALK",
-    "step_bike": "BIKE",
+    "step_bike": "CYCLING",
     "step_stretching": "STRETCHING",
     "step_gymnastics": "GYMNASTICS",
     "tts_locale": "en-US",
@@ -370,7 +370,10 @@
     "tab_subtitle": "Select the workout type and go, without a preset plan.",
     "location_info": "Location permission is needed to track your route.",
     "start_with": "START {{name}}",
-    "gps_diagnostic": "GPS Diagnostics"
+    "gps_diagnostic": "GPS Diagnostics",
+    "ui_bpm": "BPM",
+    "ui_spm": "SPM",
+    "ui_kcal": "KCAL"
   },
   "onboarding": {
     "step_level_title": "WHAT'S YOUR LEVEL?",
@@ -482,7 +485,7 @@
     "elite_f6": "Exclusive Coach badge"
   },
   "dashboard": {
-    "title": "Progress",
+    "title": "Dashboard",
     "card_distance": "DISTANCE",
     "card_activity": "ACTIVITY",
     "card_pace_avg": "AVG PACE",
@@ -504,7 +507,12 @@
     "range_1y": "1Y",
     "range_all": "ALL",
     "activity": "ACTIVITY",
-    "max_time": "MAX TIME"
+    "max_time": "MAX TIME",
+    "personal_bests": "Personal Bests",
+    "weekly_volume": "Weekly Volume",
+    "total_km": "Total km",
+    "total_sessions": "Total sessions",
+    "avg_pace": "Avg pace"
   },
   "workout_detail": {
     "session_not_found": "Session not found",
@@ -649,7 +657,7 @@
     "locked": "LOCKED"
   },
   "social": {
-    "title": "COMMUNITY",
+    "title": "Community",
     "tab_feed": "FEED",
     "tab_friends": "FRIENDS",
     "tab_leaderboard": "LEADERBOARD",
@@ -803,7 +811,7 @@
     "remove_athlete_title": "Remove athlete?"
   },
   "nearby": {
-    "title": "Near you",
+    "title": "Nearby Runners",
     "loader": "Searching for RunHubbers nearby…",
     "within_paid": "RunHubbers within {{km}} km",
     "within_free": "RunHubbers within 10 km",
@@ -870,7 +878,13 @@
     "ipad_dialog_msg": "Apple Health sync is designed for iPhone. To use this feature, open RunHub from your iPhone.",
     "connect_title": "Connecting to Apple Health",
     "connect_msg": "RunHub will read steps, distance, heart rate and calories from Apple Health, and write your completed workouts.\n\nApple's system dialog will appear shortly to grant permissions. You can change them anytime in Settings > Privacy & Security > Health > RunHub.",
-    "steps_unit": "STEPS"
+    "steps_unit": "STEPS",
+    "garmin_desc": "Export from Garmin Connect IQ and import the .fit file",
+    "strava_desc": "Export your activities from Strava and import the .gpx file",
+    "healthkit_title": "Apple Health",
+    "healthkit_desc": "Sync your workouts directly from Apple Health",
+    "healthconnect_title": "Google Health Connect",
+    "healthconnect_desc": "Sync your workouts from Health Connect on Android"
   },
   "gps_test": {
     "title": "GPS TEST",
@@ -1013,7 +1027,7 @@
     "sec11_p": "For any question about the Privacy Policy or your data:\n• Support and DPO: support@apprunhub.com\n• Info: info@apprunhub.com"
   },
   "heatmap": {
-    "title": "YOUR MAP",
+    "title": "Heatmap",
     "runs_label": "RUNS",
     "km_total_label": "TOTAL KM",
     "legend": "LEGEND",
@@ -1026,9 +1040,9 @@
     "older": "Older"
   },
   "activity": {
-    "run": "RUN",
-    "walk": "WALK",
-    "bike": "BIKE",
+    "run": "Run",
+    "walk": "Walk",
+    "bike": "Ride",
     "run_short": "Run",
     "walk_short": "Walk",
     "bike_short": "Bike"
@@ -1056,7 +1070,14 @@
   "wearables_labels": {
     "km": "KM",
     "kcal": "KCAL",
-    "bpm": "BPM"
+    "bpm": "BPM",
+    "pace": "Pace",
+    "heart_rate": "Heart Rate",
+    "cadence": "Cadence",
+    "elevation": "Elevation",
+    "calories": "Calories",
+    "distance": "Distance",
+    "duration": "Duration"
   },
   "ads": {
     "banner_title": "Upgrade to Starter — say goodbye to ads",
@@ -1141,32 +1162,40 @@
     "pl_trail_title": "Trail Running — Mountain",
     "pl_trail_desc": "6 weeks to prepare for a trail race. Focus on climbs, technical descents, leg strength.",
     "pl_progressione_10_title": "+10% Rule — Safety",
-    "pl_progressione_10_desc": "4 weeks of safe progressive loading (+10%/week). Prevents injuries and builds aerobic base."
+    "pl_progressione_10_desc": "4 weeks of safe progressive loading (+10%/week). Prevents injuries and builds aerobic base.",
+    "beginner_5k_title": "Beginner 5K",
+    "beginner_5k_desc": "Your first 5K in 8 weeks",
+    "beginner_10k_title": "Beginner 10K",
+    "beginner_10k_desc": "From 5K to 10K in 10 weeks",
+    "half_marathon_title": "Half Marathon",
+    "half_marathon_desc": "Conquer 21K in 14 weeks",
+    "marathon_title": "Marathon",
+    "marathon_desc": "Complete 42K in 18 weeks"
   },
   "lab": {
-    "last_update": "Last update: {time}",
+    "last_update": "Last update: {{time}}",
     "run_score": "RUN SCORE",
-    "trend_up": "TRENDING UP",
-    "trend_down": "TRENDING DOWN",
+    "trend_up": "Trend up",
+    "trend_down": "Trend down",
     "week": "Week",
     "sessions": "sessions",
     "load": "LOAD",
     "recovery": "RECOVERY",
     "fatigue": "FATIGUE",
-    "load_high": "High",
-    "load_med": "Tolerable",
-    "load_low": "Low",
-    "recovery_good": "Optimal",
-    "recovery_ok": "Good",
-    "recovery_bad": "Limited",
-    "fatigue_ok": "Manageable",
-    "fatigue_med": "High",
-    "fatigue_high": "Excessive",
+    "load_high": "High load",
+    "load_med": "Moderate",
+    "load_low": "Low load",
+    "recovery_good": "Good recovery",
+    "recovery_ok": "Partial recovery",
+    "recovery_bad": "Needs rest",
+    "fatigue_ok": "Fresh",
+    "fatigue_med": "Moderate fatigue",
+    "fatigue_high": "High fatigue",
     "training_load": "TRAINING LOAD",
     "last_8_weeks": "last 8 weeks",
-    "ctl_label": "CTL · fitness",
-    "atl_label": "ATL · fatigue",
-    "tsb_label": "TSB · form",
+    "ctl_label": "Fitness (CTL)",
+    "atl_label": "Fatigue (ATL)",
+    "tsb_label": "Form (TSB)",
     "empty_title": "Empty Lab",
     "empty_body": "Import your sessions or record a run to populate the dashboard",
     "empty_import_cta": "Import sessions from Apple Watch / Garmin to see HR zones distribution.",
@@ -1242,7 +1271,6 @@
     "seg_plan": "PLAN",
     "seg_goals": "GOALS",
     "today_kicker": "TODAY · TUE JUN 9",
-    "today_title": "Easy Run 8 km",
     "today_meta": "Z2 · Aerobic · ~45 min",
     "today_badge": "SCHEDULED",
     "start_session": "START SESSION",
@@ -1311,5 +1339,9 @@
     "month_oct": "October",
     "month_nov": "November",
     "month_dec": "December"
+  },
+  "importa": {
+    "title": "Import",
+    "subtitle": "Connect your devices or import files"
   }
 }

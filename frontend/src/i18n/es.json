@@ -55,7 +55,7 @@
     "lab": "Lab",
     "diario": "Diario",
     "importa": "Importar",
-    "allenamenti": "Entrenos"
+    "allenamenti": "Entrenamientos"
   },
   "home": {
     "greeting": "¡Hola {{name}}!",
@@ -266,11 +266,11 @@
     "edit_goals": "Editar metas",
     "badges": "Logros e insignias",
     "race_predictor": "Predicción de tiempo de carrera y VO2max",
-    "coach_dashboard": "Coach Dashboard",
+    "coach_dashboard": "Panel del Entrenador",
     "wearables": "Wearables (Apple Health / Google Fit)",
     "community_feed": "Amigos, feed y rankings",
     "heatmap": "Mi mapa de carreras (heatmap)",
-    "admin_panel": "Admin Panel",
+    "admin_panel": "Panel de Administración",
     "terms": "Términos del Servicio",
     "privacy": "Política de Privacidad",
     "privacy_ads": "Preferencias de privacidad de anuncios (GDPR)",
@@ -290,11 +290,11 @@
   },
   "run": {
     "step_warmup": "CALENTAMIENTO",
-    "step_run": "CARRERA",
+    "step_run": "CORRER",
     "step_recovery": "RECUPERACIÓN",
     "step_sprint": "SPRINT",
-    "step_walk": "CAMINATA",
-    "step_bike": "BICI",
+    "step_walk": "CAMINAR",
+    "step_bike": "BICICLETA",
     "step_stretching": "ESTIRAMIENTOS",
     "step_gymnastics": "GIMNASIA",
     "tts_locale": "es-ES",
@@ -370,7 +370,10 @@
     "tab_subtitle": "Selecciona el tipo de entrenamiento y empieza, sin un plan predefinido.",
     "location_info": "Se necesita permiso de ubicación para registrar la ruta.",
     "start_with": "INICIAR {{name}}",
-    "gps_diagnostic": "Diagnóstico GPS"
+    "gps_diagnostic": "Diagnóstico GPS",
+    "ui_bpm": "PPM",
+    "ui_spm": "PPM",
+    "ui_kcal": "KCAL"
   },
   "onboarding": {
     "step_level_title": "¿CUÁL ES TU NIVEL?",
@@ -482,7 +485,7 @@
     "elite_f6": "Insignia Coach exclusiva"
   },
   "dashboard": {
-    "title": "Progreso",
+    "title": "Panel",
     "card_distance": "DISTANCIA",
     "card_activity": "ACTIVIDAD",
     "card_pace_avg": "RITMO MEDIO",
@@ -504,7 +507,12 @@
     "range_1y": "1A",
     "range_all": "TODO",
     "activity": "ACTIVIDAD",
-    "max_time": "TIEMPO MÁX"
+    "max_time": "TIEMPO MÁX",
+    "personal_bests": "Récords Personales",
+    "weekly_volume": "Volumen Semanal",
+    "total_km": "km totales",
+    "total_sessions": "sesiones totales",
+    "avg_pace": "Ritmo medio"
   },
   "workout_detail": {
     "session_not_found": "Sesión no encontrada",
@@ -649,7 +657,7 @@
     "locked": "POR DESBLOQUEAR"
   },
   "social": {
-    "title": "COMUNIDAD",
+    "title": "Comunidad",
     "tab_feed": "FEED",
     "tab_friends": "AMIGOS",
     "tab_leaderboard": "CLASIFICACIÓN",
@@ -803,7 +811,7 @@
     "remove_athlete_title": "¿Quitar atleta?"
   },
   "nearby": {
-    "title": "Cerca de ti",
+    "title": "Corredores cercanos",
     "loader": "Buscando RunHubbers cercanos…",
     "within_paid": "RunHubbers a {{km}} km",
     "within_free": "RunHubbers a 10 km",
@@ -870,7 +878,13 @@
     "ipad_dialog_msg": "La sincronización con Apple Health está diseñada para iPhone. Para usar esta función, accede a RunHub desde tu iPhone.",
     "connect_title": "Conexión con Apple Health",
     "connect_msg": "RunHub leerá de Apple Health pasos, distancia, frecuencia cardíaca y calorías, y escribirá tus entrenamientos completados.\n\nEn breve aparecerá la ventana del sistema de Apple para conceder permisos. Podrás cambiarlos cuando quieras en Ajustes > Privacidad y Seguridad > Salud > RunHub.",
-    "steps_unit": "PASOS"
+    "steps_unit": "PASOS",
+    "garmin_desc": "Exporta desde Garmin Connect IQ e importa el archivo .fit",
+    "strava_desc": "Exporta tus actividades de Strava e importa el archivo .gpx",
+    "healthkit_title": "Apple Health",
+    "healthkit_desc": "Sincroniza tus entrenamientos directamente desde Apple Health",
+    "healthconnect_title": "Google Health Connect",
+    "healthconnect_desc": "Sincroniza tus entrenamientos desde Health Connect en Android"
   },
   "gps_test": {
     "title": "TEST GPS",
@@ -1013,7 +1027,7 @@
     "sec11_p": "Para cualquier consulta sobre la Política de Privacidad o tus datos:\n• Soporte y DPO: support@apprunhub.com\n• Info: info@apprunhub.com"
   },
   "heatmap": {
-    "title": "TU MAPA",
+    "title": "Mapa de calor",
     "runs_label": "CARRERAS",
     "km_total_label": "KM TOTALES",
     "legend": "LEYENDA",
@@ -1026,9 +1040,9 @@
     "older": "Más antiguas"
   },
   "activity": {
-    "run": "CARRERA",
-    "walk": "CAMINATA",
-    "bike": "BICI",
+    "run": "Correr",
+    "walk": "Caminar",
+    "bike": "Ciclismo",
     "run_short": "Carrera",
     "walk_short": "Caminata",
     "bike_short": "Bici"
@@ -1056,7 +1070,14 @@
   "wearables_labels": {
     "km": "KM",
     "kcal": "KCAL",
-    "bpm": "BPM"
+    "bpm": "BPM",
+    "pace": "Ritmo",
+    "heart_rate": "Frecuencia Cardíaca",
+    "cadence": "Cadencia",
+    "elevation": "Elevación",
+    "calories": "Calorías",
+    "distance": "Distancia",
+    "duration": "Duración"
   },
   "ads": {
     "banner_title": "Pasa a Starter — adiós a los anuncios",
@@ -1141,32 +1162,40 @@
     "pl_trail_title": "Trail Running — Montaña",
     "pl_trail_desc": "6 semanas para prepararte para una carrera trail. Enfoque en subidas, bajadas técnicas y fuerza de piernas.",
     "pl_progressione_10_title": "Regla del +10% — Seguridad",
-    "pl_progressione_10_desc": "4 semanas de carga progresiva segura (+10%/semana). Previene lesiones y construye base aeróbica."
+    "pl_progressione_10_desc": "4 semanas de carga progresiva segura (+10%/semana). Previene lesiones y construye base aeróbica.",
+    "beginner_5k_title": "5K para principiantes",
+    "beginner_5k_desc": "Tu primer 5K en 8 semanas",
+    "beginner_10k_title": "10K para principiantes",
+    "beginner_10k_desc": "De 5K a 10K en 10 semanas",
+    "half_marathon_title": "Media Maratón",
+    "half_marathon_desc": "Conquista los 21K en 14 semanas",
+    "marathon_title": "Maratón",
+    "marathon_desc": "Completa los 42K en 18 semanas"
   },
   "lab": {
-    "last_update": "Última actualización: {time}",
+    "last_update": "Última actualización: {{time}}",
     "run_score": "RUN SCORE",
-    "trend_up": "EN ALZA",
-    "trend_down": "EN BAJA",
+    "trend_up": "Tendencia al alza",
+    "trend_down": "Tendencia a la baja",
     "week": "Semana",
     "sessions": "sesiones",
     "load": "CARGA",
     "recovery": "RECUPERACIÓN",
     "fatigue": "FATIGA",
-    "load_high": "Alto",
-    "load_med": "Tolerable",
-    "load_low": "Bajo",
-    "recovery_good": "Óptimo",
-    "recovery_ok": "Bueno",
-    "recovery_bad": "Limitado",
-    "fatigue_ok": "Manejable",
-    "fatigue_med": "Alta",
-    "fatigue_high": "Excesiva",
-    "training_load": "TRAINING LOAD",
+    "load_high": "Carga alta",
+    "load_med": "Moderada",
+    "load_low": "Carga baja",
+    "recovery_good": "Buena recuperación",
+    "recovery_ok": "Recuperación parcial",
+    "recovery_bad": "Necesita descanso",
+    "fatigue_ok": "Fresco",
+    "fatigue_med": "Fatiga moderada",
+    "fatigue_high": "Fatiga alta",
+    "training_load": "CARGA DE ENTRENAMIENTO",
     "last_8_weeks": "últimas 8 semanas",
-    "ctl_label": "CTL · forma",
-    "atl_label": "ATL · fatiga",
-    "tsb_label": "TSB · forma neta",
+    "ctl_label": "Forma (CTL)",
+    "atl_label": "Fatiga (ATL)",
+    "tsb_label": "Frescura (TSB)",
     "empty_title": "Lab vacío",
     "empty_body": "Importa tus sesiones o registra una carrera para llenar el panel",
     "empty_import_cta": "Importa sesiones desde Apple Watch / Garmin para ver las zonas cardíacas.",
@@ -1242,7 +1271,6 @@
     "seg_plan": "PLAN",
     "seg_goals": "OBJETIVOS",
     "today_kicker": "HOY · MAR 9 JUN",
-    "today_title": "Easy Run 8 km",
     "today_meta": "Z2 · Aeróbico · ~45 min",
     "today_badge": "PROGRAMADO",
     "start_session": "INICIAR SESIÓN",
@@ -1311,5 +1339,9 @@
     "month_oct": "Octubre",
     "month_nov": "Noviembre",
     "month_dec": "Diciembre"
+  },
+  "importa": {
+    "title": "Importar",
+    "subtitle": "Conecta tus dispositivos o importa archivos"
   }
 }
