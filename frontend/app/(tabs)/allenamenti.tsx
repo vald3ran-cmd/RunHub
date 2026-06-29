@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import {
   Calendar, Target, Sparkles, ChevronRight, Plus, Trash2,
-  TrendingUp, Flag, Zap, Clock,
+  TrendingUp, Flag, Zap, Clock, Play,
 } from 'lucide-react-native';
 import { tokens, FontProvider, Card } from '../../src/design-system';
 import { AdBanner } from '../../src/Ads';
@@ -112,6 +112,15 @@ function PianoView({ router }: { router: any }) {
   const { t } = useT();
   return (
     <>
+      <TouchableOpacity
+        style={styles.startSessionBtn}
+        onPress={() => router.push('/(tabs)/run')}
+        activeOpacity={0.85}
+      >
+        <Play size={20} color="#fff" strokeWidth={2.5} fill="#fff" />
+        <Text style={styles.startSessionBtnText}>{t('workouts.start_session')}</Text>
+      </TouchableOpacity>
+
       <Card>
         <Text style={styles.kicker}>{t('workouts.your_plans_kicker')}</Text>
         <Text style={styles.todayTitle}>{t('workouts.plans_title')}</Text>
@@ -395,6 +404,14 @@ const styles = StyleSheet.create({
   aiTitle: { ...typography.bodyBold, color: text.primary },
   aiSub: { ...typography.caption, color: text.secondary, marginTop: 2 },
 
+  startSessionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, backgroundColor: brand.primary,
+    paddingVertical: 16, borderRadius: 999,
+    shadowColor: brand.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
+    elevation: 4,
+  },
+  startSessionBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 14, letterSpacing: 1 },
   addGoalBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, backgroundColor: brand.primary,
