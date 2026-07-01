@@ -64,12 +64,12 @@ function LabInner() {
       setError(null);
     } catch (e: any) {
       console.warn('[lab] overview error:', e?.message);
-      setError(e?.response?.data?.detail || 'Impossibile caricare il Lab.');
+      setError(e?.response?.data?.detail || t('lab.load_error'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   const fetchScoreHistory = useCallback(async (days: 30 | 60 | 90) => {
     setHistoryLoading(true);
@@ -111,7 +111,7 @@ function LabInner() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={brand.primary} />
-          <Text style={styles.loadingTxt}>Caricamento Lab…</Text>
+          <Text style={styles.loadingTxt}>{t('lab.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -124,17 +124,14 @@ function LabInner() {
           <View style={styles.emptyIcon}>
             <FlaskConical size={44} color={brand.primary} strokeWidth={1.8} />
           </View>
-          <Text style={styles.emptyTitle}>Il tuo Lab è vuoto</Text>
-          <Text style={styles.emptyBody}>
-            Importa le tue sessioni o registra una corsa per popolare la dashboard
-            con Run Score, Training Load, previsioni e altro.
-          </Text>
+          <Text style={styles.emptyTitle}>{t('lab.empty_title')}</Text>
+          <Text style={styles.emptyBody}>{t('lab.empty_desc')}</Text>
           <TouchableOpacity style={styles.emptyCta} onPress={() => router.push('/(tabs)/importa')}>
-            <Text style={styles.emptyCtaText}>VAI A IMPORTA</Text>
+            <Text style={styles.emptyCtaText}>{t('lab.empty_go_import')}</Text>
             <ChevronRight size={14} color="#fff" strokeWidth={2.4} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.emptyCtaGhost} onPress={() => router.push('/(tabs)/run')}>
-            <Text style={styles.emptyCtaGhostText}>OPPURE AVVIA UNA CORSA</Text>
+            <Text style={styles.emptyCtaGhostText}>{t('lab.empty_start_run')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -210,12 +207,12 @@ function LabInner() {
         {/* AI INSIGHT (mostra solo se ha senso) */}
         {data.weekly_km > 0 ? (
           <InsightCard
-            body={`Questa settimana: ${data.weekly_km.toFixed(1)} km in ${data.weekly_count} sessioni (${data.weekly_delta_pct >= 0 ? '+' : ''}${data.weekly_delta_pct}% vs scorsa). ${
+            body={`${t('lab.insight_week', { km: data.weekly_km.toFixed(1), count: data.weekly_count, sign: data.weekly_delta_pct >= 0 ? '+' : '', pct: data.weekly_delta_pct })} ${
               data.weekly_delta_pct > 20
-                ? 'Carico in salita rapida: occhio al recupero.'
+                ? t('lab.insight_load_high')
                 : data.weekly_delta_pct < -20
-                ? 'Volume in calo: una sessione facile per ripartire può aiutare.'
-                : 'Carico stabile: bene così.'
+                ? t('lab.insight_load_low')
+                : t('lab.insight_load_stable')
             }`}
             timestamp={formatLastUpdate(data.last_update)}
             confidence={Math.min(95, 50 + data.sessions_count * 3)}
@@ -266,14 +263,14 @@ function LabInner() {
             onPress={() => data.next_workout?.plan_id ? router.push(`/plan/${data.next_workout.plan_id}`) : router.push('/(tabs)/allenamenti')}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.nextLabel}>PROSSIMO ALLENAMENTO</Text>
+              <Text style={styles.nextLabel}>{t('lab.next_workout')}</Text>
               <Text style={styles.nextTitle}>{data.next_workout.title}</Text>
               {data.next_workout.description ? (
                 <Text style={styles.nextMeta}>{data.next_workout.description}</Text>
               ) : null}
             </View>
             <View style={styles.nextCta}>
-              <Text style={styles.nextCtaText}>DETTAGLI</Text>
+              <Text style={styles.nextCtaText}>{t('lab.details')}</Text>
               <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
             </View>
           </TouchableOpacity>
@@ -284,9 +281,9 @@ function LabInner() {
             onPress={() => router.push('/(tabs)/allenamenti')}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[styles.nextLabel, { color: text.muted }]}>NESSUN PIANO ATTIVO</Text>
-              <Text style={[styles.nextTitle, { color: text.primary }]}>Genera un piano</Text>
-              <Text style={[styles.nextMeta, { color: text.secondary }]}>Predefinito o AI Coach (Starter+)</Text>
+              <Text style={[styles.nextLabel, { color: text.muted }]}>{t('lab.no_plan')}</Text>
+              <Text style={[styles.nextTitle, { color: text.primary }]}>{t('lab.no_plan_cta')}</Text>
+              <Text style={[styles.nextMeta, { color: text.secondary }]}>{t('lab.no_plan_sub')}</Text>
             </View>
             <ChevronRight size={18} color={text.muted} strokeWidth={2} />
           </TouchableOpacity>
@@ -296,8 +293,8 @@ function LabInner() {
         {data.predictions ? (
           <Card>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>PREVISIONE PRESTAZIONI</Text>
-              <Text style={styles.sectionSub}>Riegel · pace medio attuale</Text>
+              <Text style={styles.sectionTitle}>{t('lab.performance_forecast')}</Text>
+              <Text style={styles.sectionSub}>{t('lab.forecast_sub')}</Text>
             </View>
             <View style={styles.predRow}>
               <PredCol distance="5K" time={data.predictions['5k']} />
@@ -312,8 +309,8 @@ function LabInner() {
         {data.hr_zones ? (
           <Card>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>HR ZONES</Text>
-              <Text style={styles.sectionSub}>basate sui dati importati</Text>
+              <Text style={styles.sectionTitle}>{t('lab.hr_zones')}</Text>
+              <Text style={styles.sectionSub}>{t('lab.hr_zones_sub')}</Text>
             </View>
             <View style={{ height: spacing.md }} />
             <ZoneBar z1={data.hr_zones.z1} z2={data.hr_zones.z2} z3={data.hr_zones.z3} z4={data.hr_zones.z4} z5={data.hr_zones.z5} />
@@ -321,12 +318,10 @@ function LabInner() {
         ) : (
           <Card>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>HR ZONES</Text>
-              <Text style={styles.sectionSub}>nessun dato HR</Text>
+              <Text style={styles.sectionTitle}>{t('lab.hr_zones')}</Text>
+              <Text style={styles.sectionSub}>{t('lab.hr_zones_empty')}</Text>
             </View>
-            <Text style={styles.placeholder}>
-              Importa sessioni da Apple Watch / Garmin per vedere la distribuzione delle zone cardiache.
-            </Text>
+            <Text style={styles.placeholder}>{t('lab.hr_zones_import')}</Text>
           </Card>
         )}
 
@@ -363,7 +358,7 @@ function RunScoreHistoryCard({
   days: 30 | 60 | 90;
   onChangeDays: (d: 30 | 60 | 90) => void;
   loading: boolean;
-  t: (k: string) => string;
+  t: (k: string, options?: Record<string, any>) => string;
 }) {
   const scores = points.map(p => p.score);
   const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
@@ -374,8 +369,8 @@ function RunScoreHistoryCard({
     <Card>
       <View style={hsStyles.header}>
         <View>
-          <Text style={hsStyles.title}>TRAIETTORIA RUN SCORE</Text>
-          <Text style={hsStyles.sub}>ultimi {days} giorni</Text>
+          <Text style={hsStyles.title}>{t('lab.score_trajectory')}</Text>
+          <Text style={hsStyles.sub}>{t('lab.score_last_days', { days })}</Text>
         </View>
         <View style={hsStyles.pills}>
           {([30, 60, 90] as const).map(d => (
@@ -385,7 +380,7 @@ function RunScoreHistoryCard({
               onPress={() => onChangeDays(d)}
             >
               <Text style={[hsStyles.pillText, days === d && hsStyles.pillTextActive]}>
-                {d}g
+                {d}{t('lab.score_days_suffix')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -395,17 +390,17 @@ function RunScoreHistoryCard({
       <View style={hsStyles.kpiRow}>
         <View style={hsStyles.kpi}>
           <Text style={hsStyles.kpiValue}>{avg}</Text>
-          <Text style={hsStyles.kpiLabel}>MEDIA</Text>
+          <Text style={hsStyles.kpiLabel}>{t('lab.score_avg')}</Text>
         </View>
         <View style={hsStyles.kpi}>
           <Text style={hsStyles.kpiValue}>{max}</Text>
-          <Text style={hsStyles.kpiLabel}>PICCO</Text>
+          <Text style={hsStyles.kpiLabel}>{t('lab.score_peak')}</Text>
         </View>
         <View style={hsStyles.kpi}>
           <Text style={[hsStyles.kpiValue, { color: trend >= 0 ? semantic.success : semantic.danger }]}>
             {trend >= 0 ? '+' : ''}{trend.toFixed(1)}
           </Text>
-          <Text style={hsStyles.kpiLabel}>TREND</Text>
+          <Text style={hsStyles.kpiLabel}>{t('lab.score_trend')}</Text>
         </View>
       </View>
 
@@ -421,9 +416,7 @@ function RunScoreHistoryCard({
         />
       ) : (
         <View style={hsStyles.empty}>
-          <Text style={hsStyles.emptyText}>
-            Registra almeno 2 corse per vedere la traiettoria.
-          </Text>
+          <Text style={hsStyles.emptyText}>{t('lab.score_empty')}</Text>
         </View>
       )}
 
