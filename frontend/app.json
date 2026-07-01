@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "90",
+      "buildNumber": "101",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
