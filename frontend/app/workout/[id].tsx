@@ -197,7 +197,7 @@ function WorkoutDetailInner() {
                 </View>
                 <View style={styles.scV2Status}>
                   <CheckCircle2 size={11} color={colors.success} strokeWidth={2.6} />
-                  <Text style={styles.scV2StatusText}>SESSIONE COMPLETATA</Text>
+                  <Text style={styles.scV2StatusText}>{t('workout_detail.share_completed')}</Text>
                 </View>
                 <View style={[styles.scV2ActPill, { borderColor: activity.color }]}>
                   <ActIcon size={12} color={activity.color} strokeWidth={2.4} />
@@ -235,13 +235,13 @@ function WorkoutDetailInner() {
             <View style={styles.scV2Stats}>
               <View style={styles.scV2Stat}>
                 <Clock size={14} color={colors.textMuted} strokeWidth={2.2} />
-                <Text style={styles.scV2StatLabel}>DURATA</Text>
+                <Text style={styles.scV2StatLabel}>{t('workout_detail.share_duration')}</Text>
                 <Text style={styles.scV2StatValue}>{formatTime(session.duration_seconds)}</Text>
               </View>
               <View style={styles.scV2StatDivider} />
               <View style={styles.scV2Stat}>
                 <Zap size={14} color={colors.textMuted} strokeWidth={2.2} />
-                <Text style={styles.scV2StatLabel}>{activityType === 'bike' ? 'VEL.' : 'PASSO'}</Text>
+                <Text style={styles.scV2StatLabel}>{activityType === 'bike' ? t('workout_detail.share_speed') : t('workout_detail.share_pace')}</Text>
                 <Text style={styles.scV2StatValue}>
                   {activityType === 'bike'
                     ? (session.duration_seconds > 0 ? `${((session.distance_km / session.duration_seconds) * 3600).toFixed(1)} km/h` : '—')
@@ -259,23 +259,23 @@ function WorkoutDetailInner() {
             {/* BOTTOM: Route + Highlights */}
             <View style={styles.scV2Bottom}>
               <View style={styles.scV2BottomCol}>
-                <Text style={styles.scV2BottomLabel}>📍 PERCORSO</Text>
+                <Text style={styles.scV2BottomLabel}>📍 {t('workout_detail.share_route')}</Text>
                 <View style={styles.scV2RouteBox}>
                   <Text style={styles.scV2RouteText}>
                     {Array.isArray(session.locations) && session.locations.length > 1 ? '~' : '—'}
                   </Text>
                   <Text style={styles.scV2RouteSub}>
                     {Array.isArray(session.locations) && session.locations.length > 1
-                      ? `${session.locations.length} punti GPS`
+                      ? `${session.locations.length} ${t('workout_detail.share_gps_points')}`
                       : 'no GPS'}
                   </Text>
                 </View>
               </View>
               <View style={styles.scV2BottomCol}>
-                <Text style={styles.scV2BottomLabel}>⚡ HIGHLIGHTS</Text>
-                <HiBar label="Intensità" value={Math.min(100, Math.round(((pace || 7) <= 5 ? 80 : (pace || 7) <= 6 ? 50 : 25)))} color={activity.color} />
-                <HiBar label="FC media" value={session.avg_hr_bpm ? Math.min(100, Math.round((session.avg_hr_bpm / 200) * 100)) : 0} valueText={session.avg_hr_bpm ? `${session.avg_hr_bpm} bpm` : '—'} color="#22C55E" />
-                <HiBar label="Cadenza" value={session.avg_cadence_spm ? Math.min(100, Math.round((session.avg_cadence_spm / 200) * 100)) : 0} valueText={session.avg_cadence_spm ? `${session.avg_cadence_spm} spm` : '—'} color="#3B82F6" />
+                <Text style={styles.scV2BottomLabel}>⚡ {t('workout_detail.share_highlights')}</Text>
+                <HiBar label={t('workout_detail.share_intensity')} value={Math.min(100, Math.round(((pace || 7) <= 5 ? 80 : (pace || 7) <= 6 ? 50 : 25)))} color={activity.color} />
+                <HiBar label={t('workout_detail.share_hr')} value={session.avg_hr_bpm ? Math.min(100, Math.round((session.avg_hr_bpm / 200) * 100)) : 0} valueText={session.avg_hr_bpm ? `${session.avg_hr_bpm} bpm` : '—'} color="#22C55E" />
+                <HiBar label={t('workout_detail.share_cadence')} value={session.avg_cadence_spm ? Math.min(100, Math.round((session.avg_cadence_spm / 200) * 100)) : 0} valueText={session.avg_cadence_spm ? `${session.avg_cadence_spm} spm` : '—'} color="#3B82F6" />
               </View>
             </View>
 

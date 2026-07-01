@@ -545,6 +545,16 @@
     "max_time": "MAX TIME"
   },
   "workout_detail": {
+    "share_completed": "SESSIONE COMPLETATA",
+    "share_duration": "DURATA",
+    "share_speed": "VEL.",
+    "share_pace": "PASSO",
+    "share_route": "PERCORSO",
+    "share_gps_points": "punti GPS",
+    "share_highlights": "HIGHLIGHTS",
+    "share_intensity": "Intensità",
+    "share_hr": "FC media",
+    "share_cadence": "Cadenza",
     "session_not_found": "Sessione non trovata",
     "tab_charts": "Grafici",
     "tab_analysis": "Analisi",
@@ -1089,7 +1099,8 @@
     "time_label": "TEMPO",
     "kcal_label": "KCAL",
     "elevation_label": "DISLIVELLO · M",
-    "last_km_label": "ULTIMO KM"
+    "last_km_label": "ULTIMO KM",
+    "hr_bpm_label": "FC BPM"
   },
   "wearables_labels": {
     "km": "KM",

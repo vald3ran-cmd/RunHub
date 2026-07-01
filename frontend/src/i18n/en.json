@@ -553,6 +553,16 @@
     "avg_pace": "Avg pace"
   },
   "workout_detail": {
+    "share_completed": "SESSION COMPLETED",
+    "share_duration": "DURATION",
+    "share_speed": "SPEED",
+    "share_pace": "PACE",
+    "share_route": "ROUTE",
+    "share_gps_points": "GPS points",
+    "share_highlights": "HIGHLIGHTS",
+    "share_intensity": "Intensity",
+    "share_hr": "Avg HR",
+    "share_cadence": "Cadence",
     "session_not_found": "Session not found",
     "tab_charts": "Charts",
     "tab_analysis": "Analysis",
@@ -1103,7 +1113,8 @@
     "time_label": "TIME",
     "kcal_label": "KCAL",
     "elevation_label": "ELEVATION · M",
-    "last_km_label": "LAST KM"
+    "last_km_label": "LAST KM",
+    "hr_bpm_label": "HR BPM"
   },
   "wearables_labels": {
     "km": "KM",

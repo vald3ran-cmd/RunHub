@@ -553,6 +553,16 @@
     "avg_pace": "Ritmo medio"
   },
   "workout_detail": {
+    "share_completed": "SESIÓN COMPLETADA",
+    "share_duration": "DURACIÓN",
+    "share_speed": "VEL.",
+    "share_pace": "RITMO",
+    "share_route": "RECORRIDO",
+    "share_gps_points": "puntos GPS",
+    "share_highlights": "DESTACADOS",
+    "share_intensity": "Intensidad",
+    "share_hr": "FC media",
+    "share_cadence": "Cadencia",
     "session_not_found": "Sesión no encontrada",
     "tab_charts": "Gráficos",
     "tab_analysis": "Análisis",
@@ -1103,7 +1113,8 @@
     "time_label": "TIEMPO",
     "kcal_label": "KCAL",
     "elevation_label": "DESNIVEL · M",
-    "last_km_label": "ÚLTIMO KM"
+    "last_km_label": "ÚLTIMO KM",
+    "hr_bpm_label": "FC PPM"
   },
   "wearables_labels": {
     "km": "KM",
