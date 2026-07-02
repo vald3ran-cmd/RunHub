@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "103",
+      "buildNumber": "104",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -41,8 +41,6 @@
         "NSCameraUsageDescription": "Scatta una foto profilo direttamente nell'app",
         "NSPhotoLibraryUsageDescription": "Scegli una foto profilo dalla tua galleria",
         "NSLocationAlwaysUsageDescription": "Traccia il tuo percorso anche in background",
-        "NSBluetoothAlwaysUsageDescription": "Collega cardiofrequenzimetri Bluetooth per dati FC live",
-        "NSBluetoothPeripheralUsageDescription": "Collega cardiofrequenzimetri Bluetooth per dati FC live",
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
