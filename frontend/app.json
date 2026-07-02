@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "102",
+      "buildNumber": "103",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -27,7 +27,11 @@
           1
         ],
         "UIRequiredDeviceCapabilities": [
-          "arm64"
+          "arm64",
+          "iphone-os"
+        ],
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
         ],
         "NSLocationWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Traccia il tuo percorso e la distanza",

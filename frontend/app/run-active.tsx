@@ -674,7 +674,7 @@ function RunActiveInner() {
   const heroValue = hasSteps && currentStep
     ? formatTime(Math.max(currentStep.duration_seconds - stepElapsed, 0))
     : distance.toFixed(2);
-  const heroUnit = hasSteps && currentStep ? 'rimanenti' : 'KM';
+  const heroUnit = hasSteps && currentStep ? t('run.hero_unit_remaining') : 'KM';
 
   // Pace color: green if on target, blue if too fast, red if too slow, primary text otherwise
   const paceColor =
@@ -802,7 +802,7 @@ function RunActiveInner() {
             {currentHr ? (
               <StatItem
                 value={String(currentHr)}
-                label="FC BPM"
+                label={t('run_active.hr_bpm_label')}
                 small
                 valueColor={dsTokens.brand.primary}
               />
@@ -897,7 +897,7 @@ function RunActiveInner() {
             disabled={isPaused || !running}
           >
             <Ionicons name="flag" size={20} color={colors.textPrimary} />
-            <Text style={styles.lapLabel}>LAP</Text>
+            <Text style={styles.lapLabel}>{t('run.lap_label')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="pause-button"
@@ -915,7 +915,7 @@ function RunActiveInner() {
             activeOpacity={0.85}
           >
             <Ionicons name="stop" size={22} color="#fff" />
-            <Text style={styles.stopLabel}>TERMINA</Text>
+            <Text style={styles.stopLabel}>{t('run.end_label')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
