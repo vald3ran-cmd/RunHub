@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runhub.app",
-      "buildNumber": "106",
+      "buildNumber": "107",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -160,9 +160,7 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "modes": [
-            "central"
-          ],
+          "modes": [],
           "bluetoothAlwaysPermission": "Collega cardiofrequenzimetri Bluetooth per dati FC live",
           "backgroundModes": []
         }
