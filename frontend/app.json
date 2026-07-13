@@ -70,10 +70,7 @@
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "gradleProperties": {
-        "android.suppressKotlinVersionCompatibilityCheck": "true"
-      }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -177,12 +174,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "react-native-google-mobile-ads": {
-      "android_app_id": "ca-app-pub-8711276203998030~5505621507",
-      "ios_app_id": "ca-app-pub-8711276203998030~4483137691",
-      "delay_app_measurement_init": true,
-      "user_tracking_usage_description": "Personalizza gli annunci con pubblicita' pertinenti ai tuoi interessi."
     },
     "extra": {
       "router": {},
