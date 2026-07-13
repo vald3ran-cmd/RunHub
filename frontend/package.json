@@ -17,6 +17,13 @@
         "react-native-health",
         "react-native-reanimated"
       ]
+    },
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "react-native-google-mobile-ads"
+        ]
+      }
     }
   },
   "dependencies": {
