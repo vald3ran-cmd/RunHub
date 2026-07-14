@@ -49,6 +49,7 @@
     },
     "android": {
       "package": "com.runhub.app",
+      "versionCode": 15,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
