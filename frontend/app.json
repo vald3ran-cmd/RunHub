@@ -88,7 +88,7 @@
             "useFrameworks": "static"
           },
           "android": {
-            "kotlinVersion": "2.3.0",
+            "kotlinVersion": "2.2.20",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0"
