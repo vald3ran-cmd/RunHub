@@ -414,11 +414,11 @@ function HiBar({ label, value, color, valueText }:
 // DETAILED STATS CARD
 // ─────────────────────────────────────────────────────────────
 function DetailedStatsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
-  const { hasAccess } = useTierAccess('performance');
+  const { hasAccess } = useTierAccess('starter');
   if (!hasAccess) {
     return (
       <LockedTeaser
-        require="performance"
+        require="starter"
         title={t('gate.stats_locked_title')}
         description={t('gate.stats_locked_desc')}
       />
@@ -483,16 +483,6 @@ function DetailedStatsCard({ session, t }: { session: any; t: (k: string, o?: an
 // SPLITS CARD (table + bar chart per km)
 // ─────────────────────────────────────────────────────────────
 function SplitsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
-  const { hasAccess } = useTierAccess('starter');
-  if (!hasAccess) {
-    return (
-      <LockedTeaser
-        require="starter"
-        title={t('gate.splits_locked_title')}
-        description={t('gate.splits_locked_desc')}
-      />
-    );
-  }
   const splits = Array.isArray(session.splits) ? session.splits : [];
   const activityType: ActivityType = (session.activity_type as ActivityType) || 'run';
   if (splits.length === 0) {
@@ -613,11 +603,11 @@ function NotesCard({ session, sessionId, t }: { session: any; sessionId: string;
 // FUN EQUIVALENTS CARD
 // ─────────────────────────────────────────────────────────────
 function FunEquivalentsCard({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
-  const { hasAccess } = useTierAccess('performance');
+  const { hasAccess } = useTierAccess('starter');
   if (!hasAccess) {
     return (
       <LockedTeaser
-        require="performance"
+        require="starter"
         title={t('gate.equiv_locked_title')}
         description={t('gate.equiv_locked_desc')}
       />
@@ -689,17 +679,6 @@ function SubTabBtn({ label, Icon, active, onPress }:
 // GRAFICI TAB — chart pace/HR/elevation lungo la sessione
 // ─────────────────────────────────────────────────────────────
 function GraficiTab({ session, t }: { session: any; t: (k: string, o?: any) => string }) {
-  const { hasAccess } = useTierAccess('starter');
-  if (!hasAccess) {
-    return (
-      <LockedTeaser
-        require="starter"
-        title={t('gate.charts_locked_title') || 'Grafici dettagliati'}
-        description={t('gate.charts_locked_desc') || 'Sblocca con Starter per vedere pace, HR ed elevazione lungo la sessione.'}
-      />
-    );
-  }
-
   const splits = Array.isArray(session.splits) ? session.splits : [];
   // Pace series da splits (se mancano, mock-lite con 10 punti basati su avg pace)
   const paceSeries: number[] = splits.length > 0
