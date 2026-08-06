@@ -63,6 +63,7 @@ function RunActiveInner() {
   const router = useRouter();
   const { t } = useT();
   const { hasAccess: hasPerformance } = useTierAccess('performance');
+  const { hasAccess: hasStarter } = useTierAccess('starter');
   const activityType: ActivityType =
     (params.activity_type === 'walk' || params.activity_type === 'bike' || params.activity_type === 'run')
       ? params.activity_type as ActivityType
@@ -849,7 +850,7 @@ function RunActiveInner() {
               <Text style={styles.gpsBadgeText}>GPS · {coords.length}</Text>
             </View>
             {/* Weather widget */}
-            {weather && hasPerformance ? (
+            {weather && hasStarter ? (
               <View style={styles.weatherBadge}>
                 <Text style={styles.weatherEmoji}>{weather.emoji}</Text>
                 <View>
