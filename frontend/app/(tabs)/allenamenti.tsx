@@ -13,6 +13,7 @@ import { tokens, FontProvider, Card } from '../../src/design-system';
 import { AdBanner } from '../../src/Ads';
 import { api } from '../../src/api';
 import { useT } from '../../src/i18n';
+import { useTierAccess, LockedTeaser } from '../../src/PremiumGate';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -30,6 +31,7 @@ type Mode = 'piano' | 'obiettivi';
 function AllenamentiInner() {
   const router = useRouter();
   const { t } = useT();
+  const { hasAccess: hasStarter } = useTierAccess('starter');
   const [mode, setMode] = useState<Mode>('piano');
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loadingGoals, setLoadingGoals] = useState(false);
@@ -92,6 +94,7 @@ function AllenamentiInner() {
             onDelete={deleteGoal}
             onAdd={() => setShowAddModal(true)}
             router={router}
+            hasStarter={hasStarter}
           />
         )}
         <AdBanner />
@@ -167,11 +170,12 @@ function PianoView({ router }: { router: any }) {
 }
 
 // ── OBIETTIVI VIEW ──
-function ObiettiviView({ goals, loading, onDelete, onAdd, router }: {
+function ObiettiviView({ goals, loading, onDelete, onAdd, router, hasStarter }: {
   goals: Goal[]; loading: boolean;
   onDelete: (id: string) => void;
   onAdd: () => void;
   router: any;
+  hasStarter: boolean;
 }) {
   const { t } = useT();
 
@@ -183,12 +187,22 @@ function ObiettiviView({ goals, loading, onDelete, onAdd, router }: {
     );
   }
 
+  const goalLimitReached = !hasStarter && goals.length >= 3;
+
   return (
     <>
-      <TouchableOpacity style={styles.addGoalBtn} onPress={onAdd} activeOpacity={0.85}>
-        <Plus size={16} color="#fff" strokeWidth={2.5} />
-        <Text style={styles.addGoalBtnText}>{t('workouts.add_goal')}</Text>
-      </TouchableOpacity>
+      {goalLimitReached ? (
+        <LockedTeaser
+          require="starter"
+          title="Limite obiettivi raggiunto"
+          description="Il piano Free include fino a 3 obiettivi attivi. Passa a Starter per obiettivi illimitati"
+        />
+      ) : (
+        <TouchableOpacity style={styles.addGoalBtn} onPress={onAdd} activeOpacity={0.85}>
+          <Plus size={16} color="#fff" strokeWidth={2.5} />
+          <Text style={styles.addGoalBtnText}>{t('workouts.add_goal')}</Text>
+        </TouchableOpacity>
+      )}
 
       {goals.length === 0 ? (
         <Card>

@@ -19,6 +19,7 @@ import { api } from '../../src/api';
 import { AdBanner } from '../../src/Ads';
 import { useT } from '../../src/i18n';
 import { WeatherForecast } from '../../src/components/WeatherForecast';
+import { useTierAccess, LockedTeaser } from '../../src/PremiumGate';
 
 const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
 
@@ -49,6 +50,7 @@ type LabOverview = {
 function LabInner() {
   const router = useRouter();
   const { t } = useT();
+  const { hasAccess: hasPerformance } = useTierAccess('performance');
   const [data, setData] = useState<LabOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,16 +195,24 @@ function LabInner() {
           </View>
         </View>
 
-        <RunScoreHistoryCard
-          points={scoreHistory}
-          days={historyDays}
-          onChangeDays={(d) => {
-            setHistoryDays(d);
-            fetchScoreHistory(d);
-          }}
-          loading={historyLoading}
-          t={t}
-        />
+        {hasPerformance ? (
+          <RunScoreHistoryCard
+            points={scoreHistory}
+            days={historyDays}
+            onChangeDays={(d) => {
+              setHistoryDays(d);
+              fetchScoreHistory(d);
+            }}
+            loading={historyLoading}
+            t={t}
+          />
+        ) : (
+          <LockedTeaser
+            require="performance"
+            title="Run Score Storico"
+            description="Visualizza la traiettoria del tuo Run Score negli ultimi 30/60/90 giorni"
+          />
+        )}
 
         {/* AI INSIGHT (mostra solo se ha senso) */}
         {data.weekly_km > 0 ? (
@@ -232,7 +242,13 @@ function LabInner() {
         <WeatherForecast />
 
         {/* TRAINING LOAD */}
-        {data.training_load ? (
+        {!hasPerformance ? (
+          <LockedTeaser
+            require="performance"
+            title="Training Load"
+            description="Monitora carico, recupero e fatica (CTL/ATL/TSB) delle ultime 8 settimane"
+          />
+        ) : data.training_load ? (
           <Card>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{t('lab.training_load')}</Text>
@@ -306,7 +322,13 @@ function LabInner() {
         ) : null}
 
         {/* HR ZONES (solo se importati con HR) */}
-        {data.hr_zones ? (
+        {!hasPerformance ? (
+          <LockedTeaser
+            require="performance"
+            title="Zone di Frequenza Cardiaca"
+            description="Analizza la distribuzione del tuo allenamento nelle 5 zone di frequenza cardiaca"
+          />
+        ) : data.hr_zones ? (
           <Card>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{t('lab.hr_zones')}</Text>
