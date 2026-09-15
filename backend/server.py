@@ -4506,6 +4506,171 @@ async def set_nearby_visibility(data: NearbyVisibilityIn, user: dict = Depends(g
     return {"ok": True, "visible": bool(data.visible)}
 
 
+# ----------------- Eventi (community run events) -----------------
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+@api_router.get("/events")
+async def get_events(lat: float, lng: float, radius_km: float = 10, level: str = None, user: dict = Depends(get_current_user)):
+    """Restituisce eventi attivi nel raggio specificato, ordinati per data."""
+    now = datetime.now(timezone.utc).isoformat()
+    all_events = await db.events.find(
+        {"status": "active", "date": {"$gte": now}},
+        {"_id": 0},
+    ).sort("date", 1).to_list(length=200)
+
+    filtered = []
+    for ev in all_events:
+        ev_lat = ev["location"]["lat"]
+        ev_lng = ev["location"]["lng"]
+        dist = _haversine_km(lat, lng, ev_lat, ev_lng)
+        if dist <= radius_km:
+            if level and ev.get("level") != level:
+                continue
+            ev["distance_from_user_km"] = round(dist, 1)
+            ev["participant_count"] = len(ev.get("participants", []))
+            ev["is_participant"] = user["user_id"] in ev.get("participants", [])
+            filtered.append(ev)
+
+    return filtered[:50]
+
+
+@api_router.get("/events/my/organized")
+async def get_my_organized_events(user: dict = Depends(get_current_user)):
+    events = await db.events.find(
+        {"organizer_id": user["user_id"]},
+        {"_id": 0},
+    ).sort("date", -1).to_list(length=50)
+    for ev in events:
+        ev["participant_count"] = len(ev.get("participants", []))
+    return events
+
+
+@api_router.get("/events/my/joined")
+async def get_my_joined_events(user: dict = Depends(get_current_user)):
+    events = await db.events.find(
+        {"participants": user["user_id"], "organizer_id": {"$ne": user["user_id"]}},
+        {"_id": 0},
+    ).sort("date", -1).to_list(length=50)
+    for ev in events:
+        ev["participant_count"] = len(ev.get("participants", []))
+    return events
+
+
+@api_router.get("/events/{event_id}")
+async def get_event(event_id: str, user: dict = Depends(get_current_user)):
+    ev = await db.events.find_one({"event_id": event_id}, {"_id": 0})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    ev["participant_count"] = len(ev.get("participants", []))
+    ev["is_participant"] = user["user_id"] in ev.get("participants", [])
+    ev["is_organizer"] = ev["organizer_id"] == user["user_id"]
+    return ev
+
+
+@api_router.post("/events")
+async def create_event(body: dict, user: dict = Depends(get_current_user)):
+    required = ["title", "date", "location", "distance_km", "level"]
+    for field in required:
+        if field not in body:
+            raise HTTPException(status_code=400, detail=f"Campo mancante: {field}")
+
+    event = {
+        "event_id": str(uuid.uuid4()),
+        "organizer_id": user["user_id"],
+        "organizer_name": user.get("name") or "Anonimo",
+        "organizer_avatar": user.get("avatar_base64", ""),
+        "title": body["title"],
+        "description": body.get("description", ""),
+        "date": body["date"],
+        "location": body["location"],
+        "distance_km": float(body["distance_km"]),
+        "level": body["level"],
+        "cover_image": body.get("cover_image"),
+        "participants": [user["user_id"]],
+        "chat": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "active",
+    }
+    await db.events.insert_one(event)
+    event.pop("_id", None)
+    return event
+
+
+@api_router.post("/events/{event_id}/join")
+async def join_event(event_id: str, user: dict = Depends(get_current_user)):
+    ev = await db.events.find_one({"event_id": event_id})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    if user["user_id"] in ev.get("participants", []):
+        raise HTTPException(status_code=400, detail="Sei già iscritto")
+    await db.events.update_one(
+        {"event_id": event_id},
+        {"$push": {"participants": user["user_id"]}},
+    )
+    return {"ok": True}
+
+
+@api_router.post("/events/{event_id}/leave")
+async def leave_event(event_id: str, user: dict = Depends(get_current_user)):
+    ev = await db.events.find_one({"event_id": event_id})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    if ev["organizer_id"] == user["user_id"]:
+        raise HTTPException(status_code=400, detail="L'organizzatore non può abbandonare l'evento")
+    await db.events.update_one(
+        {"event_id": event_id},
+        {"$pull": {"participants": user["user_id"]}},
+    )
+    return {"ok": True}
+
+
+@api_router.post("/events/{event_id}/chat")
+async def send_chat_message(event_id: str, body: dict, user: dict = Depends(get_current_user)):
+    ev = await db.events.find_one({"event_id": event_id})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    if user["user_id"] not in ev.get("participants", []):
+        raise HTTPException(status_code=403, detail="Devi essere iscritto per chattare")
+
+    message = (body.get("message") or "").strip()
+    if not message or len(message) > 500:
+        raise HTTPException(status_code=400, detail="Messaggio non valido")
+
+    chat_msg = {
+        "user_id": user["user_id"],
+        "username": user.get("name") or "Anonimo",
+        "avatar": user.get("avatar_base64", ""),
+        "message": message,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.events.update_one(
+        {"event_id": event_id},
+        {"$push": {"chat": chat_msg}},
+    )
+    return chat_msg
+
+
+@api_router.delete("/events/{event_id}")
+async def delete_event(event_id: str, user: dict = Depends(get_current_user)):
+    ev = await db.events.find_one({"event_id": event_id})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    if ev["organizer_id"] != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Solo l'organizzatore può cancellare l'evento")
+    await db.events.update_one(
+        {"event_id": event_id},
+        {"$set": {"status": "cancelled"}},
+    )
+    return {"ok": True}
+
+
 app.include_router(api_router)
 
 # ── Modular routers (RunHub 1.6.2+) ──────────────────────────────────
