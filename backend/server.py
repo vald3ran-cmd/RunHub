@@ -4571,6 +4571,21 @@ async def get_event(event_id: str, user: dict = Depends(get_current_user)):
     ev["participant_count"] = len(ev.get("participants", []))
     ev["is_participant"] = user["user_id"] in ev.get("participants", [])
     ev["is_organizer"] = ev["organizer_id"] == user["user_id"]
+
+    participant_ids = ev.get("participants", [])
+    docs = await db.users.find(
+        {"user_id": {"$in": participant_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "avatar_base64": 1},
+    ).to_list(length=len(participant_ids)) if participant_ids else []
+    by_id = {d["user_id"]: d for d in docs}
+    ev["participants_detail"] = [
+        {
+            "user_id": pid,
+            "name": by_id.get(pid, {}).get("name") or "Runner",
+            "avatar_base64": by_id.get(pid, {}).get("avatar_base64"),
+        }
+        for pid in participant_ids
+    ]
     return ev
 
 

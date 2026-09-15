@@ -246,6 +246,7 @@ function RootNav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="plan/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="workout/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="event/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="run-active" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="premium" options={{ presentation: 'modal' }} />
         <Stack.Screen name="ai-generate" options={{ presentation: 'modal' }} />

@@ -8,7 +8,7 @@
  */
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
-import { FlaskConical, BookOpen, Watch, Calendar, User } from 'lucide-react-native';
+import { FlaskConical, BookOpen, Watch, Calendar, Users, User } from 'lucide-react-native';
 import { useT } from '../../src/i18n';
 import { tokens } from '../../src/design-system';
 
@@ -72,6 +72,15 @@ export default function TabsLayout() {
           title: t('tabs.allenamenti') || 'Allenamenti',
           tabBarIcon: ({ color, focused }) => (
             <Calendar size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="eventi"
+        options={{
+          title: t('tabs.eventi') || 'Eventi',
+          tabBarIcon: ({ color, focused }) => (
+            <Users size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
           ),
         }}
       />
