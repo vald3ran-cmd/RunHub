@@ -7,7 +7,8 @@
  * Stile Scientific Light: sfondo card bianco, border sottile, accent arancione.
  */
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlaskConical, BookOpen, Watch, Calendar, Users, User } from 'lucide-react-native';
 import { useT } from '../../src/i18n';
 import { tokens } from '../../src/design-system';
@@ -16,6 +17,7 @@ const { brand, neutral, text } = tokens;
 
 export default function TabsLayout() {
   const { t } = useT();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -26,8 +28,9 @@ export default function TabsLayout() {
           backgroundColor: neutral.card,
           borderTopColor: neutral.border,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: Platform.OS === 'ios' ? 84 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+          // Somma l'inset di sistema (home indicator iOS, barra gesti/pulsanti Android edge-to-edge)
+          height: 60 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
