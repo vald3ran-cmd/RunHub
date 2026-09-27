@@ -6,7 +6,8 @@ import Constants from 'expo-constants';
 export const isExpoGo = Constants.appOwnership === 'expo';
 
 // AdMob native module is available when NOT in Expo Go AND on a native platform.
-export const isAdMobAvailable = !isExpoGo && Platform.OS !== 'web';
+// Excluded on Android: the native module is unlinked there (react-native.config.js).
+export const isAdMobAvailable = !isExpoGo && Platform.OS !== 'web' && Platform.OS !== 'android';
 
 // ------------ Production Ad Unit IDs (RunHub) ------------
 const PROD = {
