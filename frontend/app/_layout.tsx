@@ -116,8 +116,9 @@ function RootNav() {
         }
       }
 
-      // 3) AdMob SDK init - solo se UMP autorizza (o nessun UMP richiesto)
-      if (isAdMobAvailable) {
+      // 3) AdMob SDK init - solo se UMP autorizza (o nessun UMP richiesto).
+      //    Su Android il modulo nativo è escluso (react-native.config.js).
+      if (isAdMobAvailable && Platform.OS !== 'android') {
         try {
           if (!snapshot || snapshot.canRequestAds) {
             await initializeAdMob();
