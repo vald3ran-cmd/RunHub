@@ -169,7 +169,7 @@ function LabInner() {
         <View style={styles.hero}>
           <Text style={styles.heroLabel}>{t('lab.run_score')}</Text>
           <View style={styles.heroBody}>
-            <View>
+            <View style={styles.heroScoreRow}>
               <Text style={styles.heroLetter}>{data.run_score_letter || '—'}</Text>
               <Text style={styles.heroValue}>
                 {data.run_score !== null ? Math.round(data.run_score) : '—'}
@@ -510,9 +510,10 @@ const styles = StyleSheet.create({
   hero: { backgroundColor: '#0F172A', borderRadius: radius.card, padding: spacing.xl },
   heroLabel: { ...typography.kpiLabel, color: '#94A3B8' },
   heroBody: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
-  heroLetter: { ...typography.heroMetric, color: brand.primary, fontSize: 56 },
-  heroValue: { ...typography.heroMetric, color: text.inverse, fontSize: 44, marginTop: -8 },
-  heroOver: { ...typography.body, color: '#94A3B8', fontSize: 16 },
+  heroScoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  heroLetter: { ...typography.heroMetric, color: brand.primary, fontSize: 72, lineHeight: 76 },
+  heroValue: { ...typography.heroMetric, color: text.inverse, fontSize: 32, lineHeight: 36, marginBottom: 6 },
+  heroOver: { ...typography.body, color: '#94A3B8', fontSize: 14 },
   heroChartWrap: { flex: 1, marginLeft: spacing.md },
   heroTrend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
   heroTrendText: { ...typography.caption, color: '#94A3B8', letterSpacing: 0.3, flex: 1 },
