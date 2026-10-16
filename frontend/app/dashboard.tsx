@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   periodTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
 
   // Stat card

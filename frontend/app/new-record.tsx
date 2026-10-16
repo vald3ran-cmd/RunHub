@@ -12,7 +12,7 @@ import { useT } from '../src/i18n';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-const CONFETTI_COLORS = ['#FF6B1F', '#FFFFFF', '#F59E0B', '#22C55E', '#3B82F6', '#FF8543'];
+const CONFETTI_COLORS = [colors.primary, colors.white, colors.gold, colors.success, colors.secondary, colors.accent];
 const CONFETTI_COUNT = 60;
 
 export default function NewRecord() {
@@ -82,7 +82,7 @@ export default function NewRecord() {
           <Animated.View style={[styles.hexInner, { transform: [{ scale }] }]}>
             <HexBadge size={180} />
             <View style={styles.hexIconWrap}>
-              <Trophy size={64} color="#FFFFFF" strokeWidth={2.2} fill="rgba(255,255,255,0.18)" />
+              <Trophy size={64} color={colors.white} strokeWidth={2.2} fill={colors.onDarkSubtle} />
             </View>
           </Animated.View>
         </View>
@@ -111,7 +111,7 @@ export default function NewRecord() {
             onPress={shareRecord}
             activeOpacity={0.85}
           >
-            <Share2 size={18} color="#fff" strokeWidth={2.4} />
+            <Share2 size={18} color={colors.white} strokeWidth={2.4} />
             <Text style={styles.shareText}>{t('record.share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -147,14 +147,14 @@ function HexBadge({ size = 160 }: { size?: number }) {
     <Svg width={size} height={size}>
       <Defs>
         <SvgGradient id="hexGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FF8543" />
-          <Stop offset="1" stopColor="#E55A0F" />
+          <Stop offset="0" stopColor={colors.primaryHover} />
+          <Stop offset="1" stopColor={colors.primaryDark} />
         </SvgGradient>
       </Defs>
       <Polygon
         points={points}
         fill="url(#hexGrad)"
-        stroke="#FFFFFF"
+        stroke={colors.white}
         strokeWidth={3}
         strokeOpacity={0.7}
       />
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   title: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 34,
     fontFamily: fonts.heading,
     letterSpacing: -0.8,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   value: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 64,
     fontFamily: fonts.heading,
     letterSpacing: -2,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -6 }],
   },
   pbPillText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 12,
     fontFamily: fonts.headingBold,
     letterSpacing: 1,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   shareText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     letterSpacing: 1.2,
     fontFamily: fonts.headingBold,

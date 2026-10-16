@@ -11,6 +11,9 @@ export const brand = {
   accent: '#7C3AED',        // Violet — highlight secondari
   light: '#93C5FD',         // Accent chiaro
   subtle: '#EFF6FF',        // Brand background subtle (cards highlight)
+  subtleBorder: '#DBEAFE',  // Bordo per superfici brand subtle
+  accentSubtle: '#F5F3FF',  // Background subtle accent
+  accentLight: '#DDD6FE',   // Bordo/accent chiaro violet
   dark: '#1D4ED8',          // Pressed state
   logo: '#E85D04',          // Arancione brand — SOLO per il logo
 } as const;
@@ -23,6 +26,18 @@ export const semantic = {
   info: '#0EA5E9',          // Azzurro — informativo, easy zone
 } as const;
 
+// Superfici tenui per chip / banner semantici
+export const semanticSoft = {
+  successBg: '#D1FAE5',
+  successBorder: '#A7F3D0',
+  warningBg: '#FEF3C7',
+  warningBorder: '#FDE68A',
+  dangerBg: '#FEE2E2',
+  dangerBorder: '#FECACA',
+  infoBg: '#E0F2FE',
+  infoBorder: '#BAE6FD',
+} as const;
+
 // ─── NEUTRI / SUPERFICI ───────────────────────────────
 export const neutral = {
   background: '#F6F8FC',    // App background
@@ -30,6 +45,8 @@ export const neutral = {
   surfaceSoft: '#F1F5F9',   // Hover, separator
   border: '#E2E8F0',        // Border sottile
   divider: '#CBD5E1',       // Divider più visibile
+  inverse: '#0F172A',       // Superficie scura di contrasto (hero)
+  overlay: 'rgba(15,23,42,0.45)', // Backdrop modali
 } as const;
 
 // ─── TESTO ─────────────────────────────────────────────
@@ -39,6 +56,8 @@ export const text = {
   muted: '#94A3B8',         // Caption, label muted
   disabled: '#CBD5E1',
   inverse: '#FFFFFF',       // Testo su fondo brand/scuro
+  inverseMuted: 'rgba(255,255,255,0.75)', // Testo secondario su fondo brand/scuro
+  inverseSubtle: 'rgba(255,255,255,0.18)', // Pill / bg su fondo brand/scuro
 } as const;
 
 // ─── HR ZONES ─────────────────────────────────────────
@@ -206,6 +225,7 @@ export const typography = {
 export const tokens = {
   brand,
   semantic,
+  semanticSoft,
   neutral,
   text,
   hrZones,

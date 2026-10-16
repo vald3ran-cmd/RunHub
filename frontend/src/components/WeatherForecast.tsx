@@ -69,11 +69,11 @@ function getIconComponent(icon: string) {
 
 function getIconColor(icon: string): string {
   switch (icon) {
-    case 'sun': return '#F59E0B';
-    case 'cloud-sun': return '#F59E0B';
-    case 'cloud-rain': return '#3B82F6';
-    case 'cloud-lightning': return '#7C3AED';
-    case 'cloud-snow': return '#0EA5E9';
+    case 'sun': return semantic.warning;
+    case 'cloud-sun': return semantic.warning;
+    case 'cloud-rain': return brand.primary;
+    case 'cloud-lightning': return brand.accent;
+    case 'cloud-snow': return semantic.info;
     case 'cloud-fog': return text.muted;
     default: return text.secondary;
   }

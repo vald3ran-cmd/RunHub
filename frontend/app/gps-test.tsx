@@ -120,7 +120,7 @@ export default function GpsTest() {
         </View>
 
         <TouchableOpacity style={styles.btn} onPress={testGps} testID="gps-test-button">
-          <Ionicons name="location" size={20} color="#fff" />
+          <Ionicons name="location" size={20} color={colors.white} />
           <Text style={styles.btnText}>{t('gps_test.test_now')}</Text>
         </TouchableOpacity>
 
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   key: { color: colors.textSecondary, fontSize: 12, fontWeight: '700', flex: 1 },
   value: { color: colors.textPrimary, fontSize: 12, flex: 2, textAlign: 'right' },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.pill, marginTop: spacing.lg },
-  btnText: { color: '#fff', fontWeight: '900', letterSpacing: 2, fontSize: 14 },
+  btnText: { color: colors.white, fontWeight: '900', letterSpacing: 2, fontSize: 14 },
   smallBtn: { paddingVertical: 8, paddingHorizontal: spacing.md, backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   smallBtnText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   logBox: { backgroundColor: '#000', padding: spacing.md, borderRadius: radius.md, minHeight: 200, borderWidth: 1, borderColor: colors.border },

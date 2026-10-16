@@ -5,6 +5,7 @@
 
 import React from 'react';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
+import { colors } from '../theme';
 
 type IconProps = {
   size?: number;
@@ -15,7 +16,7 @@ type IconProps = {
 const D = 24;
 
 // HOME — casa con percorso runner stilizzato
-export const HomeIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: IconProps) => (
+export const HomeIcon = ({ size = 22, color = colors.textPrimary, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Path
       d="M3 11 L12 4 L21 11 V19 A2 2 0 0 1 19 21 H5 A2 2 0 0 1 3 19 Z"
@@ -35,7 +36,7 @@ export const HomeIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: Icon
 );
 
 // PLANS — lista con check dinamico
-export const PlansIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: IconProps) => (
+export const PlansIcon = ({ size = 22, color = colors.textPrimary, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Rect x="3" y="4" width="18" height="16" rx="3" stroke={color} strokeWidth={strokeWidth} />
     <Path d="M7 9 L10 12 L13 8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
@@ -45,7 +46,7 @@ export const PlansIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: Ico
 );
 
 // RUN — figura stilizzata che corre (per pulsante centrale tab + activity)
-export const RunIcon = ({ size = 22, color = '#FFFFFF', strokeWidth = 2 }: IconProps) => (
+export const RunIcon = ({ size = 22, color = colors.white, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Circle cx="14" cy="4.5" r="1.8" stroke={color} strokeWidth={strokeWidth} fill={color} />
     <Path
@@ -72,7 +73,7 @@ export const RunIcon = ({ size = 22, color = '#FFFFFF', strokeWidth = 2 }: IconP
 );
 
 // WALK — figura stilizzata che cammina
-export const WalkIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: IconProps) => (
+export const WalkIcon = ({ size = 22, color = colors.textPrimary, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Circle cx="12" cy="4" r="1.8" stroke={color} strokeWidth={strokeWidth} fill={color} />
     <Path
@@ -93,7 +94,7 @@ export const WalkIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: Icon
 );
 
 // BIKE — bicicletta minimal
-export const BikeIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: IconProps) => (
+export const BikeIcon = ({ size = 22, color = colors.textPrimary, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Circle cx="5.5" cy="17.5" r="3.5" stroke={color} strokeWidth={strokeWidth} />
     <Circle cx="18.5" cy="17.5" r="3.5" stroke={color} strokeWidth={strokeWidth} />
@@ -111,7 +112,7 @@ export const BikeIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: Icon
 );
 
 // HISTORY — orologio analogico stilizzato
-export const HistoryIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: IconProps) => (
+export const HistoryIcon = ({ size = 22, color = colors.textPrimary, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Circle cx="12" cy="13" r="8" stroke={color} strokeWidth={strokeWidth} />
     <Path d="M12 9 V13 L15 15" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
@@ -120,7 +121,7 @@ export const HistoryIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: I
 );
 
 // PROFILE — silhouette pulita
-export const ProfileIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: IconProps) => (
+export const ProfileIcon = ({ size = 22, color = colors.textPrimary, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Circle cx="12" cy="8" r="4" stroke={color} strokeWidth={strokeWidth} />
     <Path
@@ -133,7 +134,7 @@ export const ProfileIcon = ({ size = 22, color = '#0F1115', strokeWidth = 2 }: I
 );
 
 // TROPHY brand — per achievements
-export const TrophyIcon = ({ size = 22, color = '#FF6B6B', strokeWidth = 2 }: IconProps) => (
+export const TrophyIcon = ({ size = 22, color = colors.accent, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Path
       d="M7 4 H17 V9 A5 5 0 0 1 7 9 Z"
@@ -149,7 +150,7 @@ export const TrophyIcon = ({ size = 22, color = '#FF6B6B', strokeWidth = 2 }: Ic
 );
 
 // FLAME — streak
-export const FlameIcon = ({ size = 22, color = '#FF6B6B', strokeWidth = 2 }: IconProps) => (
+export const FlameIcon = ({ size = 22, color = colors.accent, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Path
       d="M12 3 C13 7 17 9 17 14 A5 5 0 0 1 7 14 C7 11 9 10 9 7 C10 8 11 8 12 7 Z"
@@ -162,7 +163,7 @@ export const FlameIcon = ({ size = 22, color = '#FF6B6B', strokeWidth = 2 }: Ico
 );
 
 // LIGHTNING / BOLT — used for "start run" CTA
-export const BoltIcon = ({ size = 22, color = '#FFFFFF', strokeWidth = 2 }: IconProps) => (
+export const BoltIcon = ({ size = 22, color = colors.white, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Path
       d="M13 2 L4 14 H11 L10 22 L20 10 H13 Z"
@@ -175,7 +176,7 @@ export const BoltIcon = ({ size = 22, color = '#FFFFFF', strokeWidth = 2 }: Icon
 );
 
 // SPARKLES — AI Coach
-export const SparklesIcon = ({ size = 22, color = '#FF6B6B', strokeWidth = 2 }: IconProps) => (
+export const SparklesIcon = ({ size = 22, color = colors.accent, strokeWidth = 2 }: IconProps) => (
   <Svg width={size} height={size} viewBox={`0 0 ${D} ${D}`} fill="none">
     <Path
       d="M12 3 L13.5 9 L19 10.5 L13.5 12 L12 18 L10.5 12 L5 10.5 L10.5 9 Z"

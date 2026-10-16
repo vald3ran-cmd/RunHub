@@ -71,7 +71,7 @@ export default function CoachDashboard() {
           testID="add-athlete-button"
           style={styles.addBtn} onPress={() => setShowAdd(true)} disabled={athletes.length >= 10}
         >
-          <Ionicons name="add" size={24} color="#fff" />
+          <Ionicons name="add" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
 
@@ -128,7 +128,7 @@ export default function CoachDashboard() {
                 testID="submit-add-athlete"
                 style={styles.saveBtn} onPress={addAthlete} disabled={saving}
               >
-                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>{t('common.add_upper')}</Text>}
+                {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveText}>{t('common.add_upper')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -146,15 +146,15 @@ const styles = StyleSheet.create({
   addBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  avatarText: { color: colors.white, fontSize: 18, fontWeight: '900' },
   cardName: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
   cardEmail: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
   statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, marginTop: 6 },
-  statusText: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  statusText: { color: colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
   emptyText: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
   emptySub: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalBg: { flex: 1, backgroundColor: colors.overlayStrong, justifyContent: 'flex-end' },
   modalCard: { backgroundColor: colors.background, padding: spacing.lg, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, borderTopWidth: 1, borderColor: colors.border },
   modalTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900', letterSpacing: 1, marginBottom: spacing.md },
   label: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.sm, marginBottom: 4 },
@@ -163,5 +163,5 @@ const styles = StyleSheet.create({
   cancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: 'center' },
   saveBtn: { flex: 1, padding: spacing.md, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: 'center' },
   cancelText: { color: colors.textPrimary, fontWeight: '800', letterSpacing: 1 },
-  saveText: { color: '#fff', fontWeight: '800', letterSpacing: 1 },
+  saveText: { color: colors.white, fontWeight: '800', letterSpacing: 1 },
 });

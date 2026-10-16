@@ -79,7 +79,7 @@ export default function Login() {
                 testID="login-submit-button"
                 style={styles.button} onPress={onSubmit} disabled={loading}
               >
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t('auth.login_cta').toUpperCase()}</Text>}
+                {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>{t('auth.login_cta').toUpperCase()}</Text>}
               </TouchableOpacity>
               <SocialAuthButtons mode="login" />
               <Link href="/(auth)/forgot-password" asChild>
@@ -102,7 +102,7 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: colors.background },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(9,9,11,0.78)' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlayStrong },
   safe: { flex: 1 },
   scroll: { flexGrow: 1, padding: spacing.lg, justifyContent: 'space-between' },
   header: { marginTop: spacing.xl, alignItems: 'center' },
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, paddingVertical: spacing.md, borderRadius: radius.pill,
     alignItems: 'center', marginTop: spacing.sm,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 2 },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight: '800', letterSpacing: 2 },
   link: { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.lg },
   error: { color: colors.primary, marginBottom: spacing.md, fontWeight: '600' },
 });

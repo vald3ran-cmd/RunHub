@@ -14,7 +14,7 @@ import { api } from '../../src/api';
 import { useT } from '../../src/i18n';
 import { useTierAccess, LockedTeaser } from '../../src/PremiumGate';
 
-const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
+const { brand, neutral, text, semantic, spacing, typography, radius, semanticSoft } = tokens;
 
 type EventLevel = 'beginner' | 'intermediate' | 'advanced';
 type ParticipantDetail = { user_id: string; name: string; avatar_base64?: string | null };
@@ -237,7 +237,7 @@ function EventDetailInner() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.actionBtn} onPress={join} disabled={joining} activeOpacity={0.85}>
-              {joining ? <ActivityIndicator size="small" color="#fff" /> :
+              {joining ? <ActivityIndicator size="small" color={text.inverse} /> :
                 <Text style={styles.actionBtnText}>{t('eventi.join')}</Text>}
             </TouchableOpacity>
           )}
@@ -290,7 +290,7 @@ function EventDetailInner() {
                     multiline
                   />
                   <TouchableOpacity style={styles.chatSendBtn} onPress={sendMessage} disabled={sending || !chatText.trim()} activeOpacity={0.85}>
-                    {sending ? <ActivityIndicator size="small" color="#fff" /> : <Send size={16} color="#fff" strokeWidth={2.4} />}
+                    {sending ? <ActivityIndicator size="small" color={text.inverse} /> : <Send size={16} color={text.inverse} strokeWidth={2.4} />}
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: neutral.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: spacing.marginApp, paddingBottom: spacing.xl, gap: spacing.sm },
 
-  cancelledBanner: { backgroundColor: '#FEE2E2', borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
+  cancelledBanner: { backgroundColor: semanticSoft.dangerBg, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
   cancelledBannerText: { ...typography.kpiLabel, color: semantic.danger, fontSize: 11 },
 
   title: { ...typography.sectionTitle, color: text.primary, fontSize: 24 },
@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
   actionPillNeutral: { backgroundColor: neutral.surfaceSoft },
   actionPillText: { ...typography.kpiLabel, color: text.secondary, fontSize: 11 },
   actionBtn: { backgroundColor: brand.primary, paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginTop: spacing.md },
-  actionBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 12 },
-  leaveBtn: { backgroundColor: '#FEE2E2' },
+  actionBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 12 },
+  leaveBtn: { backgroundColor: semanticSoft.dangerBg },
   leaveBtnText: { color: semantic.danger, ...typography.kpiLabel, fontSize: 12 },
 
   sectionKicker: { ...typography.kpiLabel, color: text.muted, fontSize: 11, marginTop: spacing.xl, marginBottom: spacing.sm },

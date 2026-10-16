@@ -130,7 +130,7 @@ function OnboardingInner() {
           <Text style={styles.ctaText}>
             {step === SLIDES.length - 1 ? 'INIZIA' : 'CONTINUA'}
           </Text>
-          <ChevronRight size={18} color="#fff" strokeWidth={2.5} />
+          <ChevronRight size={18} color={text.inverse} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -170,5 +170,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: brand.primary, paddingVertical: 16, borderRadius: radius.button,
   },
-  ctaText: { ...typography.kpiLabel, color: '#fff', fontSize: 13 },
+  ctaText: { ...typography.kpiLabel, color: text.inverse, fontSize: 13 },
 });

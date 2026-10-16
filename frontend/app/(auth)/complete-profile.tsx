@@ -155,7 +155,7 @@ export default function CompleteProfile() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.checkbox, acceptedLegal && styles.checkboxChecked]}>
-                {acceptedLegal && <Ionicons name="checkmark" size={18} color="#fff" />}
+                {acceptedLegal && <Ionicons name="checkmark" size={18} color={colors.white} />}
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedLegal(!acceptedLegal)}>
@@ -179,7 +179,7 @@ export default function CompleteProfile() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.checkbox, acceptedAge && styles.checkboxChecked]}>
-                {acceptedAge && <Ionicons name="checkmark" size={18} color="#fff" />}
+                {acceptedAge && <Ionicons name="checkmark" size={18} color={colors.white} />}
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedAge(!acceptedAge)}>
@@ -193,7 +193,7 @@ export default function CompleteProfile() {
             disabled={!canSubmit}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={colors.white} />
               : <Text style={styles.buttonText}>{t('complete_profile.continue_upper')}</Text>}
           </TouchableOpacity>
 
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 2 },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight: '800', letterSpacing: 2 },
   error: {
     color: colors.primary,
     marginBottom: spacing.md,

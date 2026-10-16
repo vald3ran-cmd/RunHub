@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { tokens as dsTokens } from './design-system';
-import { spacing, radius, fonts } from './theme';
+import { colors, spacing, radius, fonts } from './theme';
 import {
   HRMDevice, isBleSupported, requestBlePermissions,
   scanForHrmDevices, connectAndSubscribe, ConnectionState, HRMSample,
@@ -226,7 +226,7 @@ export function HrmPickerModal({ visible, onClose, onConnected }: HrmPickerProps
                   })();
                 }}
               >
-                <Ionicons name="refresh" size={16} color="#fff" />
+                <Ionicons name="refresh" size={16} color={colors.white} />
                 <Text style={styles.btnPrimaryText}>SCANSIONA</Text>
               </TouchableOpacity>
             ) : (
@@ -255,7 +255,7 @@ function signalLabel(rssi: number): string {
 
 const styles = StyleSheet.create({
   backdrop: {
-    flex: 1, backgroundColor: 'rgba(15,23,42,0.45)',
+    flex: 1, backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -282,10 +282,10 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: colors.dangerMuted,
     paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.md,
     marginBottom: spacing.md,
-    borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+    borderWidth: 1, borderColor: colors.dangerBorder,
   },
   errorText: {
     color: dsTokens.semantic.danger, fontSize: 12, flex: 1,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   deviceRowActive: {
     borderColor: dsTokens.brand.primary,
-    backgroundColor: 'rgba(255,107,26,0.04)',
+    backgroundColor: colors.primaryMuted,
   },
   deviceIconBox: {
     width: 40, height: 40, borderRadius: 20,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   btnPrimaryText: {
-    color: '#fff', fontSize: 12, letterSpacing: 1.4,
+    color: colors.white, fontSize: 12, letterSpacing: 1.4,
     fontFamily: fonts.headingBold,
   },
   btnGhost: {

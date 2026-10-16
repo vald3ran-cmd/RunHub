@@ -181,8 +181,8 @@ function DiarioInner() {
           style={[styles.compareBtn, compareMode && styles.compareBtnActive]}
           onPress={() => { setCompareMode(v => !v); setSelected(new Set()); }}
         >
-          <GitCompare size={16} color={compareMode ? '#fff' : text.primary} strokeWidth={2} />
-          <Text style={[styles.compareBtnText, compareMode && { color: '#fff' }]}>{t('diario.compare_btn')}</Text>
+          <GitCompare size={16} color={compareMode ? text.inverse : text.primary} strokeWidth={2} />
+          <Text style={[styles.compareBtnText, compareMode && { color: text.inverse }]}>{t('diario.compare_btn')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     marginTop: 16, paddingHorizontal: 18, paddingVertical: 10,
     backgroundColor: brand.primary, borderRadius: 999,
   },
-  emptyCtaText: { ...typography.kpiLabel, color: '#fff', fontSize: 11 },
+  emptyCtaText: { ...typography.kpiLabel, color: text.inverse, fontSize: 11 },
 
   compareBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: brand.primary, paddingHorizontal: 18, paddingVertical: 10,
     borderRadius: 999,
   },
-  compareBarBtnText: { ...typography.kpiLabel, color: '#fff', fontSize: 11 },
+  compareBarBtnText: { ...typography.kpiLabel, color: text.inverse, fontSize: 11 },
 
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
 });

@@ -91,7 +91,7 @@ export function PremiumGate({ require, title, description, children, compact }: 
         testID={`premium-gate-cta-${require}`}
       >
         <Text style={styles.ctaText}>{t('gate.unlock_with', { tier: tierLabel })}</Text>
-        <Ionicons name="arrow-forward" size={18} color="#fff" />
+        <Ionicons name="arrow-forward" size={18} color={colors.white} />
       </TouchableOpacity>
     </View>
   );
@@ -123,7 +123,7 @@ export function LockedTeaser({
       <Text style={lockedStyles.desc}>{description}</Text>
       <View style={lockedStyles.cta}>
         <Text style={lockedStyles.ctaText}>{t('gate.unlock_with', { tier: tierLabel })}</Text>
-        <Ionicons name="arrow-forward" size={14} color="#fff" />
+        <Ionicons name="arrow-forward" size={14} color={colors.white} />
       </View>
     </TouchableOpacity>
   );
@@ -150,7 +150,7 @@ const lockedStyles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: radius.pill,
   },
-  ctaText: { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  ctaText: { color: colors.white, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
 });
 
 const styles = StyleSheet.create({
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
   },
-  ctaText: { color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  ctaText: { color: colors.white, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
 
   compactBanner: {
     flexDirection: 'row',

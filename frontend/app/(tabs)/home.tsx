@@ -180,7 +180,7 @@ export default function Home() {
           }}
         >
           <View style={styles.nearbyIconWrap}>
-            <MapPin size={22} color="#fff" strokeWidth={2.4} />
+            <MapPin size={22} color={colors.white} strokeWidth={2.4} />
             {nearby && nearby.active > 0 ? (
               <View style={styles.nearbyLivePulse} />
             ) : null}
@@ -198,7 +198,7 @@ export default function Home() {
               <Text style={styles.nearbySub}>{t('home.nearby_tap')}</Text>
             )}
           </View>
-          <ChevronRight size={22} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
+          <ChevronRight size={22} color={colors.onDark} strokeWidth={2.4} />
         </TouchableOpacity>
 
         {/* ── I TUOI PIANI ── */}
@@ -321,7 +321,7 @@ export default function Home() {
           {Platform.OS !== 'web' && (
             <ExploreItem
               testID="health-card-button"
-              icon={<Heart size={20} color="#FF2D55" strokeWidth={2.2} fill="#FF2D55" />}
+              icon={<Heart size={20} color={colors.danger} strokeWidth={2.2} fill={colors.danger} />}
               title={Platform.OS === 'ios' ? 'Apple Health' : 'Google Health Connect'}
               onPress={() => router.push('/wearables')}
             />
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   },
   nearbyIconWrap: {
     width: 44, height: 44, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: colors.onDarkSubtle,
     alignItems: 'center', justifyContent: 'center',
     position: 'relative',
   },
@@ -576,18 +576,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2, right: -2,
     width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#22C55E',
+    backgroundColor: colors.success,
     borderWidth: 2,
     borderColor: colors.primary,
   },
   nearbyHeadline: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     fontFamily: fonts.bold,
     lineHeight: 18,
   },
   nearbySub: {
-    color: 'rgba(255,255,255,0.85)',
+    color: colors.onDark,
     fontSize: 11,
     fontFamily: fonts.medium,
     marginTop: 3,
@@ -600,10 +600,10 @@ const styles = StyleSheet.create({
   },
   nearbyLiveDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: '#22C55E',
+    backgroundColor: colors.success,
   },
   nearbyLiveText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 11,
     fontFamily: fonts.headingBold,
     letterSpacing: 0.5,

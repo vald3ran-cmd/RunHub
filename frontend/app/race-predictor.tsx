@@ -51,7 +51,7 @@ export default function RacePredictor() {
           </View>
 
           <View style={styles.icon}>
-            <Ionicons name="stopwatch" size={32} color="#fff" />
+            <Ionicons name="stopwatch" size={32} color={colors.white} />
           </View>
           <Text style={styles.title}>{t('race.title')}</Text>
           <Text style={styles.sub}>{t('race.subtitle')}</Text>
@@ -88,9 +88,9 @@ export default function RacePredictor() {
             testID="predict-submit-button"
             style={styles.btn} onPress={onPredict} disabled={loading}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : (
+            {loading ? <ActivityIndicator color={colors.white} /> : (
               <>
-                <Ionicons name="analytics" size={18} color="#fff" />
+                <Ionicons name="analytics" size={18} color={colors.white} />
                 <Text style={styles.btnText}>{t('race.calculate')}</Text>
               </>
             )}
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   colon: { color: colors.textSecondary, fontSize: 32, fontWeight: '900' },
   unit: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 4, textAlign: 'center' },
   btn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.pill, marginTop: spacing.xl },
-  btnText: { color: '#fff', fontWeight: '900', letterSpacing: 2, fontSize: 14 },
+  btnText: { color: colors.white, fontWeight: '900', letterSpacing: 2, fontSize: 14 },
   vo2Card: { marginTop: spacing.xl, padding: spacing.lg, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.primary, alignItems: 'center' },
   vo2Label: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
   vo2Value: { color: colors.primary, fontSize: 56, fontWeight: '900', letterSpacing: -2 },

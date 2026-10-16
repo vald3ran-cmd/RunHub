@@ -152,10 +152,10 @@ export default function AccountScreen() {
             testID="export-data-button"
           >
             {exporting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <>
-                <Ionicons name="download" size={20} color="#fff" />
+                <Ionicons name="download" size={20} color={colors.white} />
                 <Text style={styles.actionBtnText}>{t('account.export_cta')}</Text>
               </>
             )}
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
   },
-  actionBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  actionBtnText: { color: colors.white, fontSize: 15, fontWeight: '700' },
 
   linkRow: {
     flexDirection: 'row',

@@ -28,7 +28,7 @@ import {
   healthConnectStatusReason,
 } from '../../src/healthConnect';
 
-const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
+const { brand, neutral, text, semantic, spacing, typography, radius, semanticSoft } = tokens;
 
 function ImportaInner() {
   const router = useRouter();
@@ -197,8 +197,8 @@ function ImportaInner() {
 
         <SourceCard
           Icon={Apple}
-          iconBg="#0F172A"
-          iconColor="#FFFFFF"
+          iconBg={neutral.inverse}
+          iconColor={text.inverse}
           title={t('import.apple_title')}
           desc={t('import.apple_desc')}
           available={isIOS}
@@ -217,7 +217,7 @@ function ImportaInner() {
         <SourceCard
           Icon={Activity}
           iconBg="#1A73E8"
-          iconColor="#FFFFFF"
+          iconColor={text.inverse}
           title={t('import.hc_title')}
           desc={t('import.hc_desc')}
           available={isAndroid}
@@ -370,8 +370,8 @@ const styles = StyleSheet.create({
 
   successBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#ECFDF5', borderRadius: 12,
-    borderWidth: 1, borderColor: '#A7F3D0',
+    backgroundColor: semanticSoft.successBg, borderRadius: 12,
+    borderWidth: 1, borderColor: semanticSoft.successBorder,
     paddingHorizontal: 14, paddingVertical: 12,
   },
   successTitle: { ...typography.bodyBold, color: semantic.success, fontSize: 13 },
@@ -380,8 +380,8 @@ const styles = StyleSheet.create({
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#FEF2F2', borderRadius: 12,
-    borderWidth: 1, borderColor: '#FCA5A5',
+    backgroundColor: semanticSoft.dangerBg, borderRadius: 12,
+    borderWidth: 1, borderColor: semanticSoft.dangerBorder,
     paddingHorizontal: 14, paddingVertical: 12,
   },
   errorText: { ...typography.caption, color: semantic.danger, flex: 1, fontSize: 12 },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: 999,
   },
-  sourceCtaText: { ...typography.kpiLabel, color: '#fff', fontSize: 10 },
+  sourceCtaText: { ...typography.kpiLabel, color: text.inverse, fontSize: 10 },
 
   infoBoxHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   infoBoxTitle: { ...typography.bodyBold, color: text.primary, fontSize: 14 },

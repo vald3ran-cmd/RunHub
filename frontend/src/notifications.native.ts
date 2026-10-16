@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import { api } from './api';
 import { t } from './i18n';
+import { colors } from './theme';
 
 export const isExpoGo = Constants.appOwnership === 'expo';
 // In Expo Go su SDK 53+ expo-notifications funziona parzialmente (local),
@@ -43,13 +44,13 @@ export async function initNotifications() {
         name: t('notifications_local.channel_default'),
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF3B30',
+        lightColor: colors.primary,
       });
       await Notifications.setNotificationChannelAsync('workout', {
         name: t('notifications_local.channel_workout'),
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 400, 250, 400],
-        lightColor: '#FF3B30',
+        lightColor: colors.primary,
       });
     }
   } catch (e) {

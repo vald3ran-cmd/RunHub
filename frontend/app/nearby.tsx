@@ -136,14 +136,14 @@ export default function NearbyScreen() {
                   <RouteMap coords={mapCoords} height={200} showsUser />
                 </View>
                 <View style={styles.blurOverlay}>
-                  <Lock size={36} color="#fff" strokeWidth={2} />
+                  <Lock size={36} color={colors.white} strokeWidth={2} />
                   <Text style={styles.blurTitle}>{t('nearby.map_locked')}</Text>
                 </View>
               </View>
 
               <View style={styles.paywallInner}>
                 <View style={styles.paywallIconBox}>
-                  <Sparkles size={20} color="#fff" strokeWidth={2.4} />
+                  <Sparkles size={20} color={colors.white} strokeWidth={2.4} />
                 </View>
                 <Text style={styles.paywallEyebrow}>{t('nearby.unlock_starter_eyebrow')}</Text>
                 <Text style={styles.paywallTitle}>{t('nearby.paywall_title')}</Text>
@@ -286,7 +286,7 @@ export default function NearbyScreen() {
                     onPress={sendFriendRequest}
                     activeOpacity={0.85}
                   >
-                    <UserPlus size={18} color="#fff" strokeWidth={2.4} />
+                    <UserPlus size={18} color={colors.white} strokeWidth={2.4} />
                     <Text style={styles.addFriendBtnText}>{t('nearby.add_friend_upper')}</Text>
                   </TouchableOpacity>
                 )}
@@ -325,22 +325,22 @@ const styles = StyleSheet.create({
   heroLabel: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.bold, letterSpacing: 0.5, marginTop: -4 },
   activeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    backgroundColor: colors.successMuted,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, marginTop: spacing.sm,
   },
-  activeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22C55E' },
-  activeText: { color: '#22C55E', fontFamily: fonts.headingBold, fontSize: 11, letterSpacing: 1 },
+  activeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
+  activeText: { color: colors.success, fontFamily: fonts.headingBold, fontSize: 11, letterSpacing: 1 },
 
   // Paywall
   paywallCard: { marginHorizontal: spacing.lg, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   blurredMapWrap: { position: 'relative' },
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: colors.overlay,
     alignItems: 'center', justifyContent: 'center',
     gap: 8,
   },
-  blurTitle: { color: '#fff', fontSize: 12, fontFamily: fonts.headingBold, letterSpacing: 2 },
+  blurTitle: { color: colors.white, fontSize: 12, fontFamily: fonts.headingBold, letterSpacing: 2 },
   paywallInner: { padding: spacing.lg, alignItems: 'center', gap: 6 },
   paywallIconBox: {
     width: 44, height: 44, borderRadius: 14,
@@ -358,14 +358,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill, marginTop: 4,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 14, elevation: 6,
   },
-  upgradeBtnText: { color: '#fff', fontFamily: fonts.headingBold, fontSize: 13, letterSpacing: 1.5 },
+  upgradeBtnText: { color: colors.white, fontFamily: fonts.headingBold, fontSize: 13, letterSpacing: 1.5 },
 
   // Radius
   radiusBar: { flexDirection: 'row', gap: 6, paddingHorizontal: spacing.lg, marginVertical: spacing.sm },
   radiusPill: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   radiusPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   radiusText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bold },
-  radiusTextActive: { color: '#fff' },
+  radiusTextActive: { color: colors.white },
 
   // Map area
   mapWrap: { marginHorizontal: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
@@ -383,17 +383,17 @@ const styles = StyleSheet.create({
   },
   runnerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceSecondary },
   runnerAvatarFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
-  runnerAvatarText: { color: '#fff', fontFamily: fonts.heading, fontSize: 18 },
+  runnerAvatarText: { color: colors.white, fontFamily: fonts.heading, fontSize: 18 },
   runnerName: { color: colors.textPrimary, fontSize: 15, fontFamily: fonts.bold },
   runnerMeta: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.bold, letterSpacing: 0.4, marginTop: 2 },
-  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#22C55E' },
+  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.success },
 
   empty: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, alignItems: 'center' },
   emptyTitle: { color: colors.textPrimary, fontFamily: fonts.bold, fontSize: 15 },
   emptySub: { color: colors.textSecondary, fontFamily: fonts.medium, fontSize: 12, marginTop: 4, textAlign: 'center' },
 
   // Modal
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalBg: { flex: 1, backgroundColor: colors.overlayStrong, justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: colors.surface,
     padding: spacing.lg, paddingTop: spacing.md,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     borderWidth: 3, borderColor: colors.primary,
     marginBottom: spacing.md,
   },
-  modalAvatarText: { color: '#fff', fontFamily: fonts.heading, fontSize: 30 },
+  modalAvatarText: { color: colors.white, fontFamily: fonts.heading, fontSize: 30 },
   modalName: { color: colors.textPrimary, fontSize: 22, fontFamily: fonts.heading, letterSpacing: -0.4 },
   modalMeta: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.headingBold, letterSpacing: 1, marginTop: 4 },
   statsGrid: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg, alignSelf: 'stretch' },
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 14, elevation: 6,
   },
-  addFriendBtnText: { color: '#fff', fontSize: 13, fontFamily: fonts.headingBold, letterSpacing: 1.5 },
+  addFriendBtnText: { color: colors.white, fontSize: 13, fontFamily: fonts.headingBold, letterSpacing: 1.5 },
   friendChip: {
     marginTop: spacing.lg, marginBottom: spacing.md, alignSelf: 'stretch',
     backgroundColor: colors.surfaceSecondary, paddingVertical: 14, borderRadius: radius.pill,

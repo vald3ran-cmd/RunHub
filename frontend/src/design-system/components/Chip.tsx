@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, StyleProp, TouchableOpacity } from 'react-native';
-import { brand, neutral, semantic, text, radius, spacing, typography } from '../tokens';
+import { brand, neutral, semantic, text, radius, spacing, typography, semanticSoft } from '../tokens';
 
 type Tone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -17,17 +17,17 @@ type Props = {
 const TONE_MAP: Record<Tone, { bg: string; fg: string; border: string }> = {
   neutral: { bg: neutral.surfaceSoft, fg: text.secondary, border: neutral.border },
   brand:   { bg: brand.subtle, fg: brand.primary, border: brand.light },
-  success: { bg: '#D1FAE5', fg: semantic.success, border: '#A7F3D0' },
-  warning: { bg: '#FEF3C7', fg: semantic.warning, border: '#FDE68A' },
-  danger:  { bg: '#FEE2E2', fg: semantic.danger, border: '#FECACA' },
-  info:    { bg: '#DBEAFE', fg: semantic.info, border: '#BFDBFE' },
+  success: { bg: semanticSoft.successBg, fg: semantic.success, border: semanticSoft.successBorder },
+  warning: { bg: semanticSoft.warningBg, fg: semantic.warning, border: semanticSoft.warningBorder },
+  danger:  { bg: semanticSoft.dangerBg, fg: semantic.danger, border: semanticSoft.dangerBorder },
+  info:    { bg: semanticSoft.infoBg, fg: semantic.info, border: semanticSoft.infoBorder },
 };
 
 export function Chip({ label, tone = 'neutral', filled = true, icon, style, selected, onPress }: Props) {
   const c = TONE_MAP[tone];
   // When `selected` is true → render orange brand fill irrespective of tone.
   const colors = selected
-    ? { bg: brand.primary, fg: '#FFFFFF', border: brand.primary }
+    ? { bg: brand.primary, fg: text.inverse, border: brand.primary }
     : c;
   const Wrap: any = onPress ? TouchableOpacity : View;
   const wrapProps = onPress ? { onPress, activeOpacity: 0.7 } : {};

@@ -45,6 +45,7 @@ export const colors = {
   infoMuted: 'rgba(14,165,233,0.10)',
   danger: '#DC2626',
   dangerMuted: 'rgba(220,38,38,0.10)',
+  dangerBorder: 'rgba(220,38,38,0.25)',
 
   // Progress
   progressTrack: '#E2E8F0',
@@ -69,6 +70,9 @@ export const colors = {
 
 // Scrim per testo sopra immagini (LinearGradient)
 export const imageScrim = ['transparent', 'rgba(15,23,42,0.45)', 'rgba(15,23,42,0.85)'] as const;
+
+// Scala intensità heatmap (dato, non brand): dal più caldo al più freddo
+export const heatScale = ['#FF3B30', '#FF6B6B', '#FF9500', '#FFD60A', 'rgba(255,149,0,0.55)'] as const;
 
 export const fonts = {
   heading: 'Inter_900Black',

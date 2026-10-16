@@ -17,14 +17,14 @@ import { ChevronLeft, Settings, Target, ChevronRight, X, Check } from 'lucide-re
 import { tokens, FontProvider } from '../../src/design-system';
 import { useT } from '../../src/i18n';
 
-const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
+const { brand, neutral, text, semantic, semanticSoft, spacing, typography, radius } = tokens;
 
 type ActivityKey = 'run' | 'walk' | 'bike';
 
 const THEMES: Record<ActivityKey, { primary: string; subtle: string; light: string }> = {
   run:  { primary: brand.primary, subtle: brand.subtle, light: brand.light },
-  walk: { primary: '#16A34A',     subtle: '#D1FAE5',    light: '#A7F3D0' },
-  bike: { primary: '#2563EB',     subtle: '#DBEAFE',    light: '#BFDBFE' },
+  walk: { primary: semantic.success, subtle: semanticSoft.successBg, light: semanticSoft.successBorder },
+  bike: { primary: brand.accent,     subtle: brand.accentSubtle,      light: brand.accentLight },
 };
 
 const ACTIVITIES: Array<{
@@ -143,7 +143,7 @@ function RunInner() {
                 {isSel ? <View style={[styles.actUnderline, { backgroundColor: actTheme.primary }]} /> : null}
                 {isSel ? (
                   <View style={[styles.actCheck, { backgroundColor: actTheme.primary }]}>
-                    <Check size={12} color="#fff" strokeWidth={3} />
+                    <Check size={12} color={text.inverse} strokeWidth={3} />
                   </View>
                 ) : null}
               </TouchableOpacity>
@@ -298,7 +298,7 @@ function SwitchRow({ label, desc, value, onChange }:
       </View>
       <Switch value={value} onValueChange={onChange}
         trackColor={{ false: neutral.surfaceSoft, true: brand.subtle }}
-        thumbColor={value ? brand.primary : '#fff'} />
+        thumbColor={value ? brand.primary : neutral.card} />
     </View>
   );
 }
@@ -315,7 +315,7 @@ function SegmentedControl<T extends string>({ value, options, onChange }:
             style={[styles.segBtn, active && styles.segBtnActive]}
             onPress={() => onChange(opt.v)}
           >
-            <Text style={[styles.segBtnText, active && { color: '#fff' }]}>{opt.l}</Text>
+            <Text style={[styles.segBtnText, active && { color: text.inverse }]}>{opt.l}</Text>
           </TouchableOpacity>
         );
       })}
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
     paddingVertical: 18, borderRadius: radius.button, marginTop: spacing.xl },
   ctaIcon: { width: 24, height: 24 },
-  ctaText: { ...typography.kpiLabel, color: '#fff', fontSize: 13 },
+  ctaText: { ...typography.kpiLabel, color: text.inverse, fontSize: 13 },
 
   diagLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 14, marginTop: 4 },
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   diagText: { ...typography.body, color: text.muted, fontSize: 13 },
 
   // Modal
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'flex-end' },
+  modalBackdrop: { flex: 1, backgroundColor: neutral.overlay, justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: neutral.background, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingTop: 6, maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

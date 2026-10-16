@@ -18,7 +18,7 @@ import {
   JetBrainsMono_600SemiBold,
   JetBrainsMono_700Bold,
 } from '@expo-google-fonts/jetbrains-mono';
-import { neutral } from './tokens';
+import { brand, neutral } from './tokens';
 
 export function useLabFonts() {
   const [ready] = useInterFonts({
@@ -39,7 +39,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: neutral.background }}>
-        <ActivityIndicator color="#E85D04" />
+        <ActivityIndicator color={brand.primary} />
       </View>
     );
   }

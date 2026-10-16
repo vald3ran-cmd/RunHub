@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/api';
-import { colors, spacing, radius } from '../src/theme';
+import { colors, spacing, radius, heatScale } from '../src/theme';
 import { HeatmapView } from '../src/Heatmap';
 import { useT } from '../src/i18n';
 
@@ -68,19 +68,19 @@ export default function HeatmapScreen() {
             <View style={styles.legend}>
               <Text style={styles.legendTitle}>{t('heatmap.legend')}</Text>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
+                <View style={[styles.legendDot, { backgroundColor: heatScale[0] }]} />
                 <Text style={styles.legendText}>{t('heatmap.last_run')}</Text>
               </View>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
+                <View style={[styles.legendDot, { backgroundColor: heatScale[2] }]} />
                 <Text style={styles.legendText}>{t('heatmap.recent_5')}</Text>
               </View>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#FFD60A' }]} />
+                <View style={[styles.legendDot, { backgroundColor: heatScale[3] }]} />
                 <Text style={styles.legendText}>{t('heatmap.history_10')}</Text>
               </View>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: 'rgba(255, 149, 0, 0.55)' }]} />
+                <View style={[styles.legendDot, { backgroundColor: heatScale[4] }]} />
                 <Text style={styles.legendText}>{t('heatmap.older')}</Text>
               </View>
             </View>
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800', marginTop: spacing.md },
   emptyText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
   emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.pill, marginTop: spacing.md },
-  emptyBtnText: { color: '#fff', fontWeight: '800', letterSpacing: 1 },
+  emptyBtnText: { color: colors.white, fontWeight: '800', letterSpacing: 1 },
   legend: { marginTop: spacing.lg, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
   legendTitle: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: spacing.sm },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: 4 },

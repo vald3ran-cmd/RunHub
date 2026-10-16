@@ -181,7 +181,7 @@ export function RouteMap({
               id="start-circle-outer"
               style={{
                 circleRadius: 9,
-                circleColor: '#FFFFFF',
+                circleColor: colors.white,
                 circleOpacity: 0.9,
               }}
             />
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: colors.surfaceSecondary,
   },
   empty: {
     borderRadius: radius.lg,
@@ -213,6 +213,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  fill: { flex: 1, overflow: 'hidden', backgroundColor: '#0A0A0A' },
-  fillEmpty: { flex: 1, backgroundColor: '#0A0A0A' },
+  fill: { flex: 1, overflow: 'hidden', backgroundColor: colors.surfaceSecondary },
+  fillEmpty: { flex: 1, backgroundColor: colors.surfaceSecondary },
 });

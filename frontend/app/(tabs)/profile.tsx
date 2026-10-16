@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: oldColors.dangerMuted,
+    borderColor: oldColors.dangerBorder,
   },
   logoutText: {
     color: colors.danger,

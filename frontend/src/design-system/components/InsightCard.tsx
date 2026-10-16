@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     backgroundColor: brand.subtle,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#FFE0C2',
+    borderColor: brand.subtleBorder,
     padding: spacing.lg,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   timestamp: { ...typography.caption, color: text.muted },
   body: { ...typography.body, color: text.primary, lineHeight: 22 },
   confRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
-  confTrack: { flex: 1, height: 4, backgroundColor: '#FFE0C2', borderRadius: 999, overflow: 'hidden' },
+  confTrack: { flex: 1, height: 4, backgroundColor: brand.subtleBorder, borderRadius: 999, overflow: 'hidden' },
   confFill: { height: '100%', backgroundColor: brand.primary, borderRadius: 999 },
   confLabel: { ...typography.caption, color: brand.dark, fontFamily: typography.kpiLabel.fontFamily, fontSize: 10 },
 });

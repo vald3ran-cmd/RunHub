@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import MapView, { Polyline as MapPolyline } from 'react-native-maps';
-import { colors, radius } from './theme';
+import { colors, radius, heatScale } from './theme';
 
 type Coord = { lat: number; lng: number };
 type Route = { session_id: string; coords: Coord[]; completed_at?: string };
@@ -30,11 +30,11 @@ export function HeatmapView({ routes, height = 400 }: Props) {
 
   // Generate color for each route based on recency index
   const colorFor = (idx: number) => {
-    if (idx === 0) return '#FF3B30';
-    if (idx <= 2) return '#FF6B6B';
-    if (idx <= 5) return '#FF9500';
-    if (idx <= 10) return '#FFD60A';
-    return 'rgba(255, 149, 0, 0.55)';
+    if (idx === 0) return heatScale[0];
+    if (idx <= 2) return heatScale[1];
+    if (idx <= 5) return heatScale[2];
+    if (idx <= 10) return heatScale[3];
+    return heatScale[4];
   };
 
   return (

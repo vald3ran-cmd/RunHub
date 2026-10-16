@@ -52,13 +52,13 @@ export default function BadgesScreen() {
               style={[styles.card, b.earned && styles.cardEarned]}
             >
               <View style={[styles.iconBox, b.earned && styles.iconBoxEarned]}>
-                <Ionicons name={b.icon as any} size={32} color={b.earned ? '#fff' : colors.textMuted} />
+                <Ionicons name={b.icon as any} size={32} color={b.earned ? colors.white : colors.textMuted} />
               </View>
               <Text style={[styles.cardTitle, !b.earned && { color: colors.textSecondary }]}>{translateBadgeTitle(b, t)}</Text>
               <Text style={styles.cardDesc}>{translateBadgeDesc(b, t)}</Text>
               {b.earned ? (
                 <View style={styles.earnedBadge}>
-                  <Ionicons name="checkmark" size={12} color="#fff" />
+                  <Ionicons name="checkmark" size={12} color={colors.white} />
                   <Text style={styles.earnedText}>{t('badges.earned')}</Text>
                 </View>
               ) : (
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '800', textAlign: 'center', marginTop: spacing.sm },
   cardDesc: { color: colors.textSecondary, fontSize: 10, textAlign: 'center', minHeight: 26 },
   earnedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.success, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, marginTop: spacing.xs },
-  earnedText: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  earnedText: { color: colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   lockedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceSecondary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, marginTop: spacing.xs },
   lockedText: { color: colors.textMuted, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
 });

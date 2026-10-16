@@ -72,7 +72,7 @@ export default function ForgotPassword() {
                 placeholder={t('auth.email_placeholder')} placeholderTextColor={colors.textMuted}
               />
               <TouchableOpacity testID="send-code-btn" style={styles.button} onPress={sendCode} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t('auth.send_code')}</Text>}
+                {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>{t('auth.send_code')}</Text>}
               </TouchableOpacity>
             </>
           ) : (
@@ -99,7 +99,7 @@ export default function ForgotPassword() {
                 placeholder="********" placeholderTextColor={colors.textMuted}
               />
               <TouchableOpacity testID="reset-pwd-btn" style={styles.button} onPress={resetPwd} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t('auth.reset_cta')}</Text>}
+                {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>{t('auth.reset_cta')}</Text>}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setStep('email')} style={{ marginTop: spacing.md }}>
                 <Text style={styles.link}>{t('auth.didnt_receive_code')} <Text style={{ color: colors.primary }}>{t('auth.resend')}</Text></Text>
@@ -136,6 +136,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.pill,
     alignItems: 'center', marginTop: spacing.lg, minHeight: 50, justifyContent: 'center',
   },
-  buttonText: { color: '#fff', fontWeight: '800', letterSpacing: 2 },
+  buttonText: { color: colors.white, fontWeight: '800', letterSpacing: 2 },
   link: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
 });

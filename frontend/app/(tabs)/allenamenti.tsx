@@ -120,7 +120,7 @@ function PianoView({ router }: { router: any }) {
         onPress={() => router.push('/(tabs)/run')}
         activeOpacity={0.85}
       >
-        <Play size={20} color="#fff" strokeWidth={2.5} fill="#fff" />
+        <Play size={20} color={text.inverse} strokeWidth={2.5} fill={text.inverse} />
         <Text style={styles.startSessionBtnText}>{t('workouts.start_session')}</Text>
       </TouchableOpacity>
 
@@ -130,7 +130,7 @@ function PianoView({ router }: { router: any }) {
         <Text style={styles.todayMeta}>{t('workouts.plans_meta')}</Text>
         <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/plans')} activeOpacity={0.85}>
           <Text style={styles.ctaBtnText}>{t('workouts.view_plans')}</Text>
-          <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+          <ChevronRight size={14} color={text.inverse} strokeWidth={2.5} />
         </TouchableOpacity>
       </Card>
 
@@ -144,7 +144,7 @@ function PianoView({ router }: { router: any }) {
         </View>
         <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/ai-generate')} activeOpacity={0.85}>
           <Text style={styles.ctaBtnText}>{t('workouts.generate_ai_plan')}</Text>
-          <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+          <ChevronRight size={14} color={text.inverse} strokeWidth={2.5} />
         </TouchableOpacity>
       </Card>
 
@@ -162,7 +162,7 @@ function PianoView({ router }: { router: any }) {
           activeOpacity={0.85}
         >
           <Text style={styles.ctaBtnText}>{t('workouts.open_predictor')}</Text>
-          <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+          <ChevronRight size={14} color={text.inverse} strokeWidth={2.5} />
         </TouchableOpacity>
       </Card>
     </>
@@ -199,7 +199,7 @@ function ObiettiviView({ goals, loading, onDelete, onAdd, router, hasStarter }: 
         />
       ) : (
         <TouchableOpacity style={styles.addGoalBtn} onPress={onAdd} activeOpacity={0.85}>
-          <Plus size={16} color="#fff" strokeWidth={2.5} />
+          <Plus size={16} color={text.inverse} strokeWidth={2.5} />
           <Text style={styles.addGoalBtnText}>{t('workouts.add_goal')}</Text>
         </TouchableOpacity>
       )}
@@ -366,7 +366,7 @@ function AddGoalModal({ visible, onClose, onSaved }: {
             placeholder="2026-10-15" placeholderTextColor={text.muted} />
 
           <TouchableOpacity style={styles.saveGoalBtn} onPress={save} disabled={saving} activeOpacity={0.85}>
-            {saving ? <ActivityIndicator size="small" color="#fff" /> :
+            {saving ? <ActivityIndicator size="small" color={text.inverse} /> :
               <Text style={styles.saveGoalBtnText}>{t('workouts.save_goal')}</Text>}
           </TouchableOpacity>
         </ScrollView>
@@ -379,8 +379,8 @@ function AddGoalModal({ visible, onClose, onSaved }: {
 function SegmentBtn({ label, Icon, active, onPress }: { label: string; Icon: any; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.segBtn, active && styles.segBtnActive]} onPress={onPress} activeOpacity={0.8}>
-      <Icon size={14} color={active ? '#fff' : text.secondary} strokeWidth={2.2} />
-      <Text style={[styles.segBtnText, active && { color: '#fff' }]}>{label}</Text>
+      <Icon size={14} color={active ? text.inverse : text.secondary} strokeWidth={2.2} />
+      <Text style={[styles.segBtnText, active && { color: text.inverse }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     gap: 6, backgroundColor: brand.primary,
     paddingVertical: 12, borderRadius: 999, marginTop: spacing.md,
   },
-  ctaBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 11 },
+  ctaBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 11 },
   aiRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
   aiTitle: { ...typography.bodyBold, color: text.primary },
   aiSub: { ...typography.caption, color: text.secondary, marginTop: 2 },
@@ -425,13 +425,13 @@ const styles = StyleSheet.create({
     shadowColor: brand.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
     elevation: 4,
   },
-  startSessionBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 14, letterSpacing: 1 },
+  startSessionBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 14, letterSpacing: 1 },
   addGoalBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, backgroundColor: brand.primary,
     paddingVertical: 14, borderRadius: 999,
   },
-  addGoalBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 12 },
+  addGoalBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 12 },
 
   emptyGoals: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
   emptyGoalsTitle: { ...typography.bodyBold, color: text.primary, fontSize: 18 },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   typeBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: neutral.border, alignItems: 'center' },
   typeBtnActive: { backgroundColor: brand.primary, borderColor: brand.primary },
   typeBtnText: { ...typography.kpiLabel, color: text.secondary, fontSize: 10 },
-  typeBtnTextActive: { color: '#fff' },
+  typeBtnTextActive: { color: text.inverse },
   saveGoalBtn: { backgroundColor: brand.primary, paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.xl },
-  saveGoalBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 12 },
+  saveGoalBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 12 },
 });

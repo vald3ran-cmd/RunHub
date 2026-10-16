@@ -130,7 +130,7 @@ function LabInner() {
           <Text style={styles.emptyBody}>{t('lab.empty_desc')}</Text>
           <TouchableOpacity style={styles.emptyCta} onPress={() => router.push('/(tabs)/importa')}>
             <Text style={styles.emptyCtaText}>{t('lab.empty_go_import')}</Text>
-            <ChevronRight size={14} color="#fff" strokeWidth={2.4} />
+            <ChevronRight size={14} color={text.inverse} strokeWidth={2.4} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.emptyCtaGhost} onPress={() => router.push('/(tabs)/run')}>
             <Text style={styles.emptyCtaGhostText}>{t('lab.empty_start_run')}</Text>
@@ -287,7 +287,7 @@ function LabInner() {
             </View>
             <View style={styles.nextCta}>
               <Text style={styles.nextCtaText}>{t('lab.details')}</Text>
-              <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
+              <ChevronRight size={14} color={text.inverse} strokeWidth={2.5} />
             </View>
           </TouchableOpacity>
         ) : (
@@ -460,7 +460,7 @@ const hsStyles = StyleSheet.create({
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   pillActive: { backgroundColor: brand.primary },
   pillText: { ...typography.caption, color: text.muted, fontWeight: '700' },
-  pillTextActive: { color: '#fff' },
+  pillTextActive: { color: text.inverse },
   kpiRow: { flexDirection: 'row', marginBottom: spacing.md },
   kpi: { flex: 1, alignItems: 'center' },
   kpiValue: { ...typography.kpiValue, color: text.primary, fontSize: 22 },
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.sectionTitle, color: text.primary, fontSize: 24, textAlign: 'center' },
   emptyBody: { ...typography.body, color: text.secondary, textAlign: 'center', maxWidth: 320, lineHeight: 22 },
   emptyCta: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: brand.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, marginTop: 8 },
-  emptyCtaText: { ...typography.kpiLabel, color: '#fff', fontSize: 11 },
+  emptyCtaText: { ...typography.kpiLabel, color: text.inverse, fontSize: 11 },
   emptyCtaGhost: { paddingVertical: 10 },
   emptyCtaGhostText: { ...typography.kpiLabel, color: text.muted, fontSize: 11 },
 
@@ -507,16 +507,16 @@ const styles = StyleSheet.create({
 
   scroll: { padding: spacing.marginApp, paddingTop: spacing.sm, gap: spacing.gapSection },
 
-  hero: { backgroundColor: '#0F172A', borderRadius: radius.card, padding: spacing.xl },
-  heroLabel: { ...typography.kpiLabel, color: '#94A3B8' },
+  hero: { backgroundColor: neutral.inverse, borderRadius: radius.card, padding: spacing.xl },
+  heroLabel: { ...typography.kpiLabel, color: text.muted },
   heroBody: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
   heroScoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   heroLetter: { ...typography.heroMetric, color: brand.primary, fontSize: 72, lineHeight: 76 },
   heroValue: { ...typography.heroMetric, color: text.inverse, fontSize: 32, lineHeight: 36, marginBottom: 6 },
-  heroOver: { ...typography.body, color: '#94A3B8', fontSize: 14 },
+  heroOver: { ...typography.body, color: text.muted, fontSize: 14 },
   heroChartWrap: { flex: 1, marginLeft: spacing.md },
   heroTrend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
-  heroTrendText: { ...typography.caption, color: '#94A3B8', letterSpacing: 0.3, flex: 1 },
+  heroTrendText: { ...typography.caption, color: text.muted, letterSpacing: 0.3, flex: 1 },
 
   kpiRow: { flexDirection: 'row', gap: spacing.sm },
 
@@ -535,16 +535,16 @@ const styles = StyleSheet.create({
     backgroundColor: brand.primary, borderRadius: radius.card,
     padding: spacing.lg,
   },
-  nextLabel: { ...typography.kpiLabel, color: '#FFD9BA' },
-  nextTitle: { ...typography.bodyBold, color: '#fff', fontSize: 18, marginTop: 2 },
-  nextMeta: { ...typography.caption, color: '#FFD9BA', marginTop: 2 },
+  nextLabel: { ...typography.kpiLabel, color: text.inverseMuted },
+  nextTitle: { ...typography.bodyBold, color: text.inverse, fontSize: 18, marginTop: 2 },
+  nextMeta: { ...typography.caption, color: text.inverseMuted, marginTop: 2 },
   nextCta: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: text.inverseSubtle,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radius.pill,
   },
-  nextCtaText: { color: '#fff', ...typography.kpiLabel, fontSize: 10 },
+  nextCtaText: { color: text.inverse, ...typography.kpiLabel, fontSize: 10 },
 
   predRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs },
   predCol: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm },

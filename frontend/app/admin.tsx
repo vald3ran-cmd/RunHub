@@ -53,9 +53,9 @@ export default function AdminPanel() {
   };
 
   const tierColor = (t?: string) => {
-    if (t === 'elite') return '#F59E0B';
+    if (t === 'elite') return colors.gold;
     if (t === 'performance') return colors.primary;
-    if (t === 'starter') return '#10B981';
+    if (t === 'starter') return colors.success;
     return colors.textMuted;
   };
 
@@ -122,15 +122,15 @@ const styles = StyleSheet.create({
   sub: { color: colors.textSecondary, fontSize: 12 },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
   avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  avatarText: { color: colors.white, fontSize: 18, fontWeight: '900' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { color: colors.textPrimary, fontSize: 15, fontWeight: '800', flexShrink: 1 },
   adminBadge: { backgroundColor: colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
-  adminText: { color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  adminText: { color: colors.white, fontSize: 8, fontWeight: '900', letterSpacing: 1 },
   email: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
   meta: { flexDirection: 'row', gap: 8, marginTop: 6, alignItems: 'center' },
   tierBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
-  tierText: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  tierText: { color: colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   metaText: { color: colors.textSecondary, fontSize: 11 },
   deleteBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
 });

@@ -195,10 +195,10 @@ export default function WearablesScreen() {
           disabled={syncing}
         >
           {syncing ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
-              <Ionicons name="sync" size={20} color="#fff" />
+              <Ionicons name="sync" size={20} color={colors.white} />
               <Text style={styles.syncText}>{t('wearables.sync_now')}</Text>
             </>
           )}
@@ -262,11 +262,11 @@ const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontSize: 18, fontWeight: '900', letterSpacing: 2 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg },
   brandText: { color: colors.textPrimary, fontSize: 14, fontWeight: '900', letterSpacing: 2 },
-  warnBox: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, backgroundColor: 'rgba(255,149,0,0.1)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.warning, marginBottom: spacing.lg },
+  warnBox: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.warningMuted, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.warning, marginBottom: spacing.lg },
   warnTitle: { color: colors.warning, fontSize: 13, fontWeight: '800' },
   warnText: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
   syncBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.pill, minHeight: 52 },
-  syncText: { color: '#fff', fontSize: 14, fontWeight: '900', letterSpacing: 2 },
+  syncText: { color: colors.white, fontSize: 14, fontWeight: '900', letterSpacing: 2 },
   sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 2, marginTop: spacing.xl, marginBottom: spacing.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   card: { flex: 1, minWidth: '45%', padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 6 },

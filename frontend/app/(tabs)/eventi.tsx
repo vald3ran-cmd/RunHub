@@ -14,7 +14,7 @@ import { tokens, FontProvider, Card, Chip } from '../../src/design-system';
 import { api } from '../../src/api';
 import { useT } from '../../src/i18n';
 
-const { brand, neutral, text, semantic, spacing, typography, radius } = tokens;
+const { brand, neutral, text, semantic, spacing, typography, radius, semanticSoft } = tokens;
 
 type EventLevel = 'beginner' | 'intermediate' | 'advanced';
 type EventStatus = 'active' | 'cancelled' | 'completed';
@@ -245,7 +245,7 @@ function EventiInner() {
       </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowCreateModal(true)} activeOpacity={0.85}>
-        <Plus size={26} color="#fff" strokeWidth={2.5} />
+        <Plus size={26} color={text.inverse} strokeWidth={2.5} />
       </TouchableOpacity>
 
       <CreateEventModal
@@ -558,7 +558,7 @@ function CreateEventModal({ visible, onClose, onSaved }: {
           </View>
 
           <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={saving} activeOpacity={0.85}>
-            {saving ? <ActivityIndicator size="small" color="#fff" /> :
+            {saving ? <ActivityIndicator size="small" color={text.inverse} /> :
               <Text style={styles.saveBtnText}>{t('eventi.create')}</Text>}
           </TouchableOpacity>
         </ScrollView>
@@ -571,8 +571,8 @@ function CreateEventModal({ visible, onClose, onSaved }: {
 function SegmentBtn({ label, Icon, active, onPress }: { label: string; Icon: any; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.segBtn, active && styles.segBtnActive]} onPress={onPress} activeOpacity={0.8}>
-      <Icon size={14} color={active ? '#fff' : text.secondary} strokeWidth={2.2} />
-      <Text style={[styles.segBtnText, active && { color: '#fff' }]}>{label}</Text>
+      <Icon size={14} color={active ? text.inverse : text.secondary} strokeWidth={2.2} />
+      <Text style={[styles.segBtnText, active && { color: text.inverse }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   gpsBanner: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   gpsBannerText: { ...typography.body, color: text.secondary, textAlign: 'center' },
   gpsBtn: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: 999 },
-  gpsBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 11 },
+  gpsBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 11 },
 
   emptyState: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
   emptyTitle: { ...typography.bodyBold, color: text.primary, fontSize: 16, textAlign: 'center' },
@@ -623,10 +623,10 @@ const styles = StyleSheet.create({
 
   statusPill: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: 999 },
   statusPillNeutral: { backgroundColor: neutral.surfaceSoft },
-  statusPillJoined: { backgroundColor: '#D1FAE5' },
+  statusPillJoined: { backgroundColor: semanticSoft.successBg },
   statusPillText: { ...typography.kpiLabel, color: text.secondary, fontSize: 10 },
   joinBtn: { alignSelf: 'flex-start', backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: 999 },
-  joinBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 11 },
+  joinBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 11 },
 
   fab: {
     position: 'absolute', bottom: 90, right: 20,
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   typeBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: neutral.border, alignItems: 'center' },
   typeBtnActive: { backgroundColor: brand.primary, borderColor: brand.primary },
   typeBtnText: { ...typography.kpiLabel, color: text.secondary, fontSize: 9 },
-  typeBtnTextActive: { color: '#fff' },
+  typeBtnTextActive: { color: text.inverse },
   saveBtn: { backgroundColor: brand.primary, paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.xl },
-  saveBtnText: { color: '#fff', ...typography.kpiLabel, fontSize: 12 },
+  saveBtnText: { color: text.inverse, ...typography.kpiLabel, fontSize: 12 },
 });

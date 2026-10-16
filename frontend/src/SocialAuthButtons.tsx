@@ -119,6 +119,7 @@ const styles = StyleSheet.create({
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: '#fff', paddingVertical: spacing.md, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.border,
     minHeight: 50,
   },
   googleBtnText: { color: '#000', fontWeight: '700', fontSize: 15 },
