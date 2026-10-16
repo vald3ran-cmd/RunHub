@@ -6,11 +6,13 @@
 
 // ─── COLORI BRAND ────────────────────────────────────
 export const brand = {
-  primary: '#E85D04',       // Brand primary (call to action, logo)
-  secondary: '#F97316',     // Hover, gradient end
-  light: '#FFB183',         // Accent secondario
-  subtle: '#FFF3E8',        // Brand background subtle (cards highlight)
-  dark: '#C2410C',          // Pressed state
+  primary: '#2563EB',       // Brand primary (call to action)
+  secondary: '#4F46E5',     // Indigo — hover, gradient end
+  accent: '#7C3AED',        // Violet — highlight secondari
+  light: '#93C5FD',         // Accent chiaro
+  subtle: '#EFF6FF',        // Brand background subtle (cards highlight)
+  dark: '#1D4ED8',          // Pressed state
+  logo: '#E85D04',          // Arancione brand — SOLO per il logo
 } as const;
 
 // ─── COLORI SEMANTICI ─────────────────────────────────
@@ -18,12 +20,12 @@ export const semantic = {
   success: '#059669',       // Verde — recovery, PR, completato
   warning: '#D97706',       // Arancio attenzione — ramping, occhio
   danger: '#DC2626',        // Rosso — overload, errore
-  info: '#2563EB',          // Blu — informativo, easy zone
+  info: '#0EA5E9',          // Azzurro — informativo, easy zone
 } as const;
 
 // ─── NEUTRI / SUPERFICI ───────────────────────────────
 export const neutral = {
-  background: '#F8FAFC',    // App background
+  background: '#F6F8FC',    // App background
   card: '#FFFFFF',          // Card primaria
   surfaceSoft: '#F1F5F9',   // Hover, separator
   border: '#E2E8F0',        // Border sottile
@@ -33,7 +35,7 @@ export const neutral = {
 // ─── TESTO ─────────────────────────────────────────────
 export const text = {
   primary: '#0F172A',       // Testo principale (slate-900)
-  secondary: '#475569',     // Testo secondario
+  secondary: '#64748B',     // Testo secondario
   muted: '#94A3B8',         // Caption, label muted
   disabled: '#CBD5E1',
   inverse: '#FFFFFF',       // Testo su fondo brand/scuro
@@ -50,9 +52,9 @@ export const hrZones = {
 
 // ─── CHART LINES ──────────────────────────────────────
 export const chart = {
-  linePrimary: '#E85D04',
+  linePrimary: '#2563EB',
   lineSecondary: '#059669',
-  lineTertiary: '#2563EB',
+  lineTertiary: '#7C3AED',
   grid: '#E2E8F0',
   axisLabel: '#647488',
   legend: '#475569',
@@ -64,8 +66,8 @@ export const chart = {
 
 // ─── GRADIENT (per card hero) ──────────────────────────
 export const gradient = {
-  primary: ['#FF8A33', '#E85D04'] as const,
-  soft: ['#FFF3E8', '#FFE7D6'] as const,
+  primary: ['#4F46E5', '#2563EB'] as const,
+  soft: ['#EFF6FF', '#E0E7FF'] as const,
 } as const;
 
 // ─── SPACING (8px base) ───────────────────────────────

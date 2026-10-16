@@ -1,45 +1,55 @@
 // ─────────────────────────────────────────────────────────────
-// RunHub Design System — Premium Dark Theme + Vibrant Orange
-// Inspirato a Nike Run / Strava Premium
+// RunHub Design System — Light Blue professionale
+// Primary #2563EB · Secondary #4F46E5 · Accent #7C3AED
+// L'arancione brand (#E85D04) è riservato al logo (colors.brandLogo).
 // ─────────────────────────────────────────────────────────────
 
 export const colors = {
   // Base
-  background: '#000000',           // pure black
-  surface: '#161616',              // cards
-  surfaceSecondary: '#1F1F1F',     // secondary surface
-  surfaceElevated: '#1C1C1C',      // elevated cards
+  background: '#F6F8FC',           // app background
+  surface: '#FFFFFF',              // cards
+  surfaceSecondary: '#F1F5F9',     // secondary surface
+  surfaceElevated: '#FFFFFF',      // elevated cards
 
-  // Brand — Vibrant Orange
-  primary: '#FF6B1F',              // RunHub orange
-  primaryHover: '#FF8543',
-  primaryMuted: 'rgba(255,107,31,0.14)', // orange with alpha for icon bg
-  primaryDark: '#E55A0F',
+  // Brand — Light Blue professionale
+  primary: '#2563EB',
+  primaryHover: '#3B82F6',
+  primaryMuted: 'rgba(37,99,235,0.10)', // blue with alpha for icon bg
+  primaryDark: '#1D4ED8',
+  secondary: '#4F46E5',
+  secondaryMuted: 'rgba(79,70,229,0.10)',
+  accent: '#7C3AED',
+  accentMuted: 'rgba(124,58,237,0.10)',
+
+  // Logo — l'arancione brand vive SOLO qui
+  brandLogo: '#E85D04',
 
   // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
+  textPrimary: '#0F172A',
+  textSecondary: '#64748B',
+  textMuted: '#94A3B8',
+  textInverse: '#FFFFFF',
 
   // Borders / dividers
-  border: '#262626',
-  borderLight: '#1F1F1F',
+  border: '#E2E8F0',
+  borderLight: '#EEF2F7',
 
   // Functional
-  success: '#22C55E',
-  successMuted: 'rgba(34,197,94,0.15)',
-  warning: '#F59E0B',
-  warningMuted: 'rgba(245,158,11,0.15)',
-  info: '#3B82F6',
-  infoMuted: 'rgba(59,130,246,0.15)',
-  danger: '#EF4444',
+  success: '#16A34A',
+  successMuted: 'rgba(22,163,74,0.10)',
+  warning: '#D97706',
+  warningMuted: 'rgba(217,119,6,0.10)',
+  info: '#0EA5E9',
+  infoMuted: 'rgba(14,165,233,0.10)',
+  danger: '#DC2626',
+  dangerMuted: 'rgba(220,38,38,0.10)',
 
   // Progress
-  progressTrack: '#262626',
+  progressTrack: '#E2E8F0',
 
   // Overlays
-  overlay: 'rgba(0,0,0,0.55)',
-  overlayStrong: 'rgba(0,0,0,0.75)',
+  overlay: 'rgba(15,23,42,0.45)',
+  overlayStrong: 'rgba(15,23,42,0.70)',
   black: '#000000',
   white: '#FFFFFF',
 };
@@ -63,33 +73,33 @@ export const radius = {
   sm: 8, md: 14, lg: 18, xl: 24, xxl: 32, pill: 999,
 };
 
-// Shadow presets — sottili sul dark, glow arancione per CTA
+// Shadow presets — morbide sul light, glow blu per CTA
 export const shadows = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
   },
   md: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.07,
     shadowRadius: 10,
     elevation: 2,
   },
   lg: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.09,
     shadowRadius: 20,
     elevation: 4,
   },
-  orange: {
-    shadowColor: '#FF6B1F',
+  primary: {
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 6,
   },
@@ -125,9 +135,9 @@ export const activityMeta: Record<ActivityType, {
   colorMuted: string;
   kcalPerKm: number;
 }> = {
-  run:  { label: 'CORSA',      shortLabel: 'Corsa',     color: '#FF6B1F', colorMuted: 'rgba(255,107,31,0.15)', kcalPerKm: 65 },
-  walk: { label: 'CAMMINATA',  shortLabel: 'Camminata', color: '#22C55E', colorMuted: 'rgba(34,197,94,0.15)',  kcalPerKm: 50 },
-  bike: { label: 'BICI',       shortLabel: 'Bici',      color: '#3B82F6', colorMuted: 'rgba(59,130,246,0.15)', kcalPerKm: 30 },
+  run:  { label: 'CORSA',      shortLabel: 'Corsa',     color: '#2563EB', colorMuted: 'rgba(37,99,235,0.10)', kcalPerKm: 65 },
+  walk: { label: 'CAMMINATA',  shortLabel: 'Camminata', color: '#16A34A', colorMuted: 'rgba(22,163,74,0.10)',  kcalPerKm: 50 },
+  bike: { label: 'BICI',       shortLabel: 'Bici',      color: '#7C3AED', colorMuted: 'rgba(124,58,237,0.10)', kcalPerKm: 30 },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -135,12 +145,12 @@ export const activityMeta: Record<ActivityType, {
 // ─────────────────────────────────────────────────────────────
 export const stepTypeColors: Record<string, string> = {
   warmup: '#F59E0B',
-  run: '#FF6B1F',
+  run: '#2563EB',
   recovery: '#22C55E',
   sprint: '#EF4444',
   walk: '#22C55E',
-  bike: '#3B82F6',
-  stretching: '#A855F7',
+  bike: '#7C3AED',
+  stretching: '#4F46E5',
   gymnastics: '#EC4899',
 };
 
