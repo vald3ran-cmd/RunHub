@@ -6,7 +6,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../src/api';
-import { colors as oldColors, spacing, radius, fonts } from '../../src/theme';
+import { colors as oldColors, imageScrim, spacing, radius, fonts } from '../../src/theme';
 import { tokens as dsTokens, FontProvider } from '../../src/design-system';
 
 // ── Scientific Light shim (RunHub 1.6.4) ──────────────
@@ -145,7 +145,7 @@ function PlansInner() {
               activeOpacity={0.9}
             >
               <View style={styles.aiBannerIcon}>
-                <Sparkles size={18} color="#fff" strokeWidth={2.4} />
+                <Sparkles size={18} color={oldColors.white} strokeWidth={2.4} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.aiBannerTitle}>{t('plans.ai_banner_title')}</Text>
@@ -199,7 +199,7 @@ function PlanCard({
         <View style={styles.cardTintOrange} />
         {/* Dark gradient bottom for readability */}
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.85)']}
+          colors={imageScrim}
           style={styles.cardGradient}
         />
 
@@ -210,13 +210,13 @@ function PlanCard({
             </View>
             {plan.is_ai_generated ? (
               <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                <SparklesIcon size={10} color="#fff" />
+                <SparklesIcon size={10} color={oldColors.white} />
                 <Text style={[styles.badgeText, { marginLeft: 4 }]}>AI</Text>
               </View>
             ) : null}
             {plan.is_premium && !plan.is_ai_generated ? (
               <View style={[styles.badge, { backgroundColor: colors.warning }]}>
-                <Star size={10} color="#fff" fill="#fff" />
+                <Star size={10} color={oldColors.white} fill={oldColors.white} />
                 <Text style={[styles.badgeText, { marginLeft: 4 }]}>PREMIUM</Text>
               </View>
             ) : null}
@@ -228,10 +228,10 @@ function PlanCard({
           <Text style={styles.cardDesc} numberOfLines={2}>{desc}</Text>
 
           <View style={styles.metaRow}>
-            <Calendar size={12} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
+            <Calendar size={12} color={oldColors.onDark} strokeWidth={2.4} />
             <Text style={styles.meta}>{plan.duration_weeks} {weeksShort}</Text>
             <View style={styles.metaDot} />
-            <Repeat size={12} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
+            <Repeat size={12} color={oldColors.onDark} strokeWidth={2.4} />
             <Text style={styles.meta}>{plan.workouts_per_week}{perWeekShort}</Text>
           </View>
         </View>
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
   },
   tabTextActive: {
-    color: '#fff',
+    color: oldColors.white,
   },
 
   // AI banner (header above list, on "Per te")
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   cardTintOrange: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,107,31,0.18)',
+    backgroundColor: oldColors.primaryTint,
   },
   cardGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -355,20 +355,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   badgeText: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 10,
     fontFamily: fonts.headingBold,
     letterSpacing: 1,
   },
   cardTitle: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 24,
     fontFamily: fonts.heading,
     letterSpacing: -0.5,
     lineHeight: 27,
   },
   cardDesc: {
-    color: 'rgba(255,255,255,0.88)',
+    color: oldColors.onDark,
     fontSize: 13,
     fontFamily: fonts.medium,
     marginTop: 6,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   meta: {
-    color: 'rgba(255,255,255,0.92)',
+    color: oldColors.onDark,
     fontSize: 12,
     fontFamily: fonts.bold,
   },
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: oldColors.onDarkMuted,
     marginHorizontal: 4,
   },
 

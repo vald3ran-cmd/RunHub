@@ -111,8 +111,8 @@ export default function Onboarding() {
                   style={[styles.dayCard, days === d && styles.dayActive]}
                   onPress={() => setDays(d)}
                 >
-                  <Text style={[styles.dayNum, days === d && { color: '#fff' }]}>{d}</Text>
-                  <Text style={[styles.dayLabel, days === d && { color: '#fff' }]}>{t('onboarding.days_label')}</Text>
+                  <Text style={[styles.dayNum, days === d && { color: colors.white }]}>{d}</Text>
+                  <Text style={[styles.dayLabel, days === d && { color: colors.white }]}>{t('onboarding.days_label')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -142,17 +142,17 @@ export default function Onboarding() {
             onPress={next}
           >
             <Text style={styles.nextText}>{t('onboarding.continue')}</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
+            <Ionicons name="arrow-forward" size={20} color={colors.white} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             testID="onb-finish"
             style={styles.nextBtn} onPress={finish} disabled={saving}
           >
-            {saving ? <ActivityIndicator color="#fff" /> : (
+            {saving ? <ActivityIndicator color={colors.white} /> : (
               <>
                 <Text style={styles.nextText}>{t('onboarding.go_to_plan')}</Text>
-                <Ionicons name="rocket" size={18} color="#fff" />
+                <Ionicons name="rocket" size={18} color={colors.white} />
               </>
             )}
           </TouchableOpacity>
@@ -192,5 +192,5 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg, alignItems: 'center' },
   backBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
   nextBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.pill, marginLeft: spacing.md },
-  nextText: { color: '#fff', fontSize: 14, fontWeight: '900', letterSpacing: 2 },
+  nextText: { color: colors.white, fontSize: 14, fontWeight: '900', letterSpacing: 2 },
 });

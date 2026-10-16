@@ -86,7 +86,7 @@ export function Skeleton({
 
   const bg = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [colors.surfaceSecondary, '#2A2A2A'],
+    outputRange: [colors.surfaceSecondary, colors.border],
   });
 
   return (

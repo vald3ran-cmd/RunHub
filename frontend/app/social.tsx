@@ -178,7 +178,7 @@ export default function SocialScreen() {
             <Ionicons
               name={tk === 'feed' ? 'newspaper' : tk === 'friends' ? 'people' : 'trophy'}
               size={16}
-              color={tab === tk ? '#fff' : colors.textSecondary}
+              color={tab === tk ? colors.white : colors.textSecondary}
             />
             <Text style={[styles.segText, tab === tk && styles.segTextActive]}>
               {tk === 'feed' ? t('social.tab_feed') : tk === 'friends' ? t('social.tab_friends') : t('social.tab_leaderboard')}
@@ -210,7 +210,7 @@ export default function SocialScreen() {
         {tab === 'friends' && (
           <>
             <TouchableOpacity testID="add-friend-btn" style={styles.addBtn} onPress={() => setAddModal(true)}>
-              <Ionicons name="person-add" size={18} color="#fff" />
+              <Ionicons name="person-add" size={18} color={colors.white} />
               <Text style={styles.addBtnText}>{t('social.add_friend')}</Text>
             </TouchableOpacity>
 
@@ -225,7 +225,7 @@ export default function SocialScreen() {
                       <Text style={styles.friendEmail}>{r.from?.email}</Text>
                     </View>
                     <TouchableOpacity style={styles.acceptBtn} onPress={() => respondRequest(r.friendship_id, 'accept')}>
-                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Ionicons name="checkmark" size={18} color={colors.white} />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.rejectBtn} onPress={() => respondRequest(r.friendship_id, 'reject')}>
                       <Ionicons name="close" size={18} color={colors.textPrimary} />
@@ -293,7 +293,7 @@ export default function SocialScreen() {
               <Text style={styles.emptyText}>{t('social.leaderboard_empty')}</Text>
             ) : board.map(e => (
               <View key={e.user_id} style={[styles.boardRow, e.is_me && styles.boardRowMe]}>
-                <View style={[styles.rankPill, e.rank === 1 && { backgroundColor: '#F59E0B' }, e.rank === 2 && { backgroundColor: '#A1A1AA' }, e.rank === 3 && { backgroundColor: '#CD7F32' }]}>
+                <View style={[styles.rankPill, e.rank === 1 && { backgroundColor: colors.gold }, e.rank === 2 && { backgroundColor: colors.silver }, e.rank === 3 && { backgroundColor: colors.bronze }]}>
                   <Text style={styles.rankText}>{e.rank}</Text>
                 </View>
                 <View style={styles.avatar}><Text style={styles.avatarText}>{e.name?.[0]?.toUpperCase()}</Text></View>
@@ -340,7 +340,7 @@ export default function SocialScreen() {
                     <Text style={styles.pendingTag}>{t('social.pending')}</Text>
                   ) : (
                     <TouchableOpacity style={styles.smallAddBtn} onPress={() => sendRequest(item.email)}>
-                      <Ionicons name="person-add" size={14} color="#fff" />
+                      <Ionicons name="person-add" size={14} color={colors.white} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -375,7 +375,7 @@ function FeedCard({ item, onLike, onComments }: { item: FeedItem; onLike: () => 
   return (
     <View style={styles.feedCard} testID={`feed-${item.session_id}`}>
       <View style={styles.feedHeader}>
-        <View style={[styles.avatar, item.user.tier === 'elite' && { backgroundColor: '#F59E0B' }]}>
+        <View style={[styles.avatar, item.user.tier === 'elite' && { backgroundColor: colors.gold }]}>
           <Text style={styles.avatarText}>{item.user.name?.[0]?.toUpperCase()}</Text>
         </View>
         <View style={{ flex: 1 }}>
@@ -475,7 +475,7 @@ function CommentsModal({ item, onClose }: { item: FeedItem; onClose: () => void 
               multiline maxLength={500}
             />
             <TouchableOpacity testID="send-comment" style={styles.sendBtn} onPress={send} disabled={sending || !text.trim()}>
-              {sending ? <ActivityIndicator color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
+              {sending ? <ActivityIndicator color={colors.white} /> : <Ionicons name="send" size={18} color={colors.white} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   segBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: radius.pill },
   segBtnActive: { backgroundColor: colors.primary },
   segText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  segTextActive: { color: '#fff' },
+  segTextActive: { color: colors.white },
 
   feedCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border },
   feedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
@@ -509,11 +509,11 @@ const styles = StyleSheet.create({
 
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   avatarSm: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontWeight: '900' },
+  avatarText: { color: colors.white, fontWeight: '900' },
 
   sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 2, marginTop: spacing.lg, marginBottom: spacing.sm },
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
-  addBtnText: { color: '#fff', fontWeight: '800', letterSpacing: 1 },
+  addBtnText: { color: colors.white, fontWeight: '800', letterSpacing: 1 },
 
   friendCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
   reqCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
@@ -529,21 +529,21 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '800', marginTop: spacing.md },
   emptyText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
   emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.pill, marginTop: spacing.md },
-  emptyBtnText: { color: '#fff', fontWeight: '800', letterSpacing: 1 },
+  emptyBtnText: { color: colors.white, fontWeight: '800', letterSpacing: 1 },
 
   filterRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm, flexWrap: 'wrap' },
   chip: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { color: colors.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  chipTextActive: { color: '#fff' },
+  chipTextActive: { color: colors.white },
 
   boardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
-  boardRowMe: { borderColor: colors.primary, backgroundColor: 'rgba(255,107,31,0.10)' },
+  boardRowMe: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   rankPill: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceSecondary, justifyContent: 'center', alignItems: 'center' },
-  rankText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  rankText: { color: colors.white, fontSize: 12, fontWeight: '900' },
   boardValue: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
 
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlayStrong },
   modalCard: { backgroundColor: colors.surface, padding: spacing.lg, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingBottom: spacing.xxl },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.borderLight, alignSelf: 'center', marginBottom: spacing.md },
   modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '900', marginBottom: spacing.md },

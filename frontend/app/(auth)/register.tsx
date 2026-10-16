@@ -212,7 +212,7 @@ export default function Register() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.checkbox, acceptedLegal && styles.checkboxChecked]}>
-                {acceptedLegal && <Ionicons name="checkmark" size={18} color="#fff" />}
+                {acceptedLegal && <Ionicons name="checkmark" size={18} color={colors.white} />}
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedLegal(!acceptedLegal)}>
@@ -245,7 +245,7 @@ export default function Register() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.checkbox, acceptedAge && styles.checkboxChecked]}>
-                {acceptedAge && <Ionicons name="checkmark" size={18} color="#fff" />}
+                {acceptedAge && <Ionicons name="checkmark" size={18} color={colors.white} />}
               </View>
             </TouchableOpacity>
             <Text style={styles.consentText} onPress={() => setAcceptedAge(!acceptedAge)}>
@@ -260,7 +260,7 @@ export default function Register() {
             disabled={!canSubmit}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={colors.white} />
               : <Text style={styles.buttonText}>{t('auth.create_account')}</Text>}
           </TouchableOpacity>
 
@@ -320,14 +320,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,107,31,0.10)',
+    backgroundColor: colors.primaryMuted,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radius.md,
     marginTop: -spacing.sm,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,107,31,0.30)',
+    borderColor: colors.primaryBorder,
   },
   referrerHintText: {
     color: colors.textPrimary,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: spacing.md,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 2 },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight: '800', letterSpacing: 2 },
   link: { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.lg },
   error: { color: colors.primary, marginBottom: spacing.md, fontWeight: '600' },
   gdprFooter: {

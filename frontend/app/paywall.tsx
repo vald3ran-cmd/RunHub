@@ -64,7 +64,7 @@ const TIERS: TierDef[] = [
     key: 'starter',
     name: 'Starter',
     taglineKey: 'paywall.tier_starter_tagline',
-    color: '#3B82F6',
+    color: oldColors.success,
     featuresKeys: ['paywall.starter_f1', 'paywall.starter_f2', 'paywall.starter_f3', 'paywall.starter_f4'],
     monthlyProductId: 'com.runhub.app.sub.starter.monthly',
     yearlyProductId: 'com.runhub.app.sub.starter.yearly',
@@ -87,7 +87,7 @@ const TIERS: TierDef[] = [
     key: 'elite',
     name: 'Elite',
     taglineKey: 'paywall.tier_elite_tagline',
-    color: '#F59E0B',
+    color: oldColors.gold,
     featuresKeys: ['paywall.elite_f1', 'paywall.elite_f2', 'paywall.elite_f3', 'paywall.elite_f4', 'paywall.elite_f5', 'paywall.elite_f6'],
     monthlyProductId: 'com.runhub.app.sub.elite.monthly',
     yearlyProductId: 'com.runhub.app.sub.elite.yearly',
@@ -462,7 +462,7 @@ function PaywallInner() {
                 testID={`paywall-cta-${tier.key}`}
               >
                 {isLoadingThis ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={oldColors.white} />
                 ) : (
                   <Text style={styles.ctaText}>
                     {isCurrent ? t('paywall.current_plan') : t('paywall.subscribe_to', { tier: tier.name })}
@@ -546,9 +546,9 @@ const styles = StyleSheet.create({
   },
   periodBtnActive: { backgroundColor: colors.primary },
   periodBtnText: { color: colors.textSecondary, fontSize: 14, fontWeight: '700' },
-  periodBtnTextActive: { color: '#fff' },
-  saveBadge: { backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
-  saveBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  periodBtnTextActive: { color: oldColors.white },
+  saveBadge: { backgroundColor: oldColors.success, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
+  saveBadgeText: { color: oldColors.white, fontSize: 10, fontWeight: '800' },
 
   card: {
     backgroundColor: colors.surface,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.pill,
   },
-  popularBadgeText: { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  popularBadgeText: { color: oldColors.white, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
 
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm },
   tierName: { fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.sm,
   },
-  currentBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  currentBadgeText: { color: oldColors.white, fontSize: 10, fontWeight: '800' },
 
   priceRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.xs },
   price: { color: colors.textPrimary, fontSize: 36, fontWeight: '900' },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+  ctaText: { color: oldColors.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
 
   restoreBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
   restoreText: { color: colors.primary, fontSize: 14, fontWeight: '600' },

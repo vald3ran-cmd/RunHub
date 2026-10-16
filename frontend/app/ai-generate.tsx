@@ -15,7 +15,7 @@ import { tokens as dsTokens, FontProvider } from '../src/design-system';
 const colors = {
   primary: dsTokens.brand.primary,
   primaryDark: dsTokens.brand.dark,
-  primaryMuted: 'rgba(255,107,26,0.10)',
+  primaryMuted: oldColors.primaryMuted,
   background: dsTokens.neutral.background,
   surface: dsTokens.neutral.card,
   surfaceSoft: dsTokens.neutral.surfaceSoft,
@@ -196,7 +196,7 @@ function AIGenerateInner() {
           </View>
 
           <View style={styles.aiIcon}>
-            <Ionicons name="sparkles" size={32} color="#fff" />
+            <Ionicons name="sparkles" size={32} color={oldColors.white} />
           </View>
           <Text style={styles.title}>{t('ai_generate.title')}</Text>
           <Text style={styles.sub}>{t('ai_generate.subtitle')}</Text>
@@ -273,10 +273,10 @@ function AIGenerateInner() {
             style={styles.generateBtn} onPress={onGenerate} disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={oldColors.white} />
             ) : (
               <>
-                <Ionicons name="sparkles" size={18} color="#fff" />
+                <Ionicons name="sparkles" size={18} color={oldColors.white} />
                 <Text style={styles.generateText}>{t('ai_generate.generate_btn')}</Text>
               </>
             )}
@@ -289,7 +289,7 @@ function AIGenerateInner() {
         <View style={styles.overlay} pointerEvents="auto">
           <View style={styles.overlayCard}>
             <View style={styles.overlayIconBox}>
-              <Ionicons name="sparkles" size={42} color="#fff" />
+              <Ionicons name="sparkles" size={42} color={oldColors.white} />
             </View>
             <Text style={styles.overlayTitle}>{progressLabel()}</Text>
             <Text style={styles.overlaySub}>{t('ai_generate.do_not_close')}</Text>
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   warnBox: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginTop: spacing.lg, padding: spacing.md,
-    backgroundColor: 'rgba(255,107,26,0.06)',
+    backgroundColor: oldColors.primaryMuted,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary,
   },
   warnText: {
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary, fontSize: 11, letterSpacing: 1,
     fontFamily: dsTokens.fontFamily.headingBold,
   },
-  pillTextActive: { color: '#fff' },
+  pillTextActive: { color: oldColors.white },
   input: {
     backgroundColor: colors.surface, color: colors.textPrimary,
     padding: spacing.md, borderRadius: radius.md, fontSize: 15,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   generateText: {
-    color: '#fff', letterSpacing: 1.8, fontSize: 14,
+    color: oldColors.white, letterSpacing: 1.8, fontSize: 14,
     fontFamily: dsTokens.fontFamily.headingBold,
   },
 
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(15,23,42,0.45)',
+    backgroundColor: oldColors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,

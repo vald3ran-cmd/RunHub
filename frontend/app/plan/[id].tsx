@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Lock, Home, Play, Sparkles, Star } from 'lucide-react-native';
 import { api } from '../../src/api';
-import { colors, spacing, radius, fonts, stepTypeColors, stepTypeLabels, getStepTypeLabel } from '../../src/theme';
+import { colors, imageScrim, spacing, radius, fonts, stepTypeColors, stepTypeLabels, getStepTypeLabel } from '../../src/theme';
 import { useT } from '../../src/i18n';
 
 export default function PlanDetail() {
@@ -65,12 +65,12 @@ export default function PlanDetail() {
         >
           <View style={styles.heroTint} />
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.95)']}
+            colors={imageScrim}
             style={StyleSheet.absoluteFillObject}
           />
           <SafeAreaView edges={['top']} style={{ width: '100%', flex: 1 }}>
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-              <ChevronLeft size={24} color="#fff" strokeWidth={2.4} />
+              <ChevronLeft size={24} color={colors.white} strokeWidth={2.4} />
             </TouchableOpacity>
             <View style={styles.heroContent}>
               <View style={styles.badgeRow}>
@@ -79,13 +79,13 @@ export default function PlanDetail() {
                 </View>
                 {plan.is_ai_generated ? (
                   <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                    <Sparkles size={10} color="#fff" strokeWidth={2.4} />
+                    <Sparkles size={10} color={colors.white} strokeWidth={2.4} />
                     <Text style={[styles.badgeText, { marginLeft: 4 }]}>AI</Text>
                   </View>
                 ) : null}
                 {plan.is_premium && !plan.is_ai_generated ? (
                   <View style={[styles.badge, { backgroundColor: colors.warning }]}>
-                    <Star size={10} color="#fff" fill="#fff" />
+                    <Star size={10} color={colors.white} fill={colors.white} />
                     <Text style={[styles.badgeText, { marginLeft: 4 }]}>PREMIUM</Text>
                   </View>
                 ) : null}
@@ -106,7 +106,7 @@ export default function PlanDetail() {
         {/* Locked plan banner */}
         {plan.locked ? (
           <View style={styles.lockBox}>
-            <View style={styles.lockIcon}><Lock size={20} color="#fff" strokeWidth={2.4} /></View>
+            <View style={styles.lockIcon}><Lock size={20} color={colors.white} strokeWidth={2.4} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.lockTitle}>{t('plan_detail.locked')}</Text>
               <Text style={styles.lockSub}>
@@ -169,7 +169,7 @@ export default function PlanDetail() {
                 </View>
               </View>
               <View style={styles.playWrap}>
-                <Play size={18} color="#fff" fill="#fff" strokeWidth={2.4} />
+                <Play size={18} color={colors.white} fill={colors.white} strokeWidth={2.4} />
               </View>
             </TouchableOpacity>
           ))}
@@ -194,11 +194,11 @@ const styles = StyleSheet.create({
   hero: { height: 300, justifyContent: 'flex-end' },
   heroTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,107,31,0.16)',
+    backgroundColor: colors.primaryTint,
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: colors.overlaySoft,
     alignItems: 'center', justifyContent: 'center',
     margin: spacing.md,
   },
@@ -211,16 +211,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.sm,
   },
-  badgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.headingBold, letterSpacing: 1 },
+  badgeText: { color: colors.white, fontSize: 10, fontFamily: fonts.headingBold, letterSpacing: 1 },
   heroTitle: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 28,
     fontFamily: fonts.heading,
     letterSpacing: -0.6,
     lineHeight: 32,
   },
   heroMeta: {
-    color: 'rgba(255,255,255,0.85)',
+    color: colors.onDark,
     fontSize: 13,
     fontFamily: fonts.bold,
     marginTop: 4,
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   lockBtnText: {
-    color: '#fff',
+    color: colors.white,
     fontFamily: fonts.headingBold,
     fontSize: 11,
     letterSpacing: 1,

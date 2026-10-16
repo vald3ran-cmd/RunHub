@@ -34,17 +34,17 @@ const colors = {
   border: dsTokens.neutral.border,
   borderLight: dsTokens.neutral.border,
   success: dsTokens.semantic.success,
-  successMuted: '#ECFDF5',
+  successMuted: oldColors.successMuted,
   warning: dsTokens.semantic.warning,
-  warningMuted: '#FEF3C7',
+  warningMuted: oldColors.warningMuted,
   info: dsTokens.semantic.info,
-  infoMuted: '#EFF6FF',
+  infoMuted: oldColors.primaryMuted,
   danger: dsTokens.semantic.danger,
   progressTrack: dsTokens.neutral.surfaceSoft,
-  overlay: 'rgba(15,23,42,0.55)',
-  overlayStrong: 'rgba(15,23,42,0.75)',
-  black: '#000000',
-  white: '#FFFFFF',
+  overlay: oldColors.overlay,
+  overlayStrong: oldColors.overlayStrong,
+  black: oldColors.black,
+  white: oldColors.white,
 };
 const spacing = { ...oldSpacing };
 const radius = { ...oldRadius };
@@ -179,7 +179,7 @@ function WorkoutDetailInner() {
             style={[styles.iconBtn, { backgroundColor: colors.primary }]}
             onPress={onShareImage}
           >
-            <Share2 size={20} color="#fff" strokeWidth={2.4} />
+            <Share2 size={20} color={oldColors.white} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
 
@@ -274,8 +274,8 @@ function WorkoutDetailInner() {
               <View style={styles.scV2BottomCol}>
                 <Text style={styles.scV2BottomLabel}>⚡ {t('workout_detail.share_highlights')}</Text>
                 <HiBar label={t('workout_detail.share_intensity')} value={Math.min(100, Math.round(((pace || 7) <= 5 ? 80 : (pace || 7) <= 6 ? 50 : 25)))} color={activity.color} />
-                <HiBar label={t('workout_detail.share_hr')} value={session.avg_hr_bpm ? Math.min(100, Math.round((session.avg_hr_bpm / 200) * 100)) : 0} valueText={session.avg_hr_bpm ? `${session.avg_hr_bpm} bpm` : '—'} color="#22C55E" />
-                <HiBar label={t('workout_detail.share_cadence')} value={session.avg_cadence_spm ? Math.min(100, Math.round((session.avg_cadence_spm / 200) * 100)) : 0} valueText={session.avg_cadence_spm ? `${session.avg_cadence_spm} spm` : '—'} color="#3B82F6" />
+                <HiBar label={t('workout_detail.share_hr')} value={session.avg_hr_bpm ? Math.min(100, Math.round((session.avg_hr_bpm / 200) * 100)) : 0} valueText={session.avg_hr_bpm ? `${session.avg_hr_bpm} bpm` : '—'} color={oldColors.success} />
+                <HiBar label={t('workout_detail.share_cadence')} value={session.avg_cadence_spm ? Math.min(100, Math.round((session.avg_cadence_spm / 200) * 100)) : 0} valueText={session.avg_cadence_spm ? `${session.avg_cadence_spm} spm` : '—'} color={oldColors.primaryHover} />
               </View>
             </View>
 
@@ -364,7 +364,7 @@ function WorkoutDetailInner() {
             onPress={onShareImage}
             activeOpacity={0.9}
           >
-            <Share2 size={18} color="#fff" strokeWidth={2.4} />
+            <Share2 size={18} color={oldColors.white} strokeWidth={2.4} />
             <Text style={styles.shareBtnText}>{t('workout_detail.share_image')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -523,7 +523,7 @@ function SplitsCard({ session, t }: { session: any; t: (k: string, o?: any) => s
         const isWorst = i === worstIdx && worstPace > bestPace;
         // bar fill: best=100% green, worst=100% red. proporzional
         const fill = range > 0 ? 1 - (p - bestPace) / range : 1;
-        const barColor = isBest ? colors.success : isWorst ? colors.primary : '#8B5CF6';
+        const barColor = isBest ? colors.success : isWorst ? colors.primary : oldColors.accent;
         const speedDisp = activityType === 'bike' && dur > 0 ? `${(3600 / dur).toFixed(1)} km/h` : `${formatPace(p)} /km`;
         return (
           <View key={i} style={styles.splitRow}>
@@ -588,7 +588,7 @@ function NotesCard({ session, sessionId, t }: { session: any; sessionId: string;
           activeOpacity={0.85}
         >
           {status === 'saving' ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={oldColors.white} />
           ) : (
             <Text style={styles.notesSaveBtnText}>
               {status === 'saved' ? t('workout_detail.notes_saved') : t('workout_detail.notes_save')}
@@ -669,8 +669,8 @@ function SubTabBtn({ label, Icon, active, onPress }:
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Icon size={14} color={active ? '#fff' : colors.textSecondary} strokeWidth={2.2} />
-      <Text style={[styles.subTabBtnText, active && { color: '#fff' }]}>{label}</Text>
+      <Icon size={14} color={active ? oldColors.white : colors.textSecondary} strokeWidth={2.2} />
+      <Text style={[styles.subTabBtnText, active && { color: oldColors.white }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -817,7 +817,7 @@ function GapDecouplingCard({ session, t }: { session: any; t: (k: string, o?: an
 
       {/* DECOUPLING */}
       <View style={styles.gapRow}>
-        <View style={[styles.gapIcon, { backgroundColor: '#FEF3C7' }]}>
+        <View style={[styles.gapIcon, { backgroundColor: oldColors.warningMuted }]}>
           <TrendingDown size={20} color={decouplingColor} strokeWidth={2} />
         </View>
         <View style={{ flex: 1 }}>
@@ -1059,32 +1059,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
     borderRadius: radius.pill,
   },
-  activityBadgeText: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
-  cardBrand: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
+  activityBadgeText: { color: oldColors.white, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
+  cardBrand: { color: oldColors.onDarkMuted, fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   heroMetric: {
     flexDirection: 'row', alignItems: 'baseline',
     marginTop: spacing.lg, marginBottom: spacing.lg,
   },
-  heroValue: { color: '#fff', fontSize: 96, fontWeight: '900', letterSpacing: -4 },
-  heroUnit: { color: 'rgba(255,255,255,0.6)', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginLeft: 8 },
+  heroValue: { color: oldColors.white, fontSize: 96, fontWeight: '900', letterSpacing: -4 },
+  heroUnit: { color: oldColors.onDarkMuted, fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginLeft: 8 },
   pbBanner: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
     gap: 6, paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: radius.pill, backgroundColor: 'rgba(255,107,107,0.95)',
+    borderRadius: radius.pill, backgroundColor: oldColors.danger,
     marginBottom: spacing.md,
   },
-  pbBannerText: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  pbBannerText: { color: oldColors.white, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   cardStats: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    borderTopColor: oldColors.onDarkSubtle,
   },
   cardStat: { flex: 1 },
-  cardStatLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
-  cardStatValue: { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: -0.3 },
-  cardDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: 'rgba(255,255,255,0.15)' },
-  cardDate: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: spacing.md },
+  cardStatLabel: { color: oldColors.onDarkMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
+  cardStatValue: { color: oldColors.white, fontSize: 18, fontWeight: '900', letterSpacing: -0.3 },
+  cardDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: oldColors.onDarkSubtle },
+  cardDate: { color: oldColors.onDarkMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: spacing.md },
 
   // Decorative blobs
   blobBig: {
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
-  shareBtnText: { color: '#fff', fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
+  shareBtnText: { color: oldColors.white, fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
   shareBtnSecondary: {
     paddingHorizontal: spacing.lg, paddingVertical: 14,
     borderRadius: radius.pill, backgroundColor: colors.surface,
@@ -1182,7 +1182,7 @@ const styles = StyleSheet.create({
     maxWidth: '70%',
     flexShrink: 0,
   },
-  splitBarLabel: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  splitBarLabel: { color: oldColors.white, fontSize: 11, fontWeight: '800' },
   splitTag: {
     color: colors.textSecondary, fontSize: 10, fontWeight: '700',
     flexShrink: 1,
@@ -1235,7 +1235,7 @@ const styles = StyleSheet.create({
   gapValueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
   gapHint: { color: colors.textSecondary, fontSize: 12, marginTop: 4, lineHeight: 17 },
   decBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
-  decBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  decBadgeText: { color: oldColors.white, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
   mockFooter: {
     marginTop: spacing.sm,
@@ -1503,7 +1503,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   notesSaveBtnText: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,

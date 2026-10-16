@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../src/auth';
 import { api } from '../../src/api';
 import { tokens, FontProvider } from '../../src/design-system';
+import { colors as oldColors } from '../../src/theme';
 import { showPrivacyOptionsForm } from '../../src/ConsentManager';
 import { isAdMobAvailable } from '../../src/adMobConfig';
 import { chooseAndUploadAvatar } from '../../src/avatar';
@@ -148,9 +149,9 @@ function ProfileInner() {
           {/* Camera badge overlay */}
           <View style={styles.avatarCameraBadge}>
             {avatarBusy ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={oldColors.white} />
             ) : (
-              <Camera size={14} color="#fff" strokeWidth={2.4} />
+              <Camera size={14} color={oldColors.white} strokeWidth={2.4} />
             )}
           </View>
         </TouchableOpacity>
@@ -159,7 +160,7 @@ function ProfileInner() {
 
         <View style={styles.badgeRow}>
           <View style={[styles.badge, { backgroundColor: tierColor(tier) }]}>
-            <Star size={11} color="#fff" fill="#fff" />
+            <Star size={11} color={oldColors.white} fill={oldColors.white} />
             <Text style={styles.badgeText}>{tierLabel(tier)}</Text>
           </View>
           <View style={[styles.badge, styles.badgeNeutral]}>
@@ -176,13 +177,13 @@ function ProfileInner() {
             activeOpacity={0.9}
           >
             <View style={styles.premiumIcon}>
-              <Sparkles size={20} color="#fff" strokeWidth={2.4} />
+              <Sparkles size={20} color={oldColors.white} strokeWidth={2.4} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.premiumLabel}>{t('profile.premium_card_label')}</Text>
               <Text style={styles.premiumTitle}>{t('profile.premium_card_title')}</Text>
             </View>
-            <ChevronRight size={22} color="#fff" strokeWidth={2.4} />
+            <ChevronRight size={22} color={oldColors.white} strokeWidth={2.4} />
           </TouchableOpacity>
         ) : null}
 
@@ -308,7 +309,7 @@ function ProfileInner() {
               onValueChange={onToggleNearby}
               disabled={togglingNearby}
               trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#fff"
+              thumbColor={oldColors.white}
               ios_backgroundColor={colors.border}
             />
           </View>
@@ -338,7 +339,7 @@ function ProfileInner() {
                 activeOpacity={0.85}
               >
                 <View style={[styles.rowIcon, { backgroundColor: colors.primary }]}>
-                  <ShieldCheck size={18} color="#fff" strokeWidth={2.4} />
+                  <ShieldCheck size={18} color={oldColors.white} strokeWidth={2.4} />
                 </View>
                 <Text style={[styles.rowText, { color: colors.primary }]}>{t('profile.admin_panel')}</Text>
                 <ChevronRight size={18} color={colors.primary} strokeWidth={2.4} />
@@ -490,10 +491,10 @@ function Row({
 
 // ─────────────────────────────────────────────────────────────
 function tierColor(t: string) {
-  if (t === 'elite') return '#F59E0B';
+  if (t === 'elite') return oldColors.gold;
   if (t === 'performance') return colors.primary;
-  if (t === 'starter') return '#22C55E';
-  return '#6B7280';
+  if (t === 'starter') return oldColors.success;
+  return oldColors.textMuted;
 }
 function tierLabel(t: string) {
   if (t === 'elite') return 'ELITE';
@@ -519,7 +520,7 @@ const styles = StyleSheet.create({
   avatarImg: {
     width: 96, height: 96, borderRadius: 48,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: oldColors.white,
     backgroundColor: colors.surface,
     ...tokens.shadow.md,
   },
@@ -532,10 +533,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: oldColors.white,
   },
   avatarText: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 38,
     fontFamily: fonts.heading,
   },
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   badgeText: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 10,
     fontFamily: fonts.headingBold,
     letterSpacing: 1,
@@ -600,18 +601,18 @@ const styles = StyleSheet.create({
   },
   premiumIcon: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: oldColors.onDarkSubtle,
     alignItems: 'center', justifyContent: 'center',
   },
   premiumLabel: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 10,
     fontFamily: fonts.headingBold,
     letterSpacing: 1.5,
     opacity: 0.9,
   },
   premiumTitle: {
-    color: '#fff',
+    color: oldColors.white,
     fontSize: 14,
     fontFamily: fonts.bold,
     marginTop: 4,
@@ -705,7 +706,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(220,38,38,0.25)',
+    borderColor: oldColors.dangerMuted,
   },
   logoutText: {
     color: colors.danger,
@@ -717,16 +718,16 @@ const styles = StyleSheet.create({
   // Referral card (gradient-like highlight)
   referralCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: 'rgba(255,107,31,0.10)',
+    backgroundColor: oldColors.primaryMuted,
     borderRadius: radius.lg,
     paddingVertical: spacing.md, paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,107,31,0.35)',
+    borderColor: oldColors.primaryBorder,
     marginBottom: spacing.xs,
   },
   referralIconWrap: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,107,31,0.18)',
+    backgroundColor: oldColors.primaryTint,
     alignItems: 'center', justifyContent: 'center',
   },
   referralTitle: {
@@ -743,7 +744,7 @@ const styles = StyleSheet.create({
 
   // Language picker modal
   langBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    flex: 1, backgroundColor: oldColors.overlayStrong,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
@@ -769,9 +770,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   langRowActive: {
-    backgroundColor: 'rgba(255,107,31,0.12)',
+    backgroundColor: oldColors.primaryMuted,
     borderWidth: 1,
-    borderColor: 'rgba(255,107,31,0.35)',
+    borderColor: oldColors.primaryBorder,
   },
   langFlag: { fontSize: 22 },
   langLabel: {
@@ -786,7 +787,7 @@ const styles = StyleSheet.create({
   // Modal goals
   modalBg: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: oldColors.overlayStrong,
     justifyContent: 'flex-end',
   },
   modalCard: {
@@ -852,7 +853,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   saveText: {
-    color: '#fff',
+    color: oldColors.white,
     fontFamily: fonts.headingBold,
     fontSize: 12,
     letterSpacing: 1,

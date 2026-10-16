@@ -58,7 +58,7 @@ export default function ReferralScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} testID="referral-back-loading">
-            <Ionicons name="chevron-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('referral.title')}</Text>
           <View style={styles.headerBtn} />
@@ -75,19 +75,19 @@ export default function ReferralScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} testID="referral-back-error">
-            <Ionicons name="chevron-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('referral.title')}</Text>
           <View style={styles.headerBtn} />
         </View>
         <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={48} color="rgba(255,255,255,0.4)" />
+          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text style={styles.errorText}>{t('common.error')}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
             <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.retryBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, marginTop: 12 }]} onPress={() => router.back()}>
-            <Text style={[styles.retryText, { color: '#fff' }]}>{t('common.back')}</Text>
+            <Text style={[styles.retryText, { color: colors.textPrimary }]}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -98,7 +98,7 @@ export default function ReferralScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} testID="referral-back">
-          <Ionicons name="chevron-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('referral.title')}</Text>
         <View style={styles.headerBtn} />
@@ -106,7 +106,7 @@ export default function ReferralScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl tintColor="#fff" refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} />}
+        refreshControl={<RefreshControl tintColor={colors.primary} refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} />}
       >
         {/* Hero */}
         <View style={styles.hero}>
@@ -123,13 +123,13 @@ export default function ReferralScreen() {
             <Ionicons
               name={copied ? 'checkmark-circle' : 'copy-outline'}
               size={22}
-              color={copied ? '#34D399' : 'rgba(255,255,255,0.6)'}
+              color={copied ? colors.success : colors.textMuted}
             />
           </TouchableOpacity>
           <Text style={styles.tapHint}>{copied ? t('common.copied') : t('referral.tap_to_copy')}</Text>
 
           <TouchableOpacity style={styles.shareBtn} onPress={onShare} activeOpacity={0.85} testID="referral-share">
-            <Ionicons name="share-social" size={20} color="#fff" />
+            <Ionicons name="share-social" size={20} color={colors.white} />
             <Text style={styles.shareBtnText}>{t('referral.share_cta')}</Text>
           </TouchableOpacity>
         </View>
@@ -213,48 +213,48 @@ function formatDate(iso: string): string {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0F1115' },
+  safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  errorText: { color: '#fff', fontSize: 14, marginBottom: spacing.md, fontFamily: fonts.medium },
+  errorText: { color: colors.textPrimary, fontSize: 14, marginBottom: spacing.md, fontFamily: fonts.medium },
   retryBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.pill,
   },
-  retryText: { color: '#fff', fontFamily: fonts.headingBold, fontSize: 13 },
+  retryText: { color: colors.white, fontFamily: fonts.headingBold, fontSize: 13 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#fff', fontSize: 16, fontFamily: fonts.headingBold, letterSpacing: 0.5 },
+  headerTitle: { color: colors.textPrimary, fontSize: 16, fontFamily: fonts.headingBold, letterSpacing: 0.5 },
 
   hero: { alignItems: 'center', marginBottom: spacing.lg, marginTop: spacing.md },
   heroEmoji: { fontSize: 56, marginBottom: spacing.sm },
   heroTitle: {
-    color: '#fff', fontSize: 26, textAlign: 'center',
+    color: colors.textPrimary, fontSize: 26, textAlign: 'center',
     fontFamily: fonts.heading, letterSpacing: -0.5,
   },
   heroSubtitle: {
-    color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center', lineHeight: 20,
+    color: colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20,
     fontFamily: fonts.medium, marginTop: spacing.xs, paddingHorizontal: spacing.md,
   },
 
   codeCard: {
-    backgroundColor: '#1a1d23', borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
     marginBottom: spacing.lg,
   },
   codeLabel: {
-    color: 'rgba(255,255,255,0.5)', fontSize: 10, letterSpacing: 1.5,
+    color: colors.textMuted, fontSize: 10, letterSpacing: 1.5,
     fontFamily: fonts.headingBold, marginBottom: spacing.sm,
   },
   codeBox: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.md, paddingHorizontal: spacing.md,
     borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: 'rgba(255,107,31,0.4)',
+    borderWidth: 1.5, borderColor: colors.primaryBorder,
     borderStyle: 'dashed',
   },
   codeText: {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.headingBold, fontVariant: ['tabular-nums'],
   },
   tapHint: {
-    color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center',
+    color: colors.textMuted, fontSize: 11, textAlign: 'center',
     fontFamily: fonts.medium, marginTop: spacing.xs, marginBottom: spacing.md,
   },
   shareBtn: {
@@ -270,36 +270,36 @@ const styles = StyleSheet.create({
     height: 50, backgroundColor: colors.primary, borderRadius: radius.pill,
   },
   shareBtnText: {
-    color: '#fff', fontSize: 14, letterSpacing: 0.5,
+    color: colors.white, fontSize: 14, letterSpacing: 0.5,
     fontFamily: fonts.headingBold,
   },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   statCell: {
-    flex: 1, backgroundColor: '#1a1d23', borderRadius: radius.md,
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.md,
     paddingVertical: spacing.md, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: colors.border,
   },
-  statCellHighlight: { borderColor: 'rgba(255,107,31,0.4)', backgroundColor: 'rgba(255,107,31,0.08)' },
-  statValue: { color: '#fff', fontSize: 26, fontFamily: fonts.heading, fontVariant: ['tabular-nums'] },
+  statCellHighlight: { borderColor: colors.primaryBorder, backgroundColor: colors.primaryMuted },
+  statValue: { color: colors.textPrimary, fontSize: 26, fontFamily: fonts.heading, fontVariant: ['tabular-nums'] },
   statValueHighlight: { color: colors.primary },
   statLabel: {
-    color: 'rgba(255,255,255,0.5)', fontSize: 9, letterSpacing: 1, marginTop: 4,
+    color: colors.textMuted, fontSize: 9, letterSpacing: 1, marginTop: 4,
     fontFamily: fonts.headingBold, textAlign: 'center',
   },
 
   bonusBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(255,107,31,0.10)',
-    borderWidth: 1, borderColor: 'rgba(255,107,31,0.30)',
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1, borderColor: colors.primaryBorder,
     borderRadius: radius.md, padding: spacing.md,
     marginBottom: spacing.lg,
   },
-  bonusText: { color: '#fff', fontSize: 13, fontFamily: fonts.medium, flex: 1 },
+  bonusText: { color: colors.textPrimary, fontSize: 13, fontFamily: fonts.medium, flex: 1 },
 
   section: { marginBottom: spacing.xl },
   sectionTitle: {
-    color: '#fff', fontSize: 14, letterSpacing: 1.2,
+    color: colors.textPrimary, fontSize: 14, letterSpacing: 1.2,
     fontFamily: fonts.headingBold, marginBottom: spacing.md,
   },
 
@@ -309,42 +309,44 @@ const styles = StyleSheet.create({
   },
   stepBadge: {
     width: 26, height: 26, borderRadius: 13,
-    backgroundColor: 'rgba(255,107,31,0.18)',
-    borderWidth: 1, borderColor: 'rgba(255,107,31,0.4)',
+    backgroundColor: colors.primaryTint,
+    borderWidth: 1, borderColor: colors.primaryBorder,
     alignItems: 'center', justifyContent: 'center',
   },
   stepBadgeText: { color: colors.primary, fontSize: 12, fontFamily: fonts.headingBold },
   stepText: {
-    color: 'rgba(255,255,255,0.75)', fontSize: 13, flex: 1, lineHeight: 20,
+    color: colors.textSecondary, fontSize: 13, flex: 1, lineHeight: 20,
     fontFamily: fonts.medium, paddingTop: 3,
   },
 
   emptyText: {
-    color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center',
+    color: colors.textSecondary, fontSize: 13, textAlign: 'center',
     fontFamily: fonts.medium, padding: spacing.lg,
-    backgroundColor: '#1a1d23', borderRadius: radius.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
   },
 
   friendRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: '#1a1d23', borderRadius: radius.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     marginBottom: spacing.xs,
   },
   friendAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,107,31,0.15)',
+    backgroundColor: colors.primaryTint,
     alignItems: 'center', justifyContent: 'center',
   },
   friendInitial: {
     color: colors.primary, fontSize: 16, fontFamily: fonts.headingBold,
   },
-  friendName: { color: '#fff', fontSize: 14, fontFamily: fonts.medium },
-  friendStatus: { color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2, fontFamily: fonts.medium },
-  friendStatusOk: { color: '#34D399' },
+  friendName: { color: colors.textPrimary, fontSize: 14, fontFamily: fonts.medium },
+  friendStatus: { color: colors.textMuted, fontSize: 11, marginTop: 2, fontFamily: fonts.medium },
+  friendStatusOk: { color: colors.success },
 
   disclaimer: {
-    color: 'rgba(255,255,255,0.35)', fontSize: 11, lineHeight: 16,
+    color: colors.textMuted, fontSize: 11, lineHeight: 16,
     textAlign: 'center', fontFamily: fonts.medium,
     paddingHorizontal: spacing.md,
   },

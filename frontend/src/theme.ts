@@ -16,6 +16,8 @@ export const colors = {
   primaryHover: '#3B82F6',
   primaryMuted: 'rgba(37,99,235,0.10)', // blue with alpha for icon bg
   primaryDark: '#1D4ED8',
+  primaryTint: 'rgba(37,99,235,0.16)',   // badge / chip bg più marcato
+  primaryBorder: 'rgba(37,99,235,0.30)', // bordo evidenziato
   secondary: '#4F46E5',
   secondaryMuted: 'rgba(79,70,229,0.10)',
   accent: '#7C3AED',
@@ -47,12 +49,26 @@ export const colors = {
   // Progress
   progressTrack: '#E2E8F0',
 
+  // Medaglie / tier
+  gold: '#F59E0B',
+  silver: '#A1A1AA',
+  bronze: '#CD7F32',
+
+  // Testo su superfici scure / foto / primary
+  onDark: 'rgba(255,255,255,0.90)',
+  onDarkMuted: 'rgba(255,255,255,0.60)',
+  onDarkSubtle: 'rgba(255,255,255,0.15)',
+
   // Overlays
   overlay: 'rgba(15,23,42,0.45)',
   overlayStrong: 'rgba(15,23,42,0.70)',
+  overlaySoft: 'rgba(15,23,42,0.30)',
   black: '#000000',
   white: '#FFFFFF',
 };
+
+// Scrim per testo sopra immagini (LinearGradient)
+export const imageScrim = ['transparent', 'rgba(15,23,42,0.45)', 'rgba(15,23,42,0.85)'] as const;
 
 export const fonts = {
   heading: 'Inter_900Black',

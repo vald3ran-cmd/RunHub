@@ -106,7 +106,7 @@ function describePhase(steps: Step[], t?: (k: string, o?: any) => string): strin
 function intensityFromSteps(steps: Step[], t?: (k: string, o?: any) => string): { label: string; color: string } {
   const L = (k: string, fallback: string) => t ? t(k) : fallback;
   const types = new Set(steps.map(s => s.type));
-  if (types.has('sprint')) return { label: L('preview.intensity_max', 'Massima'), color: '#EF4444' };
+  if (types.has('sprint')) return { label: L('preview.intensity_max', 'Massima'), color: colors.danger };
   if (types.has('run') && (steps.some(s => (s.repeats || 1) >= 4))) return { label: L('preview.intensity_high', 'Alta'), color: colors.primary };
   if (types.has('run')) return { label: L('preview.intensity_medium', 'Media'), color: colors.warning };
   return { label: L('preview.intensity_low', 'Bassa'), color: colors.success };
@@ -257,7 +257,7 @@ function PhaseCard({
       {lines.map((line, idx) => (
         <Text
           key={idx}
-          style={[styles.phaseLine, idx === 0 && styles.phaseLineFirst, highlight && idx === 0 && { color: '#fff' }]}
+          style={[styles.phaseLine, idx === 0 && styles.phaseLineFirst, highlight && idx === 0 && { color: colors.textPrimary }]}
         >
           {line}
         </Text>
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   phaseCardHighlight: {
     borderColor: colors.primary,
     borderWidth: 1.5,
-    backgroundColor: '#1A1410',
+    backgroundColor: colors.primaryMuted,
   },
   phaseHeader: {
     flexDirection: 'row',
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   intensityBadgeText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 11,
     fontFamily: fonts.bold,
     letterSpacing: 0.3,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ctaText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontFamily: fonts.headingBold,
     letterSpacing: 0.3,

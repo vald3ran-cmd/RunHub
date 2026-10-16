@@ -80,7 +80,7 @@ export function ReferralModal() {
             testID="referral-modal-cta"
           >
             <Text style={styles.primaryBtnText}>{t('referral.modal_cta_invite')}</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
+            <Ionicons name="arrow-forward" size={18} color={colors.white} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryBtn}
@@ -98,33 +98,33 @@ export function ReferralModal() {
 
 const styles = StyleSheet.create({
   backdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
+    flex: 1, backgroundColor: colors.overlayStrong,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
   card: {
     width: Math.min(width - spacing.lg * 2, 420),
-    backgroundColor: '#1a1d23',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
   },
   iconWrap: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: 'rgba(255,107,31,0.18)',
+    backgroundColor: colors.primaryTint,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.md,
   },
   giftEmoji: { fontSize: 36 },
   title: {
-    color: '#fff', fontSize: 22, textAlign: 'center',
+    color: colors.textPrimary, fontSize: 22, textAlign: 'center',
     fontFamily: fonts.headingBold,
     marginBottom: spacing.sm,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center', lineHeight: 20,
+    color: colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20,
     fontFamily: fonts.medium,
     marginBottom: spacing.lg,
   },
@@ -134,14 +134,14 @@ const styles = StyleSheet.create({
   },
   benefitChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(255,107,31,0.12)',
+    backgroundColor: colors.primaryMuted,
     paddingHorizontal: 12, paddingVertical: 8,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,107,31,0.25)',
+    borderColor: colors.primaryBorder,
   },
   benefitText: {
-    color: '#fff', fontSize: 12, letterSpacing: 0.5,
+    color: colors.primary, fontSize: 12, letterSpacing: 0.5,
     fontFamily: fonts.headingBold,
   },
   primaryBtn: {
@@ -151,14 +151,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   primaryBtnText: {
-    color: '#fff', fontSize: 15, letterSpacing: 0.5,
+    color: colors.white, fontSize: 15, letterSpacing: 0.5,
     fontFamily: fonts.headingBold,
   },
   secondaryBtn: {
     paddingVertical: spacing.sm,
   },
   secondaryBtnText: {
-    color: 'rgba(255,255,255,0.6)', fontSize: 14,
+    color: colors.textSecondary, fontSize: 14,
     fontFamily: fonts.medium,
   },
 });
