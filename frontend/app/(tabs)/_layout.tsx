@@ -4,16 +4,26 @@
  * Tab legacy (home/run/history/plans) restano accessibili come route ma
  * sono nascoste dalla tab bar (href: null) per non rompere link interni.
  *
- * Stile Scientific Light: sfondo card bianco, border sottile, accent arancione.
+ * Stile Light Blue: tab bar bianca, border sottile, accent blu, icone Ionicons.
  */
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FlaskConical, BookOpen, Watch, Calendar, Users, User } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useT } from '../../src/i18n';
 import { tokens } from '../../src/design-system';
 
 const { brand, neutral, text } = tokens;
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const tabIcon = (name: string) => ({ color, focused }: { color: string; focused: boolean }) => (
+  <Ionicons
+    name={(focused ? name : `${name}-outline`) as IoniconName}
+    size={focused ? 24 : 22}
+    color={color}
+  />
+);
 
 export default function TabsLayout() {
   const { t } = useT();
@@ -46,54 +56,42 @@ export default function TabsLayout() {
         name="lab"
         options={{
           title: t('tabs.lab') || 'Lab',
-          tabBarIcon: ({ color, focused }) => (
-            <FlaskConical size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
-          ),
+          tabBarIcon: tabIcon('flask'),
         }}
       />
       <Tabs.Screen
         name="diario"
         options={{
           title: t('tabs.diario') || 'Diario',
-          tabBarIcon: ({ color, focused }) => (
-            <BookOpen size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
-          ),
+          tabBarIcon: tabIcon('book'),
         }}
       />
       <Tabs.Screen
         name="importa"
         options={{
           title: t('tabs.importa') || 'Importa',
-          tabBarIcon: ({ color, focused }) => (
-            <Watch size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
-          ),
+          tabBarIcon: tabIcon('watch'),
         }}
       />
       <Tabs.Screen
         name="allenamenti"
         options={{
           title: t('tabs.allenamenti') || 'Allenamenti',
-          tabBarIcon: ({ color, focused }) => (
-            <Calendar size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
-          ),
+          tabBarIcon: tabIcon('calendar'),
         }}
       />
       <Tabs.Screen
         name="eventi"
         options={{
           title: t('tabs.eventi') || 'Eventi',
-          tabBarIcon: ({ color, focused }) => (
-            <Users size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
-          ),
+          tabBarIcon: tabIcon('people'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t('tabs.profile'),
-          tabBarIcon: ({ color, focused }) => (
-            <User size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.4 : 1.8} />
-          ),
+          tabBarIcon: tabIcon('person'),
         }}
       />
 
